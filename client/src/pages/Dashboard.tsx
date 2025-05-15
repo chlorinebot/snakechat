@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Alert, Button, Table, Badge, Navbar, Nav, Card, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Alert, Button, Table, Badge, Navbar, Nav, Card, Modal, Form, InputGroup } from 'react-bootstrap';
 import UserForm from '../components/UserForm';
 import type { User } from '../services/api';
 import api from '../services/api';
@@ -7,6 +7,8 @@ import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [message, setMessage] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -15,10 +17,21 @@ const Dashboard: React.FC = () => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    // Lọc users khi searchTerm thay đổi
+    const filtered = users.filter(user => 
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.user_id !== undefined && user.user_id.toString().includes(searchTerm))
+    );
+    setFilteredUsers(filtered);
+  }, [searchTerm, users]);
+
   const fetchUsers = async () => {
     try {
       const data = await api.getUsers();
       setUsers(data);
+      setFilteredUsers(data);
     } catch (error) {
       console.error('Lỗi khi lấy dữ liệu:', error);
       setMessage('Lỗi khi tải dữ liệu từ server');
@@ -178,7 +191,23 @@ const Dashboard: React.FC = () => {
           <Col lg={8}>
             <Card className="shadow-sm border-0">
               <Card.Header className="bg-white border-0 py-3">
-                <h5 className="mb-0 text-primary">Danh sách người dùng</h5>
+                <div className="d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0 text-primary">Danh sách người dùng</h5>
+                  <div className="w-50">
+                    <InputGroup>
+                      <InputGroup.Text className="bg-light border-0">
+                        <i className="fas fa-search text-muted"></i>
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        placeholder="Tìm kiếm theo ID, tên hoặc email..."
+                        className="border-0 bg-light"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </InputGroup>
+                  </div>
+                </div>
               </Card.Header>
               <Card.Body className="p-0">
                 <Table hover responsive className="mb-0">
@@ -193,7 +222,7 @@ const Dashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
+                    {filteredUsers.map((user) => (
                       <tr key={user.user_id}>
                         <td className="px-4 py-3">{user.user_id}</td>
                         <td className="px-4 py-3">{user.username}</td>

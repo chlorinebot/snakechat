@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { Container, Row, Col, Card } from 'react-bootstrap';
 import UserForm from '../components/UserForm';
-import { Form } from 'react-bootstrap';
 
 const Register: React.FC = () => {
   const [error, setError] = useState('');
@@ -14,7 +14,7 @@ const Register: React.FC = () => {
 
       const userData = {
         ...data,
-        role_id: 1,
+        role_id: 2,
         confirmPassword: undefined
       };
 
@@ -72,31 +72,44 @@ const Register: React.FC = () => {
     }
   ];
 
-  const extraFields = (
-    <Form.Group className="mb-4">
-      <Form.Check
-        type="checkbox"
-        label="Tôi đồng ý với điều khoản sử dụng"
-        required
-      />
-    </Form.Group>
-  );
-
   return (
-    <UserForm
-      title="Đăng ký"
-      subtitle="Tạo tài khoản mới"
-      fields={registerFields}
-      onSubmit={handleSubmit}
-      error={error}
-      buttonText="Đăng ký"
-      footerText="Đã có tài khoản?"
-      footerLink={{
-        text: "Đăng nhập",
-        to: "/login"
-      }}
-      extraFields={extraFields}
-    />
+    <Container fluid className="min-vh-100 d-flex align-items-center justify-content-center bg-light py-5">
+      <Row className="justify-content-center w-100">
+        <Col xs={12} sm={10} md={8} lg={6} xl={4}>
+          <Card className="shadow-sm border-0">
+            <Card.Body className="p-4 p-md-5">
+              <UserForm
+                title="Đăng ký"
+                subtitle="Tạo tài khoản mới"
+                fields={registerFields}
+                onSubmit={handleSubmit}
+                error={error}
+                buttonText="Đăng ký"
+                footerText="Đã có tài khoản?"
+                footerLink={{
+                  text: "Đăng nhập",
+                  to: "/login"
+                }}
+                extraFields={
+                  <div className="form-check mb-4">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="agreeTerms"
+                      required
+                    />
+                    <label className="form-check-label small" htmlFor="agreeTerms">
+                      Tôi đồng ý với <a href="#" className="text-primary">điều khoản sử dụng</a> và{' '}
+                      <a href="#" className="text-primary">chính sách bảo mật</a>
+                    </label>
+                  </div>
+                }
+              />
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 };
 

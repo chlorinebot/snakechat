@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { Container, Row, Col, Card } from 'react-bootstrap';
 import UserForm from '../components/UserForm';
-import { Form } from 'react-bootstrap';
 
 const Login: React.FC = () => {
   const [error, setError] = useState('');
@@ -53,34 +53,47 @@ const Login: React.FC = () => {
     }
   ];
 
-  const extraFields = (
-    <div className="d-flex justify-content-between align-items-center mb-4">
-      <Form.Check
-        type="checkbox"
-        label="Ghi nhớ đăng nhập"
-        className="mb-0"
-      />
-      <a href="/forgot-password" className="text-primary text-decoration-none">
-        Quên mật khẩu?
-      </a>
-    </div>
-  );
-
   return (
-    <UserForm
-      title="Đăng nhập"
-      subtitle="Chào mừng bạn trở lại!"
-      fields={loginFields}
-      onSubmit={handleSubmit}
-      error={error}
-      buttonText="Đăng nhập"
-      footerText="Chưa có tài khoản?"
-      footerLink={{
-        text: "Đăng ký ngay",
-        to: "/register"
-      }}
-      extraFields={extraFields}
-    />
+    <Container fluid className="min-vh-100 d-flex align-items-center justify-content-center bg-light py-5">
+      <Row className="justify-content-center w-100">
+        <Col xs={12} sm={10} md={8} lg={6} xl={4}>
+          <Card className="shadow-sm border-0">
+            <Card.Body className="p-4 p-md-5">
+              <UserForm
+                title="Đăng nhập"
+                subtitle="Chào mừng bạn trở lại!"
+                fields={loginFields}
+                onSubmit={handleSubmit}
+                error={error}
+                buttonText="Đăng nhập"
+                footerText="Chưa có tài khoản?"
+                footerLink={{
+                  text: "Đăng ký ngay",
+                  to: "/register"
+                }}
+                extraFields={
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div className="form-check mb-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="rememberMe"
+                      />
+                      <label className="form-check-label" htmlFor="rememberMe">
+                        Ghi nhớ đăng nhập
+                      </label>
+                    </div>
+                    <a href="/forgot-password" className="text-primary text-decoration-none small">
+                      Quên mật khẩu?
+                    </a>
+                  </div>
+                }
+              />
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 };
 
