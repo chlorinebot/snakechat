@@ -1,0 +1,68 @@
+.form-control-lg {
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.form-control-lg:focus {
+  box-shadow: none;
+  border-color: #0d6efd;
+  background-color: #fff !important;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.btn-primary {
+  padding: 0.8rem;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.card {
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.table > :not(caption) > * > * {
+  padding: 1rem 1.5rem;
+}
+
+.table > tbody > tr:hover {
+  background-color: #f8f9fa;
+}
+
+.badge {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+} 
