@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db');
+const userRoutes = require('./routes/userRoutes');
+const errorHandler = require('./middleware/errorHandler');
+
 const app = express();
 
 // Middleware
@@ -12,48 +14,11 @@ app.get('/', (req, res) => {
     res.json({ message: 'Chào mừng đến với Node.js Backend!' });
 });
 
-// API GET: Lấy danh sách users từ MySQL
-app.get('/api/data', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM users');
-        res.json({ 
-            success: true,
-            message: 'Lấy dữ liệu thành công', 
-            data: rows 
-        });
-    } catch (error) {
-        console.error('Lỗi khi lấy dữ liệu:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Lỗi khi lấy dữ liệu từ server'
-        });
-    }
-});
+// API Routes
+app.use('/api', userRoutes);
 
-// API POST: Thêm user mới vào MySQL
-app.post('/api/send', async (req, res) => {
-    const { name } = req.body;
-    if (!name) {
-        return res.status(400).json({ 
-            success: false,
-            message: 'Tên không được để trống'
-        });
-    }
-    try {
-        const [result] = await pool.query('INSERT INTO users (name) VALUES (?)', [name]);
-        res.json({ 
-            success: true,
-            message: `Đã thêm user ${name} thành công`,
-            data: { id: result.insertId, name }
-        });
-    } catch (error) {
-        console.error('Lỗi khi thêm user:', error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Lỗi khi thêm user vào database'
-        });
-    }
-});
+// Error Handler
+app.use(errorHandler);
 
 // Khởi động server
 const PORT = process.env.PORT || 5000;
