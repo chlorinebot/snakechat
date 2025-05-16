@@ -694,17 +694,17 @@ body.dark-mode {
 
 /* Đảm bảo các nút có màu đúng */
 [data-theme="dark"] .btn-outline-primary:hover {
-  background-color: #4d7cfe !important;
+  background-color: var(--accent-blue) !important;
   color: #ffffff !important;
 }
 
 [data-theme="dark"] .btn-outline-danger:hover {
-  background-color: #ff6b6b !important;
+  background-color: var(--accent-red) !important;
   color: #ffffff !important;
 }
 
 [data-theme="dark"] .btn-outline-warning:hover {
-  background-color: #ffd166 !important;
+  background-color: var(--accent-yellow) !important;
   color: #212529 !important;
 }
 
@@ -958,15 +958,35 @@ body.dark-mode {
   border-color: var(--primary-color) !important;
 }
 
-[data-theme="dark"] .btn-outline-primary,
-[data-theme="dark"] .btn-outline-danger {
-  color: var(--text-color) !important;
-  border-color: currentColor !important;
+/* Cập nhật màu sắc nút sửa và xóa trong dark mode */
+[data-theme="dark"] .btn-outline-primary {
+  color: var(--accent-blue) !important;
+  border-color: var(--accent-blue) !important;
+  background-color: transparent !important;
 }
 
-[data-theme="dark"] .btn-outline-primary i,
+[data-theme="dark"] .btn-outline-danger {
+  color: var(--accent-red) !important;
+  border-color: var(--accent-red) !important;
+  background-color: transparent !important;
+}
+
+/* Đảm bảo icon bên trong nút có màu giống với nút */
+[data-theme="dark"] .btn-outline-primary i {
+  color: var(--accent-blue) !important;
+}
+
 [data-theme="dark"] .btn-outline-danger i {
-  color: inherit !important;
+  color: var(--accent-red) !important;
+}
+
+/* Hiệu ứng hover cho icon trong nút */
+[data-theme="dark"] .btn-outline-primary:hover i {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover i {
+  color: #ffffff !important;
 }
 
 /* Chỉnh sửa modal trong quản lý vai trò */
@@ -1040,4 +1060,43 @@ body.dark-mode {
 
 [data-theme="dark"] .card-header h5 {
   color: var(--text-color) !important;
+}
+
+/* Force màu sắc cho nút Sửa/Xóa ở dark mode để giống light mode */
+[data-theme="dark"] .btn-outline-primary {
+  color: var(--accent-blue) !important;
+  border-color: var(--accent-blue) !important;
+  background-color: transparent !important;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+  color: var(--accent-red) !important;
+  border-color: var(--accent-red) !important;
+  background-color: transparent !important;
+}
+
+[data-theme="dark"] .btn-outline-primary i {
+  color: var(--accent-blue) !important;
+}
+
+[data-theme="dark"] .btn-outline-danger i {
+  color: var(--accent-red) !important;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+  background-color: var(--accent-blue) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover i {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+  background-color: var(--accent-red) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover i {
+  color: #ffffff !important;
 }
