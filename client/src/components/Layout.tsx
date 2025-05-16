@@ -9,48 +9,63 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
-  const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [darkMode, setDarkMode] = useState(localStorage.getItem('darkMode') === 'true');
-
+  const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth > 992);
+  const [darkMode, setDarkMode] = useState(false);
+  
   // Xác định nếu trình duyệt hỗ trợ chế độ tối mặc định
   const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+  // Xử lý chế độ sáng/tối
   useEffect(() => {
-    // Kiểm tra nếu đã có cài đặt trước đó trong localStorage
+    // Ban đầu, kiểm tra localStorage và thiết lập ban đầu
     const savedTheme = localStorage.getItem('darkMode');
     
-    // Nếu chưa có cài đặt và trình duyệt ưa thích chế độ tối
-    if (savedTheme === null && prefersDarkMode) {
+    if (savedTheme === 'true') {
       setDarkMode(true);
-    } else if (savedTheme !== null) {
-      setDarkMode(savedTheme === 'true');
-    }
-  }, [prefersDarkMode]);
-
-  useEffect(() => {
-    // Áp dụng chế độ theme khi component mount và khi darkMode thay đổi
-    if (darkMode) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else if (savedTheme === 'false') {
+      setDarkMode(false);
+      document.documentElement.removeAttribute('data-theme');
+    } else if (prefersDarkMode) {
+      // Nếu không có cài đặt trong localStorage và trình duyệt ưa thích chế độ tối
+      setDarkMode(true);
       document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('darkMode', 'true');
     } else {
+      setDarkMode(false);
       document.documentElement.removeAttribute('data-theme');
       localStorage.setItem('darkMode', 'false');
     }
+    
+    // Bật transition sau một lát
+    const timer = setTimeout(() => {
+      document.body.classList.add('theme-transition-enabled');
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+      document.body.classList.remove('theme-transition-enabled');
+    };
+  }, [prefersDarkMode]);
 
-    // Thêm một chút độ trễ để đảm bảo các style được áp dụng đúng
-    const applyStyles = setTimeout(() => {
-      const forceReflow = document.body.offsetHeight;
-    }, 50);
-
-    return () => clearTimeout(applyStyles);
-  }, [darkMode]);
+  // Xử lý thay đổi dark mode
+  const toggleTheme = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    
+    if (newDarkMode) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('darkMode', 'true');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('darkMode', 'false');
+    }
+  };
 
   const toggleSidebar = () => {
     setSidebarVisible(!sidebarVisible);
-  };
-
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
   };
 
   const handleLogout = () => {
@@ -65,15 +80,30 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
     }
   };
 
+  // Responsive sidebar toggle
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 992) {
+        setSidebarVisible(false);
+      } else {
+        setSidebarVisible(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className={`app-container ${sidebarVisible ? 'sidebar-visible' : 'sidebar-hidden'}`}>
       <Sidebar />
       <div className="content-wrapper">
         <div className="content-header">
           <Button
-            variant="light"
+            variant="link"
             className="sidebar-toggle"
             onClick={toggleSidebar}
+            aria-label="Toggle sidebar"
           >
             <i className="fas fa-bars"></i>
           </Button>
@@ -82,6 +112,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
               className="theme-toggle-btn"
               onClick={toggleTheme}
               title={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
+              aria-label={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
             >
               <i className={`fas ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
             </button>

@@ -1,17 +1,19 @@
+/* Reset CSS cho theme dark/light */
+html {
+  color-scheme: light;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  /* Light theme variables */
   --primary-color: #4361ee;
   --secondary-color: #3a56d4;
   --text-color: #212529;
@@ -34,9 +36,16 @@
   --accent-red: #ef476f;
   --accent-yellow: #ffd166;
   --accent-green: #06d6a0;
+  
+  /* Default colors for standard HTML elements */
+  background-color: #ffffff;
+  color: #212529;
 }
 
+/* Dark theme variables */
 [data-theme="dark"] {
+  color-scheme: dark;
+  
   --primary-color: #4d7cfe;
   --secondary-color: #3a56d4;
   --text-color: #e9ecef;
@@ -58,6 +67,10 @@
   --accent-red: #ff6b6b;
   --accent-yellow: #ffd166;
   --accent-green: #06d6a0;
+  
+  /* Override colors for standard HTML elements */
+  background-color: #121212;
+  color: #e9ecef;
 }
 
 a {
@@ -263,4 +276,434 @@ h2, p, label, input, button {
 /* Đảm bảo phần tử fixed trên cùng luôn có màu đúng */
 [data-theme="dark"] .content-header {
   background-color: var(--header-bg);
+}
+
+/* CSS dành riêng cho bảng người dùng */
+.user-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.user-table thead th {
+  background-color: var(--table-head-bg);
+  color: var(--text-color);
+  font-weight: 600;
+  border-color: var(--border-color);
+  padding: 12px 16px;
+}
+
+.user-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.user-table tbody tr td {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+
+.user-table tbody tr:hover {
+  background-color: var(--table-hover);
+}
+
+/* Dark mode CSS cho bảng người dùng */
+[data-theme="dark"] .user-table thead th {
+  background-color: #252525 !important;
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .user-table tbody tr td {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .user-table tbody tr:hover {
+  background-color: #252525 !important;
+}
+
+[data-theme="dark"] .user-table tbody tr:hover td {
+  background-color: #252525 !important;
+}
+
+/* Badge hiển thị trong light/dark mode */
+.badge.bg-primary, 
+.badge.bg-success, 
+.badge.bg-danger, 
+.badge.bg-warning {
+  font-weight: 500;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] .badge {
+  opacity: 0.9;
+}
+
+/* Cải thiện phân trang trong dark mode */
+[data-theme="dark"] .pagination .page-link {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .pagination .page-item.active .page-link {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .pagination .page-item:not(.active) .page-link:hover {
+  background-color: #252525;
+  color: white;
+}
+
+/* Cải thiện modal trong dark mode */
+[data-theme="dark"] .modal-content {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-header {
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-footer {
+  border-top-color: var(--border-color);
+}
+
+/* Cải thiện input trong dark mode */
+[data-theme="dark"] .form-control {
+  background-color: #252525;
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .input-group-text {
+  background-color: #252525;
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .form-control:focus {
+  background-color: #2a2a2a;
+  color: white;
+}
+
+/* Cải thiện Card trong dark mode */
+[data-theme="dark"] .card {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .card-header {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Cải thiện Button chính trong dark mode */
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(45deg, #4d7cfe, #4361ee);
+  border-color: transparent;
+  box-shadow: 0 4px 10px rgba(77, 124, 254, 0.3);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: linear-gradient(45deg, #3a68e0, #3a56d4);
+  box-shadow: 0 6px 15px rgba(77, 124, 254, 0.4);
+}
+
+/* Cải thiện icon và màu chữ trong dark mode */
+[data-theme="dark"] .text-primary {
+  color: var(--accent-blue) !important;
+}
+
+[data-theme="dark"] .fa-sort-up,
+[data-theme="dark"] .fa-sort-down,
+[data-theme="dark"] .fa-sort {
+  color: var(--text-color);
+}
+
+/* Thêm cursor pointer cho các cột có thể sắp xếp */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Cải thiện hiển thị Alerts trong dark mode */
+[data-theme="dark"] .alert {
+  background-color: #252525;
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .alert-info {
+  background-color: rgba(77, 124, 254, 0.1);
+  border-color: rgba(77, 124, 254, 0.2);
+  color: #e9ecef;
+}
+
+/* Tối ưu hiển thị component InputGroup cho dark mode */
+[data-theme="dark"] .input-group .form-control {
+  background-color: #252525;
+}
+
+[data-theme="dark"] .input-group-text {
+  background-color: #252525;
+  border-right: none;
+}
+
+/* Cải thiện hover cho button */
+[data-theme="dark"] .btn:hover {
+  transform: translateY(-1px);
+  transition: all 0.2s;
+}
+
+/* Nút chức năng (Sửa, Xóa, Khóa) đẹp hơn trong dark mode */
+[data-theme="dark"] .btn-sm {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.875rem;
+}
+
+/* Hiệu ứng màu gradient cho badge */
+[data-theme="dark"] .badge.bg-success {
+  background: linear-gradient(45deg, #06d6a0, #05b688) !important;
+}
+
+[data-theme="dark"] .badge.bg-primary {
+  background: linear-gradient(45deg, #4d7cfe, #4361ee) !important;
+}
+
+/* Cải thiện hiệu ứng hover cho bảng trong dark mode */
+[data-theme="dark"] .user-table tbody tr {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .user-table tbody tr:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  background-color: rgba(37, 37, 37, 0.9) !important;
+  z-index: 1;
+}
+
+/* Fix cho nút toggle trong dark mode */
+[data-theme="dark"] .sidebar-toggle i {
+  color: white !important;
+}
+
+/* Đảm bảo text màu đúng cho trường hợp dark mode trong các element */
+[data-theme="dark"] .card-header h5,
+[data-theme="dark"] h2.text-primary,
+[data-theme="dark"] .page-link,
+[data-theme="dark"] .form-label,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .modal-title {
+  color: var(--text-color) !important;
+}
+
+/* Cải thiện nút primary và các nút khác trong dark mode */
+[data-theme="dark"] .btn.btn-primary {
+  filter: brightness(1.1);
+  border-color: transparent;
+  background: linear-gradient(45deg, #4d7cfe, #4361ee);
+}
+
+[data-theme="dark"] .btn.btn-outline-primary,
+[data-theme="dark"] .btn.btn-outline-danger,
+[data-theme="dark"] .btn.btn-outline-warning,
+[data-theme="dark"] .btn.btn-outline-secondary {
+  border-width: 1.5px;
+}
+
+/* Cải thiện thanh tìm kiếm trong dark mode */
+[data-theme="dark"] .input-group .form-control,
+[data-theme="dark"] .input-group-text {
+  background-color: #252525;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+}
+
+/* Nút primary trong light mode */
+.btn.btn-primary {
+  background: linear-gradient(45deg, #4361ee, #3a56d4);
+}
+
+/* Đảm bảo card header có nền phù hợp trong dark mode */
+[data-theme="dark"] .card-header {
+  background-color: #1a1a1a;
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Sửa màu nền và văn bản cho bảng user trong dark mode */
+[data-theme="dark"] .user-table {
+  color: #e9ecef;
+}
+
+[data-theme="dark"] .user-table th {
+  background-color: #252525 !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .user-table tr {
+  background-color: #1a1a1a !important;
+}
+
+[data-theme="dark"] .user-table td {
+  color: #e9ecef !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Sửa màu background cho hàng trong bảng khi hover */
+[data-theme="dark"] .user-table tbody tr:hover {
+  background-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] .user-table tbody tr:hover td {
+  background-color: #2a2a2a !important;
+}
+
+/* Sửa các nút và badge trong dark mode */
+[data-theme="dark"] .badge {
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge.bg-primary {
+  background-color: #4d7cfe !important;
+}
+
+[data-theme="dark"] .badge.bg-success {
+  background-color: #06d6a0 !important;
+}
+
+/* Override và force màu text cho các nút trong bảng */
+[data-theme="dark"] .btn-outline-primary {
+  color: #4d7cfe !important;
+  border-color: #4d7cfe !important;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+  color: #ff6b6b !important;
+  border-color: #ff6b6b !important;
+}
+
+[data-theme="dark"] .btn-outline-warning {
+  color: #ffd166 !important;
+  border-color: #ffd166 !important;
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+  color: #adb5bd !important;
+  border-color: #adb5bd !important;
+}
+
+/* Force card background trong dark mode */
+[data-theme="dark"] .card {
+  background-color: #1a1a1a !important;
+}
+
+[data-theme="dark"] .card-header {
+  background-color: #252525 !important;
+}
+
+/* Force màu tiêu đề */
+[data-theme="dark"] h2, 
+[data-theme="dark"] h5, 
+[data-theme="dark"] .card-header h5 {
+  color: #e9ecef !important;
+}
+
+/* Force màu công cụ tìm kiếm */
+[data-theme="dark"] .input-group-text,
+[data-theme="dark"] .form-control {
+  background-color: #252525 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e9ecef !important;
+}
+
+/* Force màu phân trang */
+[data-theme="dark"] .pagination .page-link {
+  background-color: #1a1a1a !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e9ecef !important;
+}
+
+[data-theme="dark"] .pagination .page-item.active .page-link {
+  background-color: #4d7cfe !important;
+  border-color: #4d7cfe !important;
+  color: #ffffff !important;
+}
+
+/* Force màu text muted */
+[data-theme="dark"] .text-muted {
+  color: #adb5bd !important;
+}
+
+/* Ghi đè lớp Button.primary */
+.btn-primary {
+  background: linear-gradient(45deg, #4361ee, #3a56d4) !important;
+  border: none !important;
+}
+
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(45deg, #4d7cfe, #3d67c8) !important;
+  border: none !important;
+}
+
+/* Thêm dark-mode class cho body */
+body.dark-mode {
+  background-color: #121212 !important;
+  color: #e9ecef !important;
+}
+
+/* Force màu nền cho toàn bộ bảng */
+[data-theme="dark"] table.table {
+  background-color: #1a1a1a !important;
+  color: #e9ecef !important;
+}
+
+/* Force màu nền cho từng hàng của tbody trong table */
+[data-theme="dark"] table.table tbody tr {
+  background-color: #1a1a1a !important;
+  color: #e9ecef !important;
+}
+
+/* Force màu nền cho từng ô trong tbody của table */
+[data-theme="dark"] table.table tbody td {
+  background-color: #1a1a1a !important;
+  color: #e9ecef !important;
+}
+
+/* Force màu hover */
+[data-theme="dark"] table.table tbody tr:hover td {
+  background-color: #2a2a2a !important;
+  color: #ffffff !important;
+}
+
+/* Fix màu Bootstrap các badge */
+[data-theme="dark"] .badge.bg-success {
+  background-color: #06d6a0 !important;
+  color: #212529 !important;
+}
+
+[data-theme="dark"] .badge.bg-primary {
+  background-color: #4d7cfe !important;
+  color: #ffffff !important;
+}
+
+/* Đảm bảo các nút có màu đúng */
+[data-theme="dark"] .btn-outline-primary:hover {
+  background-color: #4d7cfe !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+  background-color: #ff6b6b !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-warning:hover {
+  background-color: #ffd166 !important;
+  color: #212529 !important;
 }

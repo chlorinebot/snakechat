@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert, Button, Table, Badge, Card, Modal, Form, InputGroup, Pagination } from 'react-bootstrap';
 import UserForm from '../components/UserForm';
 import type { User, UserLock } from '../services/api';
-import api from '../services/api';
+import { api } from '../services/api';
 import Layout from '../components/Layout';
 import './Dashboard.css';
 
@@ -342,7 +342,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
         <Row className="g-4">
           <Col lg={12}>
             <Card className="shadow-sm border-0">
-              <Card.Header className="bg-white border-0 py-3">
+              <Card.Header className="border-0 py-3">
                 <div className="d-flex justify-content-between align-items-center">
                   <h5 className="mb-0 text-primary">Danh sách người dùng</h5>
                   <div className="d-flex align-items-center">
@@ -353,7 +353,6 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                       style={{ 
                         minWidth: "240px", 
                         padding: "0.7rem 1.5rem",
-                        background: "linear-gradient(45deg, #4361ee, #3a56d4)",
                         borderRadius: "8px",
                         boxShadow: "0 4px 10px rgba(67, 97, 238, 0.3)",
                         border: "none"
@@ -364,13 +363,12 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                     </Button>
                     <div className="w-100">
                       <InputGroup>
-                        <InputGroup.Text className="bg-light border-0">
-                          <i className="fas fa-search text-muted"></i>
+                        <InputGroup.Text>
+                          <i className="fas fa-search"></i>
                         </InputGroup.Text>
                         <Form.Control
                           type="text"
                           placeholder="Tìm kiếm theo ID, tên hoặc email..."
-                          className="border-0 bg-light"
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -380,25 +378,25 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                 </div>
               </Card.Header>
               <Card.Body className="p-0">
-                <Table hover responsive className="mb-0">
-                  <thead className="bg-light">
+                <Table hover responsive className="mb-0 user-table">
+                  <thead>
                     <tr>
-                      <th className="border-0 px-4 py-3 cursor-pointer" onClick={() => handleSort('user_id')}>
+                      <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => handleSort('user_id')}>
                         ID {getSortIcon('user_id')}
                       </th>
-                      <th className="border-0 px-4 py-3 cursor-pointer" onClick={() => handleSort('username')}>
+                      <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => handleSort('username')}>
                         Tên người dùng {getSortIcon('username')}
                       </th>
-                      <th className="border-0 px-4 py-3 cursor-pointer" onClick={() => handleSort('email')}>
+                      <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => handleSort('email')}>
                         Email {getSortIcon('email')}
                       </th>
-                      <th className="border-0 px-4 py-3 cursor-pointer" onClick={() => handleSort('role_id')}>
+                      <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => handleSort('role_id')}>
                         Vai trò {getSortIcon('role_id')}
                       </th>
-                      <th className="border-0 px-4 py-3 cursor-pointer" onClick={() => handleSort('birthday')}>
+                      <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => handleSort('birthday')}>
                         Ngày sinh {getSortIcon('birthday')}
                       </th>
-                      <th className="border-0 px-4 py-3">Thao tác</th>
+                      <th scope="col" className="px-4 py-3">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>

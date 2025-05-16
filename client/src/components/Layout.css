@@ -67,10 +67,11 @@
   }
 }
 
+/* Cập nhật nút toggle sidebar */
 .sidebar-toggle {
-  border: none;
-  background: transparent;
-  color: var(--text-color);
+  border: none !important;
+  background: transparent !important;
+  color: var(--text-color) !important;
   width: 40px;
   height: 40px;
   border-radius: 8px;
@@ -82,8 +83,14 @@
 }
 
 .sidebar-toggle:hover {
-  background-color: var(--bg-secondary);
-  color: var(--text-color);
+  background-color: var(--bg-secondary) !important;
+  color: var(--primary-color) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-toggle:active {
+  transform: translateY(0);
 }
 
 /* Độ sáng/tối của nội dung khi sidebar đóng/mở */
@@ -137,6 +144,16 @@
 [data-theme="dark"] .btn-light:focus {
   background-color: #252525;
   color: var(--text-color);
+}
+
+/* Fix cho dark mode - nút toggle sidebar */
+[data-theme="dark"] .sidebar-toggle {
+  color: #e9ecef !important;
+}
+
+[data-theme="dark"] .sidebar-toggle:hover {
+  background-color: #252525 !important;
+  color: var(--primary-color) !important;
 }
 
 @media (max-width: 992px) {

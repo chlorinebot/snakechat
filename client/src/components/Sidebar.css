@@ -27,6 +27,7 @@
   top: 0;
   background-color: var(--sidebar-bg);
   z-index: 10;
+  color: var(--text-color);
 }
 
 .sidebar-item {
@@ -36,11 +37,13 @@
   border-left: 3px solid transparent;
   display: flex;
   align-items: center;
+  text-decoration: none;
 }
 
 .sidebar-item:hover {
   background-color: var(--table-hover);
   color: var(--primary-color) !important;
+  text-decoration: none;
 }
 
 .sidebar-item.active {
@@ -89,6 +92,14 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+[data-theme="dark"] .sidebar i {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .sidebar-item.active i {
+  color: var(--primary-color);
+}
+
 [data-theme="dark"] .sidebar-item {
   color: var(--text-color) !important;
 }
@@ -105,6 +116,23 @@
 
 [data-theme="dark"] .sidebar-footer {
   border-top: 1px solid var(--border-color);
+}
+
+/* Hiệu ứng animation nhấp nháy cho trạng thái online */
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
 }
 
 @media (max-width: 768px) {
