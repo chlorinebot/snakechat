@@ -118,6 +118,114 @@ const userController = {
         });
       }
     }
+  },
+
+  // Khóa tài khoản user
+  lockUser: async (req, res) => {
+    const { user_id, reason, lock_time, unlock_time } = req.body;
+    
+    if (!user_id || !reason || !lock_time || !unlock_time) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Thiếu thông tin yêu cầu'
+      });
+    }
+
+    try {
+      const result = await userService.lockUser({
+        user_id,
+        reason,
+        lock_time,
+        unlock_time,
+        status: 'locked'
+      });
+
+      res.json({ 
+        success: true,
+        message: `Đã khóa tài khoản thành công`,
+        data: result
+      });
+    } catch (error) {
+      console.error('Lỗi khi khóa tài khoản:', error);
+      if (error.message === 'Không tìm thấy user') {
+        res.status(404).json({ 
+          success: false,
+          message: 'Không tìm thấy tài khoản'
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: 'Lỗi khi khóa tài khoản'
+        });
+      }
+    }
+  },
+
+  // Mở khóa tài khoản user
+  unlockUser: async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+      const result = await userService.unlockUser(userId);
+
+      res.json({ 
+        success: true,
+        message: `Đã mở khóa tài khoản thành công`,
+        data: result
+      });
+    } catch (error) {
+      console.error('Lỗi khi mở khóa tài khoản:', error);
+      if (error.message === 'Không tìm thấy user') {
+        res.status(404).json({ 
+          success: false,
+          message: 'Không tìm thấy tài khoản'
+        });
+      } else if (error.message === 'Tài khoản không bị khóa') {
+        res.status(400).json({ 
+          success: false,
+          message: 'Tài khoản không ở trạng thái khóa'
+        });
+      } else {
+        res.status(500).json({ 
+          success: false,
+          message: 'Lỗi khi mở khóa tài khoản'
+        });
+      }
+    }
+  },
+
+  // Cập nhật trạng thái người dùng (online/offline)
+  updateUserStatus: async (req, res) => {
+    const { user_id, status } = req.body;
+
+    if (!user_id || !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin user_id hoặc status'
+      });
+    }
+
+    try {
+      const result = await userService.updateUserStatus(user_id, status);
+      res.json({
+        success: true,
+        message: `Đã cập nhật trạng thái user thành ${status}`,
+        data: result
+      });
+    } catch (error) {
+      console.error('Lỗi khi cập nhật trạng thái user:', error);
+      if (error.message === 'Không tìm thấy user') {
+        res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy user'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Lỗi khi cập nhật trạng thái user'
+        });
+      }
+    }
   }
 };
 

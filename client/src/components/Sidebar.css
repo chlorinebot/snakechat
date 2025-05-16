@@ -1,0 +1,122 @@
+.sidebar {
+  width: 280px;
+  height: 100vh;
+  background-color: var(--sidebar-bg);
+  color: var(--text-color);
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  box-shadow: 2px 0 5px var(--card-shadow);
+  z-index: 1001;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 20px 15px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  background-color: var(--sidebar-bg);
+  z-index: 10;
+}
+
+.sidebar-item {
+  padding: 12px 15px;
+  color: var(--text-color) !important;
+  transition: var(--transition);
+  border-left: 3px solid transparent;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-item:hover {
+  background-color: var(--table-hover);
+  color: var(--primary-color) !important;
+}
+
+.sidebar-item.active {
+  background-color: var(--sidebar-active);
+  color: var(--primary-color) !important;
+  border-left: 3px solid var(--primary-color);
+}
+
+.sidebar-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 10px 15px;
+}
+
+.sidebar-heading {
+  padding: 10px 15px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 15px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.content-wrapper {
+  margin-left: 280px;
+  min-height: 100vh;
+  transition: var(--transition);
+}
+
+/* Fix cho dark mode */
+[data-theme="dark"] .sidebar {
+  background-color: var(--sidebar-bg);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .sidebar-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .sidebar-item {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .sidebar-item:hover {
+  background-color: var(--table-hover);
+  color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .sidebar-item.active {
+  background-color: var(--sidebar-active);
+  color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .sidebar-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    margin-left: -280px;
+  }
+  
+  .sidebar.show {
+    margin-left: 0;
+  }
+  
+  .content-wrapper {
+    margin-left: 0;
+  }
+} 

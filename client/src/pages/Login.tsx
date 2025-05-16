@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 import UserForm from '../components/UserForm';
+import api from '../services/api';
 
 const Login: React.FC = () => {
   const [error, setError] = useState('');
@@ -21,6 +22,16 @@ const Login: React.FC = () => {
         // Lưu token và thông tin người dùng vào localStorage
         localStorage.setItem('token', result.token);
         localStorage.setItem('user', JSON.stringify(result.user));
+        
+        // Cập nhật trạng thái online cho người dùng
+        if (result.user && result.user.user_id) {
+          try {
+            await api.updateStatus(result.user.user_id, 'online');
+            console.log('Đã cập nhật trạng thái online');
+          } catch (err) {
+            console.error('Lỗi khi cập nhật trạng thái online:', err);
+          }
+        }
         
         // Kiểm tra role_id và điều hướng
         if (result.user.role_id === 1) {
