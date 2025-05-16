@@ -4,6 +4,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import Roles from './pages/Roles';
+import LockedAccounts from './pages/LockedAccounts';
 import api from './services/api';
 
 const App: React.FC = () => {
@@ -128,11 +130,11 @@ const App: React.FC = () => {
         />
         <Route 
           path="/roles" 
-          element={isAuthenticated && isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? <Roles onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/locked-accounts" 
-          element={isAuthenticated && isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? <LockedAccounts onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/settings" 

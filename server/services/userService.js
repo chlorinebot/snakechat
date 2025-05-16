@@ -176,6 +176,19 @@ const userService = {
       user_id: userId,
       status
     };
+  },
+
+  // Lấy lịch sử khóa tài khoản
+  getLockHistory: async () => {
+    // Lấy toàn bộ lịch sử khóa tài khoản từ bảng user_lock
+    const [rows] = await pool.query(
+      `SELECT ul.*, u.username, u.email, r.role_name
+       FROM user_lock ul
+       JOIN users u ON ul.user_id = u.user_id
+       JOIN role r ON u.role_id = r.role_id
+       ORDER BY lock_time DESC`
+    );
+    return rows;
   }
 };
 

@@ -226,7 +226,25 @@ const userController = {
         });
       }
     }
+  },
+
+  // Lấy lịch sử khóa tài khoản 
+  getLockHistory: async (req, res) => {
+    try {
+      const lockHistory = await userService.getLockHistory();
+      res.json({ 
+        success: true,
+        message: 'Lấy lịch sử khóa tài khoản thành công',
+        items: lockHistory 
+      });
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch sử khóa tài khoản:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Lỗi khi lấy dữ liệu từ server'
+      });
+    }
   }
 };
 
-module.exports = userController; 
+module.exports = userController;  

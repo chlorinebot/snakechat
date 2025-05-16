@@ -23,4 +23,7 @@ router.post('/unlock/:id', userController.unlockUser);
 // Route cập nhật trạng thái user (online/offline)
 router.post('/update-status', userController.updateUserStatus);
 
+// Route lấy lịch sử khóa tài khoản
+router.get('/lock-history', userController.getLockHistory);
+
 module.exports = router; 

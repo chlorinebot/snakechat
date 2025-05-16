@@ -40,6 +40,12 @@ export interface OnlineStatus {
   onlinePercentage: number;
 }
 
+export interface Role {
+  role_id: number;
+  role_name: string;
+  description: string;
+}
+
 // Thời gian (ms) mà người dùng được coi là online sau hoạt động cuối cùng
 const ONLINE_THRESHOLD = 5 * 60 * 1000; // 5 phút
 
@@ -78,37 +84,37 @@ const isUserOnline = (userId: number, onlineUsers: OnlineUserData[]) => {
 export const api = {
   // Lấy danh sách users
   getUsers: async () => {
-    const response = await axios.get<{ items: User[] }>(`${API_URL}/data`);
+    const response = await axios.get<{ items: User[] }>(`${API_URL}/user/data`);
     return response.data.items;
   },
 
   // Tạo user mới
   createUser: async (userData: User) => {
-    const response = await axios.post<{ message: string; data: User }>(`${API_URL}/send`, userData);
+    const response = await axios.post<{ message: string; data: User }>(`${API_URL}/user/send`, userData);
     return response.data;
   },
 
   // Cập nhật thông tin user
   updateUser: async (userData: User) => {
-    const response = await axios.put<{ message: string; data: User }>(`${API_URL}/update/${userData.user_id}`, userData);
+    const response = await axios.put<{ message: string; data: User }>(`${API_URL}/user/update/${userData.user_id}`, userData);
     return response.data;
   },
 
   // Xóa user
   deleteUser: async (userId: number) => {
-    const response = await axios.delete<{ message: string }>(`${API_URL}/delete/${userId}`);
+    const response = await axios.delete<{ message: string }>(`${API_URL}/user/delete/${userId}`);
     return response.data;
   },
 
   // Khóa tài khoản user
   lockUser: async (lockData: UserLock) => {
-    const response = await axios.post<{ message: string }>(`${API_URL}/lock`, lockData);
+    const response = await axios.post<{ message: string }>(`${API_URL}/user/lock`, lockData);
     return response.data;
   },
 
   // Mở khóa tài khoản user
   unlockUser: async (userId: number) => {
-    const response = await axios.post<{ message: string }>(`${API_URL}/unlock/${userId}`);
+    const response = await axios.post<{ message: string }>(`${API_URL}/user/unlock/${userId}`);
     return response.data;
   },
 
@@ -136,7 +142,7 @@ export const api = {
       }
       
       // Vẫn gọi API để ghi log hoặc các xử lý khác nếu cần
-      await axios.post<{ success: boolean; message: string }>(`${API_URL}/update-status`, {
+      await axios.post<{ success: boolean; message: string }>(`${API_URL}/user/update-status`, {
         user_id: userId,
         status
       });
@@ -252,7 +258,81 @@ export const api = {
         onlinePercentage: 0
       };
     }
-  }
+  },
+
+  // Lấy danh sách vai trò
+  getRoles: async (): Promise<Role[]> => {
+    try {
+      const response = await axios.get<{ success: boolean; message: string; items: Role[] }>(`${API_URL}/role/data`);
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách vai trò:', error);
+      throw error;
+    }
+  },
+
+  // Thêm vai trò mới
+  createRole: async (roleData: Partial<Role>): Promise<Role> => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: Role }>(`${API_URL}/role/send`, roleData);
+      return response.data.data;
+    } catch (error) {
+      console.error('Lỗi khi thêm vai trò:', error);
+      throw error;
+    }
+  },
+
+  // Cập nhật vai trò
+  updateRole: async (roleId: number, roleData: Partial<Role>): Promise<Role> => {
+    try {
+      const response = await axios.put<{ success: boolean; message: string; data: Role }>(`${API_URL}/role/update/${roleId}`, roleData);
+      return response.data.data;
+    } catch (error) {
+      console.error('Lỗi khi cập nhật vai trò:', error);
+      throw error;
+    }
+  },
+
+  // Xóa vai trò
+  deleteRole: async (roleId: number): Promise<boolean> => {
+    try {
+      const response = await axios.delete<{ success: boolean; message: string }>(`${API_URL}/role/delete/${roleId}`);
+      return response.data.success;
+    } catch (error) {
+      console.error('Lỗi khi xóa vai trò:', error);
+      throw error;
+    }
+  },
+
+  // Lấy danh sách tài khoản bị khóa
+  getLockedAccounts: async () => {
+    try {
+      // Sử dụng getUsers và lọc ra các tài khoản bị khóa
+      const users = await api.getUsers();
+      const lockedAccounts = users.filter(user => user.lock_status === 'locked');
+      
+      // Sắp xếp theo thời gian khóa mới nhất trước
+      return lockedAccounts.sort((a, b) => {
+        const timeA = a.lock_time ? new Date(a.lock_time).getTime() : 0;
+        const timeB = b.lock_time ? new Date(b.lock_time).getTime() : 0;
+        return timeB - timeA;
+      });
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách tài khoản bị khóa:', error);
+      throw error;
+    }
+  },
+
+  // Lấy tất cả các bản ghi khóa tài khoản (lịch sử)
+  getLockHistory: async () => {
+    try {
+      const response = await axios.get<{ items: UserLock[] }>(`${API_URL}/user/lock-history`);
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch sử khóa tài khoản:', error);
+      return [];
+    }
+  },
 };
 
 export default api; 
