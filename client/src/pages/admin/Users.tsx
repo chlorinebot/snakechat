@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert, Button, Table, Badge, Card, Modal, Form, InputGroup, Pagination } from 'react-bootstrap';
-import UserForm from '../components/UserForm';
-import type { User, UserLock } from '../services/api';
-import { api } from '../services/api';
-import Layout from '../components/Layout';
+import UserForm from '../../components/admin/UserForm';
+import type { User, UserLock } from '../../services/api';
+import { api } from '../../services/api';
+import Layout from '../../components/admin/Layout';
 import './Dashboard.css';
 
 type SortField = 'user_id' | 'username' | 'email' | 'role_id' | 'birthday';

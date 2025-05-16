@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
-import UserForm from '../components/UserForm';
+import UserForm from '../components/admin/UserForm';
 
 const Register: React.FC = () => {
   const [error, setError] = useState('');

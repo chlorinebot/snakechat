@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Badge } from 'react-bootstrap';
-import type { User } from '../services/api';
+import type { User } from '../../services/api';
 
 interface UserListProps {
   users: User[];

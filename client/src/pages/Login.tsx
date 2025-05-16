@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
-import UserForm from '../components/UserForm';
+import UserForm from '../components/admin/UserForm';
 import api from '../services/api';
 
 const Login: React.FC = () => {

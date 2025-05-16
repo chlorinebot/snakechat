@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Users from './pages/Users';
-import Roles from './pages/Roles';
-import LockedAccounts from './pages/LockedAccounts';
+import Dashboard from './pages/admin/Dashboard';
+import Users from './pages/admin/Users';
+import Roles from './pages/admin/Roles';
+import LockedAccounts from './pages/admin/LockedAccounts';
 import api from './services/api';
 
 const App: React.FC = () => {

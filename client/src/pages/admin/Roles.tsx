@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert, Button, Table, Card, Modal, Form, Pagination } from 'react-bootstrap';
-import Layout from '../components/Layout';
-import { api } from '../services/api';
-import type { Role } from '../services/api';
+import Layout from '../../components/admin/Layout';
+import { api } from '../../services/api';
+import type { Role } from '../../services/api';
 import './Dashboard.css';
 
 type SortField = 'role_id' | 'role_name';

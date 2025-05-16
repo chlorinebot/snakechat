@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
-import type { UserLockStatus, OnlineStatus } from '../services/api';
-import api from '../services/api';
-import Layout from '../components/Layout';
+import type { UserLockStatus, OnlineStatus } from '../../services/api';
+import api from '../../services/api';
+import Layout from '../../components/admin/Layout';
 import './Dashboard.css';
 
 interface DashboardProps {
