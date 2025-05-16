@@ -751,3 +751,159 @@ body.dark-mode {
   color: var(--text-color) !important;
   border-color: var(--border-color) !important;
 }
+
+/* Cập nhật badge trong dark mode để có màu chữ đúng */
+[data-theme="dark"] .badge.bg-success,
+.dark-mode .badge.bg-success {
+  background-color: var(--accent-green) !important;
+  color: #212529 !important; /* Màu chữ tối trên background sáng */
+}
+
+[data-theme="dark"] .badge.bg-primary,
+.dark-mode .badge.bg-primary {
+  background-color: var(--accent-blue) !important;
+  color: #ffffff !important; /* Màu chữ sáng trên background tối */
+}
+
+[data-theme="dark"] .badge.bg-warning,
+.dark-mode .badge.bg-warning {
+  background-color: var(--accent-yellow) !important;
+  color: #212529 !important; /* Màu chữ tối trên background sáng */
+}
+
+[data-theme="dark"] .badge.bg-danger,
+.dark-mode .badge.bg-danger {
+  background-color: var(--accent-red) !important;
+  color: #ffffff !important; /* Màu chữ sáng trên background tối */
+}
+
+/* Style cho badge vai trò */
+.role-badge {
+  display: inline-block;
+  min-width: 70px;
+  text-align: center;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  text-shadow: none !important;
+}
+
+/* Dark mode override cho role badge */
+[data-theme="dark"] .role-badge.bg-success,
+.dark-mode .role-badge.bg-success {
+  background: linear-gradient(45deg, #06d6a0, #05b688) !important;
+  color: #212529 !important;
+  border: none;
+  box-shadow: 0 2px 5px rgba(6, 214, 160, 0.3);
+}
+
+[data-theme="dark"] .role-badge.bg-primary,
+.dark-mode .role-badge.bg-primary {
+  background: linear-gradient(45deg, #4d7cfe, #4361ee) !important;
+  color: #ffffff !important;
+  border: none;
+  box-shadow: 0 2px 5px rgba(77, 124, 254, 0.3);
+}
+
+/* FIX QUAN TRỌNG: Đảm bảo văn bản trong badge luôn hiển thị trong dark mode */
+.badge,
+[data-theme="dark"] .badge,
+.dark-mode .badge {
+  color: white !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+.badge.bg-success,
+[data-theme="dark"] .badge.bg-success,
+.dark-mode .badge.bg-success {
+  background-color: var(--accent-green) !important;
+  color: #000000 !important;
+  text-shadow: 0px 0px 1px rgba(0,0,0,0.2) !important;
+}
+
+.badge.bg-primary,
+[data-theme="dark"] .badge.bg-primary,
+.dark-mode .badge.bg-primary {
+  background-color: var(--accent-blue) !important;
+  color: #ffffff !important;
+  text-shadow: 0px 0px 1px rgba(0,0,0,0.2) !important;
+}
+
+/* Tăng cường độ tương phản nếu cần */
+.role-badge.bg-primary,
+[data-theme="dark"] .role-badge.bg-primary,
+.dark-mode .role-badge.bg-primary {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  background-color: rgb(77, 124, 254) !important;
+}
+
+.role-badge.bg-success,
+[data-theme="dark"] .role-badge.bg-success,
+.dark-mode .role-badge.bg-success {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  background-color: rgb(6, 214, 160) !important;
+}
+
+/* Style đặc biệt để đảm bảo badge hiển thị trong dark mode */
+.dark-mode-badge.bg-primary {
+  color: white !important;
+  background-color: #4d7cfe !important;
+  border: 1px solid white !important;
+}
+
+.dark-mode-badge.bg-success {
+  color: black !important;
+  background-color: #06d6a0 !important;
+  border: 1px solid white !important;
+}
+
+/* Đảm bảo chữ luôn hiển thị trong badge dark mode */
+.badge {
+  position: relative;
+  z-index: 2;
+}
+
+.badge::after {
+  display: none !important;
+}
+
+/* Fix phổ quát cho badge trong dark mode */
+[data-theme="dark"] span.badge,
+.dark-mode span.badge {
+  visibility: visible !important;
+  display: inline-block !important;
+  opacity: 1 !important;
+}
+
+/* Styling cho modal xác nhận xóa */
+.modal-header.bg-danger {
+  background: linear-gradient(135deg, #ff6b6b, #dc3545) !important;
+  color: white !important;
+  border-bottom: none;
+}
+
+[data-theme="dark"] .modal-header.bg-danger,
+.dark-mode .modal-header.bg-danger {
+  background: linear-gradient(135deg, #ff6b6b, #c82333) !important;
+  color: white !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+[data-theme="dark"] .alert-warning,
+.dark-mode .alert-warning {
+  background-color: rgba(255, 209, 102, 0.15) !important;
+  border-color: rgba(255, 209, 102, 0.3) !important;
+  color: #e9ecef !important;
+}
+
+.modal-confirm-delete .modal-title {
+  font-weight: 600;
+}
+
+[data-theme="dark"] .modal-dialog .text-danger,
+.dark-mode .modal-dialog .text-danger {
+  color: #ff6b6b !important;
+}

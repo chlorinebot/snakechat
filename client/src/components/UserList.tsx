@@ -7,10 +7,16 @@ interface UserListProps {
 }
 
 const UserList: React.FC<UserListProps> = ({ users }) => {
+  const getRoleBadge = (roleId: number) => {
+    return roleId === 1 ? 
+      <Badge bg="success" className="px-3 py-2 role-badge">Admin</Badge> : 
+      <Badge bg="primary" className="px-3 py-2 role-badge">User</Badge>;
+  };
+
   return (
     <div className="mt-4">
       <h2 className="mb-4">Danh sách người dùng</h2>
-      <Table striped bordered hover responsive>
+      <Table striped bordered hover responsive className="user-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -27,9 +33,7 @@ const UserList: React.FC<UserListProps> = ({ users }) => {
               <td>{user.username}</td>
               <td>{user.email}</td>
               <td>
-                <Badge bg={user.role_id === 2 ? "primary" : "success"}>
-                  {user.role_name}
-                </Badge>
+                {getRoleBadge(user.role_id)}
               </td>
               <td>{user.birthday}</td>
             </tr>

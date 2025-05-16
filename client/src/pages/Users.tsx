@@ -27,6 +27,8 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   const [sortField, setSortField] = useState<SortField>('user_id');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<number | null>(null);
   
   // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
@@ -241,8 +243,6 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   };
 
   const handleDelete = async (userId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa người dùng này?')) return;
-    
     try {
       const response = await api.deleteUser(userId);
       setMessage(response.message);
@@ -254,9 +254,29 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   };
 
   const getRoleBadge = (roleId: number) => {
+    const adminStyle = {
+      backgroundColor: '#06d6a0',
+      color: '#000000',
+      fontWeight: 700,
+      padding: '5px 12px',
+      display: 'inline-block',
+      minWidth: '70px',
+      textAlign: 'center' as const
+    };
+    
+    const userStyle = {
+      backgroundColor: '#4d7cfe',
+      color: '#ffffff',
+      fontWeight: 700,
+      padding: '5px 12px',
+      display: 'inline-block',
+      minWidth: '70px',
+      textAlign: 'center' as const
+    };
+    
     return roleId === 1 ? 
-      <Badge bg="success" className="px-3 py-2">Admin</Badge> : 
-      <Badge bg="primary" className="px-3 py-2">User</Badge>;
+      <Badge bg="success" className="role-badge" style={adminStyle}>Admin</Badge> : 
+      <Badge bg="primary" className="role-badge" style={userStyle}>User</Badge>;
   };
 
   const formatDate = (dateString: string | undefined) => {
@@ -423,7 +443,12 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                             variant="outline-danger"
                             size="sm"
                             className="me-2"
-                            onClick={() => user.user_id && handleDelete(user.user_id)}
+                            onClick={() => {
+                              if (user.user_id) {
+                                setUserToDelete(user.user_id);
+                                setShowDeleteModal(true);
+                              }
+                            }}
                           >
                             <i className="fas fa-trash-alt me-1"></i>
                             Xóa
@@ -652,6 +677,58 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
           >
             <i className="fas fa-unlock me-1"></i>
             Mở khóa tài khoản
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal Xác nhận xóa người dùng */}
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} className="modal-confirm-delete">
+        <Modal.Header closeButton className="bg-danger text-white">
+          <Modal.Title>
+            <i className="fas fa-exclamation-triangle me-2"></i>
+            Xác nhận xóa người dùng
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {userToDelete && (
+            <div>
+              <p className="mb-3 fs-5">Bạn có chắc chắn muốn xóa người dùng này?</p>
+              
+              <div className="alert alert-warning">
+                <p className="mb-1">
+                  <strong>ID:</strong> {userToDelete}
+                </p>
+                <p className="mb-1">
+                  <strong>Tên người dùng:</strong> {users.find(u => u.user_id === userToDelete)?.username}
+                </p>
+                <p className="mb-0">
+                  <strong>Email:</strong> {users.find(u => u.user_id === userToDelete)?.email}
+                </p>
+              </div>
+              
+              <p className="text-danger mb-0 mt-3">
+                <i className="fas fa-info-circle me-1"></i>
+                Hành động này không thể hoàn tác sau khi thực hiện!
+              </p>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+            <i className="fas fa-times me-1"></i>
+            Hủy
+          </Button>
+          <Button 
+            variant="danger" 
+            onClick={() => {
+              if (userToDelete) {
+                handleDelete(userToDelete);
+              }
+              setShowDeleteModal(false);
+            }}
+          >
+            <i className="fas fa-trash-alt me-1"></i>
+            Xóa người dùng
           </Button>
         </Modal.Footer>
       </Modal>

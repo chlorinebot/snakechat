@@ -56,10 +56,16 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
     if (newDarkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
       document.body.classList.add('dark-mode');
+      document.querySelectorAll('.badge').forEach(badge => {
+        badge.classList.add('dark-mode-badge');
+      });
       localStorage.setItem('darkMode', 'true');
     } else {
       document.documentElement.removeAttribute('data-theme');
       document.body.classList.remove('dark-mode');
+      document.querySelectorAll('.badge').forEach(badge => {
+        badge.classList.remove('dark-mode-badge');
+      });
       localStorage.setItem('darkMode', 'false');
     }
   };
