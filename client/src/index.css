@@ -707,3 +707,47 @@ body.dark-mode {
   background-color: #ffd166 !important;
   color: #212529 !important;
 }
+
+/* Style riêng cho search-input-group */
+.search-input-group {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.search-input-group:focus-within {
+  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.15);
+}
+
+.search-input {
+  height: 45px !important;
+  font-size: 0.95rem !important;
+}
+
+/* Fix cho dark mode của search-input-group */
+[data-theme="dark"] .search-input-group,
+.dark-mode .search-input-group {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .search-input-group:focus-within,
+.dark-mode .search-input-group:focus-within {
+  box-shadow: 0 4px 12px rgba(77, 124, 254, 0.25);
+}
+
+[data-theme="dark"] .search-input-group .form-control,
+.dark-mode .search-input-group .form-control {
+  background-color: var(--input-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .search-input-group .input-group-text,
+.dark-mode .search-input-group .input-group-text {
+  background-color: var(--input-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}

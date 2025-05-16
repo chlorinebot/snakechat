@@ -343,38 +343,40 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
           <Col lg={12}>
             <Card className="shadow-sm border-0">
               <Card.Header className="border-0 py-3">
-                <div className="d-flex justify-content-between align-items-center">
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
                   <h5 className="mb-0 text-primary">Danh sách người dùng</h5>
-                  <div className="d-flex align-items-center">
-                    <Button 
-                      variant="primary" 
-                      className="me-3 add-user-btn"
-                      onClick={() => setShowAddUserModal(true)}
-                      style={{ 
-                        minWidth: "240px", 
-                        padding: "0.7rem 1.5rem",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 10px rgba(67, 97, 238, 0.3)",
-                        border: "none"
-                      }}
-                    >
-                      <i className="fas fa-plus-circle me-2"></i>
-                      Thêm người dùng mới
-                    </Button>
-                    <div className="w-100">
-                      <InputGroup>
-                        <InputGroup.Text>
-                          <i className="fas fa-search"></i>
-                        </InputGroup.Text>
-                        <Form.Control
-                          type="text"
-                          placeholder="Tìm kiếm theo ID, tên hoặc email..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </InputGroup>
-                    </div>
+                  
+                  <div className="w-100 flex-grow-1 mx-auto" style={{ maxWidth: "700px" }}>
+                    <InputGroup className="search-input-group">
+                      <InputGroup.Text>
+                        <i className="fas fa-search"></i>
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        placeholder="Tìm kiếm theo ID, tên hoặc email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="search-input"
+                      />
+                    </InputGroup>
                   </div>
+                  
+                  <Button 
+                    variant="primary" 
+                    className="add-user-btn"
+                    onClick={() => setShowAddUserModal(true)}
+                    style={{ 
+                      minWidth: "200px", 
+                      padding: "0.7rem 1.5rem",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 10px rgba(67, 97, 238, 0.3)",
+                      border: "none",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    <i className="fas fa-plus-circle me-2"></i>
+                    Thêm người dùng mới
+                  </Button>
                 </div>
               </Card.Header>
               <Card.Body className="p-0">
