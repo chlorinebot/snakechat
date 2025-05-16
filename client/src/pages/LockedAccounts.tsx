@@ -16,6 +16,7 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
   const [message, setMessage] = useState('');
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
   
   // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
@@ -155,6 +156,11 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
     setShowInfoModal(true);
   };
 
+  const handleShowUnlockConfirm = (user: User) => {
+    setSelectedUser(user);
+    setShowUnlockModal(true);
+  };
+
   const handleUnlock = async (userId: number | undefined) => {
     if (!userId) return;
     
@@ -162,6 +168,7 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
       await api.unlockUser(userId);
       fetchLockedAccounts();
       setMessage('Đã mở khóa tài khoản thành công');
+      setShowUnlockModal(false);
       setShowInfoModal(false);
     } catch (error: any) {
       console.error('Lỗi khi mở khóa tài khoản:', error);
@@ -273,7 +280,7 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
                         <Button
                           variant="outline-success"
                           size="sm"
-                          onClick={() => handleUnlock(user.user_id)}
+                          onClick={() => handleShowUnlockConfirm(user)}
                           title="Mở khóa"
                         >
                           <i className="fas fa-unlock"></i>
@@ -377,7 +384,7 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
               <>
                 <Button 
                   variant="success" 
-                  onClick={() => handleUnlock(selectedUser.user_id)}
+                  onClick={() => handleShowUnlockConfirm(selectedUser)}
                 >
                   <i className="fas fa-unlock me-1"></i> Mở khóa tài khoản
                 </Button>
@@ -386,6 +393,60 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
                 </Button>
               </>
             )}
+          </Modal.Footer>
+        </Modal>
+
+        {/* Modal xác nhận mở khóa tài khoản */}
+        <Modal
+          show={showUnlockModal}
+          onHide={() => setShowUnlockModal(false)}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Xác nhận mở khóa tài khoản</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedUser && (
+              <div>
+                <Alert variant="warning">
+                  <i className="fas fa-exclamation-triangle me-2"></i>
+                  Bạn có chắc chắn muốn mở khóa tài khoản này?
+                </Alert>
+                
+                <h6 className="fw-bold mt-3">Thông tin tài khoản:</h6>
+                <p><strong>Tên người dùng:</strong> {selectedUser.username}</p>
+                <p><strong>Email:</strong> {selectedUser.email}</p>
+                
+                <h6 className="fw-bold mt-3">Thông tin khóa:</h6>
+                <div className="mb-2">
+                  <strong>Lý do khóa:</strong>
+                  <div className="p-2 bg-light rounded mt-1">
+                    {selectedUser.reason || 'Không có lý do'}
+                  </div>
+                </div>
+                
+                <div className="d-flex">
+                  <div className="me-3">
+                    <strong>Thời gian khóa:</strong>
+                    <div className="text-danger">{formatDate(selectedUser.lock_time)}</div>
+                  </div>
+                  <div>
+                    <strong>Thời hạn khóa đến:</strong>
+                    <div className="text-danger">{formatDate(selectedUser.unlock_time)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowUnlockModal(false)}>
+              Hủy
+            </Button>
+            <Button 
+              variant="success" 
+              onClick={() => selectedUser && handleUnlock(selectedUser.user_id)}
+            >
+              <i className="fas fa-unlock me-1"></i> Xác nhận mở khóa
+            </Button>
           </Modal.Footer>
         </Modal>
       </Container>

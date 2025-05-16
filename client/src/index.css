@@ -907,3 +907,137 @@ body.dark-mode {
 .dark-mode .modal-dialog .text-danger {
   color: #ff6b6b !important;
 }
+
+/* Chỉnh sửa cho trang quản lý vai trò trong chế độ dark */
+[data-theme="dark"] .page-title {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] table {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] table thead th {
+  background-color: var(--table-head-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] table tbody tr {
+  background-color: var(--card-bg) !important;
+}
+
+[data-theme="dark"] table tbody td {
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .cursor-pointer {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .cursor-pointer:hover {
+  background-color: var(--table-hover) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .table-responsive {
+  background-color: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .form-control {
+  background-color: var(--input-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .form-control:focus {
+  background-color: var(--input-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .btn-outline-primary,
+[data-theme="dark"] .btn-outline-danger {
+  color: var(--text-color) !important;
+  border-color: currentColor !important;
+}
+
+[data-theme="dark"] .btn-outline-primary i,
+[data-theme="dark"] .btn-outline-danger i {
+  color: inherit !important;
+}
+
+/* Chỉnh sửa modal trong quản lý vai trò */
+[data-theme="dark"] .modal-content {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-header {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-header .modal-title {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .modal-body {
+  background-color: var(--card-bg) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .modal-footer {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-header .close {
+  color: var(--text-color) !important;
+  text-shadow: none;
+}
+
+[data-theme="dark"] .modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Chỉnh sửa ô tìm kiếm vai trò */
+[data-theme="dark"] .form-control::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .input-group-text {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-muted) !important;
+}
+
+/* Chỉnh sửa nút thêm vai trò */
+[data-theme="dark"] .btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background-color: var(--secondary-color) !important;
+  border-color: var(--secondary-color) !important;
+}
+
+[data-theme="dark"] .btn-primary i {
+  color: #ffffff !important;
+}
+
+/* Chỉnh sửa Card.Header trong dark mode */
+[data-theme="dark"] .card-header {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .card-header h5 {
+  color: var(--text-color) !important;
+}

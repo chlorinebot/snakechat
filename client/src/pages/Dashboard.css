@@ -496,6 +496,41 @@ h1, h2, h3, h4, h5, h6, p, span, div {
   border-color: var(--border-color);
 }
 
+/* CSS đặc biệt cho trang quản lý vai trò */
+[data-theme="dark"] table.table > tbody > tr > td {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] table.table > thead > tr > th {
+  background-color: var(--table-head-bg) !important;
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .fas.fa-sort,
+[data-theme="dark"] .fas.fa-sort-up,
+[data-theme="dark"] .fas.fa-sort-down {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .table > tbody > tr:hover > td {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .btn-outline-primary,
+[data-theme="dark"] .btn-outline-danger {
+  background-color: transparent !important;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover,
+[data-theme="dark"] .btn-outline-danger:hover {
+  background-color: var(--table-hover) !important;
+}
+
+[data-theme="dark"] .btn-outline-primary i,
+[data-theme="dark"] .btn-outline-danger i {
+  color: inherit !important;
+}
+
 [data-theme="dark"] .bg-light {
   background-color: var(--input-bg) !important;
 }
