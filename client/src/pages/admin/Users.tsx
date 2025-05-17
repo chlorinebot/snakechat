@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Alert, Button, Table, Badge, Card, Modal, Form, InputGroup, Pagination } from 'react-bootstrap';
 import UserForm from '../../components/admin/UserForm';
 import type { User, UserLock } from '../../services/api';
@@ -30,23 +30,46 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString('vi-VN'));
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  
+  // Ref để theo dõi nếu đang cập nhật tự động
+  const isAutoUpdateRef = useRef<boolean>(false);
   
   // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
 
+  // Khởi tạo và cập nhật theo thời gian thực
   useEffect(() => {
     fetchUsers();
     
     // Thiết lập interval để cập nhật danh sách người dùng theo thời gian thực
     const intervalId = setInterval(() => {
+      isAutoUpdateRef.current = true; // Đánh dấu là cập nhật tự động
+      setIsUpdating(true);
       fetchUsers();
     }, 3000); // Cập nhật mỗi 3 giây
     
     return () => clearInterval(intervalId);
   }, []);
 
+  // Xử lý lọc người dùng khi searchTerm thay đổi
   useEffect(() => {
+    filterAndSortUsers();
+    
+    // Chỉ reset trang khi người dùng thực hiện tìm kiếm, không phải khi cập nhật tự động
+    if (!isAutoUpdateRef.current) {
+      setCurrentPage(1);
+    }
+  }, [searchTerm, sortField, sortDirection]);
+
+  // Cập nhật người dùng đã lọc khi danh sách người dùng thay đổi 
+  useEffect(() => {
+    filterAndSortUsers();
+  }, [users]);
+
+  // Hàm riêng để lọc và sắp xếp dữ liệu
+  const filterAndSortUsers = () => {
     // Lọc users khi searchTerm thay đổi
     const filtered = users.filter(user => 
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,21 +80,24 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
     // Sắp xếp users theo trường đang được chọn
     const sorted = sortUsers([...filtered]);
     setFilteredUsers(sorted);
-    
-    // Reset về trang đầu tiên khi thay đổi bộ lọc
-    setCurrentPage(1);
-  }, [searchTerm, users, sortField, sortDirection]);
+  };
 
   const fetchUsers = async () => {
     try {
       const data = await api.getUsers();
       setUsers(data);
-      const sorted = sortUsers([...data]);
-      setFilteredUsers(sorted);
       setLastUpdated(new Date().toLocaleTimeString('vi-VN'));
+      setIsUpdating(false);
+      
+      // Reset cờ cập nhật tự động sau một thời gian ngắn
+      setTimeout(() => {
+        isAutoUpdateRef.current = false;
+      }, 100);
     } catch (error) {
       console.error('Lỗi khi lấy dữ liệu:', error);
       setMessage('Lỗi khi tải dữ liệu từ server');
+      setIsUpdating(false);
+      isAutoUpdateRef.current = false;
     }
   };
 
@@ -117,6 +143,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   // Xử lý chuyển trang
   const paginate = (pageNumber: number) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
+      isAutoUpdateRef.current = false; // Đánh dấu không phải cập nhật tự động
       setCurrentPage(pageNumber);
     }
   };
@@ -189,6 +216,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   };
 
   const handleSort = (field: SortField) => {
+    isAutoUpdateRef.current = false; // Đánh dấu không phải cập nhật tự động
     if (field === sortField) {
       // Nếu field đã được chọn, đổi hướng sắp xếp
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -403,7 +431,10 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                         type="text"
                         placeholder="Tìm kiếm theo ID, tên hoặc email..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                          isAutoUpdateRef.current = false; // Đánh dấu không phải cập nhật tự động
+                          setSearchTerm(e.target.value);
+                        }}
                         className="search-input"
                       />
                     </InputGroup>
@@ -431,7 +462,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                 <div className="p-3 d-flex justify-content-between align-items-center border-bottom">
                   <small className="text-muted">Cập nhật theo thời gian thực</small>
                   <small className="text-primary">
-                    <i className="fas fa-sync-alt me-1"></i>
+                    <i className={`fas fa-sync-alt me-1 ${isUpdating ? 'fa-spin' : ''}`}></i>
                     Cập nhật gần nhất: {lastUpdated}
                   </small>
                 </div>
