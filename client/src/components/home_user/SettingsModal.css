@@ -11,6 +11,11 @@
   z-index: 9999;
 }
 
+/* Quy tắc áp dụng cho toàn bộ modal */
+.settings-modal * {
+  color: #000000 !important;
+}
+
 .settings-modal {
   background-color: white;
   border-radius: 12px;
@@ -38,6 +43,24 @@
   font-size: 18px;
   color: #000000;
   font-weight: 700;
+}
+
+/* Đảm bảo tiêu đề "Cài đặt" luôn hiển thị màu đen */
+#settings-title-heading {
+  color: #000000 !important;
+  color: black !important;
+  font-weight: 900 !important;
+  font-size: 20px !important;
+}
+
+/* Đảm bảo cài đặt trong span luôn hiển thị đúng màu */
+#settings-title-heading span {
+  color: #000000 !important;
+}
+
+/* Ghi đè mọi quy tắc có thể ảnh hưởng */
+h2#settings-title-heading {
+  color: #000000 !important;
 }
 
 .close-button {

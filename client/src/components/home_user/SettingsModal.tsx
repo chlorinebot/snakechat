@@ -19,7 +19,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     <div className="settings-modal-overlay">
       <div className="settings-modal">
         <div className="settings-modal-header">
-          <h2 style={{ color: "#000000 !important", fontWeight: 900, fontSize: "20px" }}>Cài đặt</h2>
+          <h2 id="settings-title-heading" style={{ color: "#000000", fontWeight: 900, fontSize: "20px" }}><span style={{ color: "#000000" }}>Cài đặt</span></h2>
           <button className="close-button" onClick={onClose}></button>
         </div>
         <div className="settings-modal-content">
