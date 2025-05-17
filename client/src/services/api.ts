@@ -18,7 +18,7 @@ export interface User {
   lock_time?: string;
   unlock_time?: string;
   // Trạng thái online/offline
-  status?: string; // 'online' hoặc 'offline'
+  status?: string; // 'online' hoặc 'offline' hoặc 'away'
   join_date?: string;
 }
 
@@ -90,7 +90,7 @@ export const api = {
   },
 
   // Cập nhật trạng thái online/offline
-  updateStatus: async (userId: number, status: 'online' | 'offline') => {
+  updateStatus: async (userId: number, status: 'online' | 'offline' | 'away') => {
     try {
       // Gọi API cập nhật trạng thái vào database
       const response = await axios.post<{ success: boolean; message: string }>(`${API_URL}/user/update-status`, {
@@ -152,6 +152,35 @@ export const api = {
       await api.updateStatus(userId, 'offline');
     } catch (error) {
       console.error('Lỗi khi cập nhật trạng thái offline:', error);
+    }
+  },
+
+  // Đánh dấu người dùng đang rời (away)
+  updateUserAway: async (userId: number) => {
+    try {
+      if (!userId) return;
+      
+      // Cập nhật trạng thái away
+      await api.updateStatus(userId, 'away');
+    } catch (error) {
+      console.error('Lỗi khi cập nhật trạng thái away:', error);
+    }
+  },
+
+  // Gửi heartbeat để xác nhận người dùng vẫn đang hoạt động
+  sendHeartbeat: async (userId: number) => {
+    try {
+      if (!userId) return;
+      
+      // Gửi heartbeat lên server
+      const response = await axios.post<{ success: boolean; message: string }>(`${API_URL}/user/heartbeat`, {
+        user_id: userId
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi gửi heartbeat:', error);
+      return { success: false, message: 'Lỗi khi gửi heartbeat' };
     }
   },
 

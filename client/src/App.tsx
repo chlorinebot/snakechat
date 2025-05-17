@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -8,11 +8,24 @@ import Roles from './pages/admin/Roles';
 import LockedAccounts from './pages/admin/LockedAccounts';
 import api from './services/api';
 
+// URL endpoint cho cập nhật trạng thái
+const API_URL = 'http://localhost:5000/api';
+const OFFLINE_URL = `${API_URL}/user/update-status-beacon`;
+const HEARTBEAT_INTERVAL = 30000; // 30 giây
+
 const App: React.FC = () => {
   // Kiểm tra authentication và role từ localStorage
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(localStorage.getItem('token') !== null);
   const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('user') || '{}'));
   const isAdmin = user.role_id === 1;
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isTabActive, setIsTabActive] = useState<boolean>(document.visibilityState === 'visible');
+
+  // Hàm cập nhật thời gian hoạt động cuối cùng
+  const updateLastActivityTime = () => {
+    const now = new Date().getTime();
+    localStorage.setItem('lastActivity', now.toString());
+  };
 
   // Thêm sự kiện để cập nhật trạng thái online
   const updateOnlineStatus = () => {
@@ -23,16 +36,32 @@ const App: React.FC = () => {
         // Kiểm tra cả id và user_id
         const userId = parsedUser.user_id || parsedUser.id;
         if (userId) {
-          console.log('Cập nhật trạng thái online định kỳ cho user:', userId);
           api.updateUserActivity(userId);
-        } else {
-          console.error('Không tìm thấy user_id hoặc id trong dữ liệu:', parsedUser);
+          // Cập nhật thời gian hoạt động cuối cùng
+          updateLastActivityTime();
         }
       } catch (error) {
         console.error('Lỗi khi parse user data trong updateOnlineStatus:', error);
       }
-    } else {
-      console.log('Không có dữ liệu người dùng trong localStorage');
+    }
+  };
+
+  // Hàm gửi heartbeat để xác nhận người dùng vẫn đang sử dụng hệ thống
+  const sendHeartbeat = () => {
+    if (!isTabActive) return; // Không gửi heartbeat nếu tab không hoạt động
+    
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        const userId = parsedUser.user_id || parsedUser.id;
+        if (userId) {
+          api.sendHeartbeat(userId);
+          updateLastActivityTime();
+        }
+      } catch (error) {
+        console.error('Lỗi khi gửi heartbeat:', error);
+      }
     }
   };
 
@@ -45,74 +74,182 @@ const App: React.FC = () => {
         // Kiểm tra cả id và user_id
         const userId = parsedUser.user_id || parsedUser.id;
         if (userId) {
-          console.log('Đang cập nhật trạng thái offline cho user:', userId);
           await api.updateUserOffline(userId);
-        } else {
-          console.error('Không tìm thấy user_id hoặc id trong dữ liệu:', parsedUser);
         }
       } catch (error) {
         console.error('Lỗi khi parse user data trong handleUserOffline:', error);
       }
-    } else {
-      console.log('Không có dữ liệu người dùng để cập nhật offline');
     }
   };
 
+  // Hàm sử dụng Beacon API để gửi trạng thái offline khi đóng tab
+  const sendOfflineBeacon = () => {
+    const userData = localStorage.getItem('user');
+    if (userData && navigator.sendBeacon) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        const userId = parsedUser.user_id || parsedUser.id;
+        if (userId) {
+          const data = new FormData();
+          data.append('user_id', userId.toString());
+          data.append('status', 'offline');
+          
+          // Sử dụng navigator.sendBeacon để đảm bảo yêu cầu được gửi ngay cả khi đóng tab
+          const beaconSent = navigator.sendBeacon(OFFLINE_URL, data);
+          return beaconSent;
+        }
+      } catch (error) {
+        console.error('Lỗi khi gửi beacon:', error);
+      }
+    }
+    return false;
+  };
+
+  // Kiểm tra xem người dùng có hoạt động trong khoảng thời gian quy định không
+  const checkUserActivity = () => {
+    const lastActivity = localStorage.getItem('lastActivity');
+    if (lastActivity) {
+      const now = new Date().getTime();
+      const lastActiveTime = parseInt(lastActivity, 10);
+      const inactiveTime = now - lastActiveTime;
+      
+      // Nếu không hoạt động trong 5 phút (300000ms), đánh dấu là offline
+      if (inactiveTime > 300000) {
+        handleUserOffline();
+        return false;
+      }
+    }
+    return true;
+  };
+
   useEffect(() => {
+    // Khởi tạo thời gian hoạt động cuối cùng
+    updateLastActivityTime();
+    
     // Kiểm tra token khi component mount
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    console.log('App khởi động - Đang kiểm tra thông tin người dùng...', { token: !!token });
     
     setIsAuthenticated(token !== null);
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        console.log('Thông tin người dùng từ localStorage:', parsedUser);
         setUser(parsedUser);
         
         // Cập nhật trạng thái online nếu người dùng đã đăng nhập
         // Kiểm tra cả id và user_id
         const userId = parsedUser.user_id || parsedUser.id;
         if (userId) {
-          console.log('Đã xác định được id người dùng, đang cập nhật trạng thái online:', userId);
           api.updateUserActivity(userId);
-        } else {
-          console.error('Không tìm thấy user_id hoặc id trong localStorage:', parsedUser);
+          updateLastActivityTime();
         }
       } catch (error) {
         console.error('Lỗi khi parse thông tin user từ localStorage:', error);
       }
-    } else {
-      console.log('Không tìm thấy thông tin người dùng trong localStorage');
     }
     
     // Thiết lập interval để cập nhật trạng thái online
     const intervalId = setInterval(() => {
-      updateOnlineStatus();
+      // Chỉ cập nhật nếu người dùng vẫn hoạt động
+      if (checkUserActivity()) {
+        updateOnlineStatus();
+      }
     }, 30000); // Cập nhật mỗi 30 giây
+    
+    // Thiết lập interval cho heartbeat
+    heartbeatTimerRef.current = setInterval(() => {
+      sendHeartbeat();
+    }, HEARTBEAT_INTERVAL);
+    
+    // Thiết lập interval để kiểm tra định kỳ sự hoạt động của người dùng
+    const activityCheckId = setInterval(() => {
+      checkUserActivity();
+    }, 60000); // Kiểm tra mỗi phút
     
     // Xử lý sự kiện khi người dùng đóng tab/trình duyệt
     const handleBeforeUnload = () => {
-      console.log('Người dùng đang đóng tab/trình duyệt - cập nhật offline');
-      handleUserOffline();
+      // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
+      if (!sendOfflineBeacon()) {
+        // Fallback nếu sendBeacon không được hỗ trợ
+        handleUserOffline();
+      }
     };
     
     // Xử lý sự kiện khi mất kết nối internet
     const handleOffline = () => {
-      console.log('Mất kết nối internet - cập nhật offline');
       handleUserOffline();
+    };
+    
+    // Xử lý sự kiện khi có kết nối internet trở lại
+    const handleOnline = () => {
+      updateOnlineStatus();
+    };
+    
+    // Xử lý sự kiện khi tab không còn hiển thị
+    const handleVisibilityChange = () => {
+      const isVisible = document.visibilityState === 'visible';
+      setIsTabActive(isVisible);
+      
+      if (!isVisible) {
+        // Tab không còn hiển thị
+        localStorage.setItem('tabHiddenTime', new Date().getTime().toString());
+        
+        // Dừng heartbeat khi tab không hiển thị
+        if (heartbeatTimerRef.current) {
+          clearInterval(heartbeatTimerRef.current);
+          heartbeatTimerRef.current = null;
+        }
+        
+        // Cập nhật trạng thái "away" trên server
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            const userId = parsedUser.user_id || parsedUser.id;
+            if (userId) {
+              api.updateUserAway(userId);
+            }
+          } catch (error) {
+            console.error('Lỗi khi cập nhật trạng thái away:', error);
+          }
+        }
+      } else {
+        // Tab hiển thị lại
+        const hiddenTime = localStorage.getItem('tabHiddenTime');
+        if (hiddenTime) {
+          const now = new Date().getTime();
+          const hiddenDuration = now - parseInt(hiddenTime, 10);
+          
+          // Nếu tab đã ẩn hơn 5 phút, cập nhật lại trạng thái online
+          if (hiddenDuration > 300000) {
+            updateOnlineStatus();
+          }
+        }
+        
+        // Khởi động lại heartbeat khi tab hiển thị lại
+        if (!heartbeatTimerRef.current) {
+          heartbeatTimerRef.current = setInterval(() => {
+            sendHeartbeat();
+          }, HEARTBEAT_INTERVAL);
+        }
+        
+        // Cập nhật lại thời gian hoạt động
+        updateLastActivityTime();
+        updateOnlineStatus();
+      }
     };
     
     // Theo dõi hoạt động người dùng trên trang
     const handleUserActivity = () => {
-      console.log('Cập nhật trạng thái online đính kỳ cho user: chỉ theo dõi khi click hoặc cuộn trang');
       updateOnlineStatus();
+      updateLastActivityTime();
     };
     
     // Đăng ký các sự kiện
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     // Theo dõi các sự kiện tương tác của người dùng
     document.addEventListener('click', handleUserActivity);
@@ -121,8 +258,14 @@ const App: React.FC = () => {
     return () => {
       // Xóa đăng ký sự kiện và dừng interval khi component unmount
       clearInterval(intervalId);
+      clearInterval(activityCheckId);
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+      }
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('click', handleUserActivity);
       document.removeEventListener('scroll', handleUserActivity);
       
@@ -139,6 +282,8 @@ const App: React.FC = () => {
     // Xóa thông tin đăng nhập khỏi localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('lastActivity');
+    localStorage.removeItem('tabHiddenTime');
     
     // Cập nhật state
     setIsAuthenticated(false);
