@@ -241,7 +241,8 @@ const Roles: React.FC<RolesProps> = ({ onLogout }) => {
     }
 
     try {
-      await api.updateRole(selectedRole.role_id, {
+      await api.updateRole({
+        role_id: selectedRole.role_id,
         role_name: roleName,
         description,
       });
@@ -293,12 +294,16 @@ const Roles: React.FC<RolesProps> = ({ onLogout }) => {
                 <h5 className="mb-0">Danh sách vai trò</h5>
               </Col>
               <Col md={4}>
-                <Form.Control
-                  type="text"
-                  placeholder="Tìm kiếm vai trò..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <div className="position-relative">
+                  <Form.Control
+                    type="text"
+                    placeholder="Tìm kiếm vai trò..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pe-4"
+                  />
+                  <i className="fas fa-search position-absolute" style={{ right: '10px', top: '10px', color: '#aaa' }}></i>
+                </div>
               </Col>
               <Col md="auto">
                 <Button

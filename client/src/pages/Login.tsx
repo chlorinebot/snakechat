@@ -54,7 +54,7 @@ const Login: React.FC = () => {
           window.location.href = '/user-home'; // hoặc trang dành cho người dùng thường
         }
       } else {
-        setError(result.message || 'Email hoặc mật khẩu không chính xác');
+        setError(result.message || 'Thông tin đăng nhập không chính xác');
       }
     } catch (error) {
       console.error('Lỗi đăng nhập chi tiết:', error);
@@ -64,10 +64,10 @@ const Login: React.FC = () => {
 
   const loginFields = [
     {
-      name: 'email',
-      label: 'Email',
-      type: 'email',
-      placeholder: 'name@example.com'
+      name: 'identity',
+      label: 'Email hoặc tên đăng nhập',
+      type: 'text',
+      placeholder: 'Nhập email hoặc tên đăng nhập'
     },
     {
       name: 'password',

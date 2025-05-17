@@ -168,21 +168,14 @@ const App: React.FC = () => {
     }, 60000); // Kiểm tra mỗi phút
     
     // Xử lý sự kiện khi người dùng đóng tab/trình duyệt
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       console.log('Sự kiện beforeunload đã được kích hoạt');
-      
-      // Thêm message để trình duyệt hiển thị hộp thoại xác nhận
-      event.preventDefault();
-      event.returnValue = '';
       
       // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
       if (!sendOfflineBeacon()) {
         // Fallback nếu sendBeacon không được hỗ trợ
         handleUserOffline();
       }
-      
-      // Xóa message sau khi đã gửi beacon
-      delete event.returnValue;
     };
     
     // Thêm sự kiện unload để đảm bảo hơn nữa

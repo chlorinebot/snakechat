@@ -17,6 +17,15 @@ router.post('/register', async (req, res) => {
             });
         }
 
+        // Kiểm tra username đã tồn tại
+        const [existingUsernames] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+        if (existingUsernames.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Tên đăng nhập đã được sử dụng' 
+            });
+        }
+
         // Mã hóa mật khẩu
         const hashedPassword = await bcrypt.hash(password, 10);
         
@@ -42,26 +51,26 @@ router.post('/register', async (req, res) => {
 // Đăng nhập
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { identity, password } = req.body;
 
-        // Tìm user theo email
-        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        // Tìm user theo email hoặc username
+        const [users] = await db.query('SELECT * FROM users WHERE email = ? OR username = ?', [identity, identity]);
         if (users.length === 0) {
             return res.status(401).json({ 
                 success: false, 
-                message: 'Email hoặc mật khẩu không chính xác' 
+                message: 'Thông tin đăng nhập không chính xác' 
             });
         }
 
         const user = users[0];
-        console.log('Thông tin user từ database:', { user_id: user.user_id, email: user.email });
+        console.log('Thông tin user từ database:', { user_id: user.user_id, email: user.email, username: user.username });
 
         // Kiểm tra mật khẩu
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ 
                 success: false, 
-                message: 'Email hoặc mật khẩu không chính xác' 
+                message: 'Thông tin đăng nhập không chính xác' 
             });
         }
 

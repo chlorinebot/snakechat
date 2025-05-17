@@ -217,12 +217,16 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
                 <h5 className="mb-0">Danh sách tài khoản bị khóa</h5>
               </Col>
               <Col md={4}>
-                <Form.Control
-                  type="text"
-                  placeholder="Tìm kiếm theo tên, email, lý do khóa..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <div className="position-relative">
+                  <Form.Control
+                    type="text"
+                    placeholder="Tìm kiếm theo tên, email, lý do khóa..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pe-4"
+                  />
+                  <i className="fas fa-search position-absolute" style={{ right: '10px', top: '10px', color: '#aaa' }}></i>
+                </div>
               </Col>
               <Col md="auto">
                 <Button 
