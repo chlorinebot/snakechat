@@ -280,21 +280,21 @@ const userController = {
 
   // Xử lý yêu cầu cập nhật trạng thái offline từ Beacon API
   updateUserStatusBeacon: async (req, res) => {
-    // Beacon API không chờ phản hồi, nên trả về ngay lập tức
-    res.status(202).send('');
-    
-    // Lấy dữ liệu từ form data (Beacon API sử dụng FormData)
-    const user_id = req.body.user_id;
-    const status = req.body.status || 'offline';
-    
-    console.log('Nhận yêu cầu Beacon từ client để cập nhật trạng thái:', { user_id, status });
-    
-    if (!user_id) {
-      console.error('Thiếu thông tin user_id trong yêu cầu Beacon');
-      return;
-    }
-    
     try {
+      // Beacon API không chờ phản hồi, nên trả về ngay lập tức
+      res.status(202).send('');
+      
+      // Lấy dữ liệu từ form data (Beacon API sử dụng FormData)
+      const user_id = req.body && req.body.user_id;
+      const status = req.body && (req.body.status || 'offline');
+      
+      if (!user_id) {
+        console.error('Thiếu thông tin user_id trong yêu cầu Beacon');
+        return;
+      }
+      
+      console.log('Nhận yêu cầu Beacon từ client để cập nhật trạng thái:', { user_id, status });
+      
       // Cập nhật trạng thái offline
       const result = await userService.updateUserStatus(user_id, status);
       console.log(`Đã cập nhật trạng thái ${status} cho user ${user_id} qua Beacon API:`, result);
