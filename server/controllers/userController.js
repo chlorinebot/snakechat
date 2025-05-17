@@ -289,17 +289,21 @@ const userController = {
       const status = req.body && (req.body.status || 'offline');
       
       if (!user_id) {
-        console.error('Thiếu thông tin user_id trong yêu cầu Beacon');
+        // Không hiển thị log cho lỗi này do xảy ra quá thường xuyên
         return;
       }
       
-      console.log('Nhận yêu cầu Beacon từ client để cập nhật trạng thái:', { user_id, status });
+      // Tắt tất cả log không cần thiết
+      // console.log('Nhận yêu cầu Beacon từ client để cập nhật trạng thái:', { user_id, status });
       
       // Cập nhật trạng thái offline
-      const result = await userService.updateUserStatus(user_id, status);
-      console.log(`Đã cập nhật trạng thái ${status} cho user ${user_id} qua Beacon API:`, result);
+      await userService.updateUserStatus(user_id, status);
+      // console.log(`Đã cập nhật trạng thái ${status} cho user ${user_id} qua Beacon API:`, result);
     } catch (error) {
-      console.error('Lỗi khi xử lý yêu cầu Beacon:', error);
+      // Chỉ log lỗi nghiêm trọng, không phải lỗi thường gặp
+      if (error.message !== 'Không tìm thấy user') {
+        console.error('Lỗi nghiêm trọng khi xử lý yêu cầu Beacon:', error);
+      }
     }
   },
   

@@ -14,14 +14,18 @@ const setupInactiveUsersCron = () => {
       
       const res = {
         json: (data) => {
-          if (data.affected > 0) {
+          // Loại bỏ thông báo log khi cập nhật trạng thái người dùng không hoạt động
+          /* if (data.affected > 0) {
             console.log(`Cập nhật trạng thái offline cho ${data.affected} người dùng không hoạt động`);
-          }
+          } */
         },
         status: (code) => {
           return {
             json: (data) => {
-              console.error('Lỗi khi kiểm tra người dùng không hoạt động:', data);
+              // Chỉ hiển thị lỗi nghiêm trọng
+              if (data && data.message !== 'Đã kiểm tra và cập nhật người dùng không hoạt động') {
+                console.error('Lỗi khi kiểm tra người dùng không hoạt động:', data);
+              }
             }
           };
         }
