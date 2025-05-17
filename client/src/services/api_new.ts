@@ -4,7 +4,6 @@ const API_URL = 'http://localhost:5000/api';
 
 export interface User {
   user_id?: number;
-  id?: number;
   username: string;
   email: string;
   password: string;
@@ -93,14 +92,14 @@ export const api = {
   updateStatus: async (userId: number, status: 'online' | 'offline') => {
     try {
       // Gọi API cập nhật trạng thái vào database
-      const response = await axios.post<{ success: boolean; message: string }>(`${API_URL}/user/update-status`, {
+      await axios.post<{ success: boolean; message: string }>(`${API_URL}/user/update-status`, {
         user_id: userId,
         status
       });
       
       return { success: true, message: `Trạng thái đã được cập nhật thành ${status}` };
-    } catch (error: any) {
-      console.error('Lỗi khi cập nhật trạng thái:', error.message);
+    } catch (error) {
+      console.error('Lỗi khi cập nhật trạng thái:', error);
       return { success: false, message: 'Lỗi khi cập nhật trạng thái' };
     }
   },
@@ -163,13 +162,12 @@ export const api = {
       const totalUsers = users.length;
       
       // Đếm số người dùng đang online dựa vào cột status
-      const onlineUsers = users.filter(user => user.status === 'online');
-      const onlineCount = onlineUsers.length;
-      const onlinePercentage = totalUsers > 0 ? Math.round((onlineCount / totalUsers) * 100) : 0;
+      const onlineUsers = users.filter(user => user.status === 'online').length;
+      const onlinePercentage = totalUsers > 0 ? Math.round((onlineUsers / totalUsers) * 100) : 0;
       
       return {
         totalUsers,
-        onlineUsers: onlineCount,
+        onlineUsers: onlineUsers,
         onlinePercentage: onlinePercentage
       };
     } catch (error) {
@@ -210,23 +208,6 @@ export const api = {
   getLockHistory: async () => {
     const response = await axios.get<{ items: any[] }>(`${API_URL}/user/lock-history`);
     return response.data.items;
-  },
-
-  // Lấy danh sách tài khoản bị khóa
-  getLockedAccounts: async () => {
-    try {
-      // Trước tiên lấy tất cả người dùng
-      const response = await axios.get<{ items: User[] }>(`${API_URL}/user/data`);
-      const users = response.data.items;
-      
-      // Lọc những người dùng có trạng thái khóa
-      const lockedUsers = users.filter(user => user.lock_id && user.lock_status === 'locked');
-      
-      return lockedUsers;
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách tài khoản bị khóa:', error);
-      return [];
-    }
   }
 };
 

@@ -162,20 +162,54 @@ const userService = {
 
   // Cập nhật trạng thái user (online/offline)
   updateUserStatus: async (userId, status) => {
-    // Kiểm tra user có tồn tại không
-    const [userRows] = await pool.query('SELECT * FROM users WHERE user_id = ?', [userId]);
+    console.log(`Service - Cập nhật trạng thái ${status} cho user ${userId}`);
     
-    if (userRows.length === 0) {
-      throw new Error('Không tìm thấy user');
+    try {
+      // Kiểm tra xem cột status đã tồn tại trong bảng users chưa
+      console.log('Kiểm tra cấu trúc bảng users...');
+      const [columns] = await pool.query(`SHOW COLUMNS FROM users LIKE 'status'`);
+      
+      if (columns.length === 0) {
+        // Nếu cột status chưa tồn tại, thêm cột này vào bảng users
+        console.log('Cột status chưa tồn tại, đang thêm cột...');
+        await pool.query(`ALTER TABLE users ADD COLUMN status ENUM('online', 'offline') DEFAULT 'offline'`);
+        console.log('Đã thêm cột status vào bảng users');
+      } else {
+        console.log('Cột status đã tồn tại');
+      }
+      
+      // Kiểm tra user có tồn tại không
+      const [userRows] = await pool.query('SELECT * FROM users WHERE user_id = ?', [userId]);
+      console.log('Kết quả tìm user:', { foundUsers: userRows.length, userExists: userRows.length > 0 });
+      
+      if (userRows.length === 0) {
+        console.log('Không tìm thấy user với ID:', userId);
+        throw new Error('Không tìm thấy user');
+      }
+      
+      // Cập nhật trạng thái online/offline vào cột status của bảng users
+      console.log('Thực hiện query để cập nhật status:', { status, userId });
+      const [result] = await pool.query(
+        'UPDATE users SET status = ? WHERE user_id = ?',
+        [status, userId]
+      );
+      
+      console.log('Kết quả UPDATE:', result);
+      
+      if (result.affectedRows === 0) {
+        console.log('Không thể cập nhật trạng thái - affected rows = 0');
+        throw new Error('Không thể cập nhật trạng thái');
+      }
+      
+      console.log('Cập nhật trạng thái thành công');
+      return {
+        user_id: userId,
+        status
+      };
+    } catch (error) {
+      console.error('Lỗi SQL khi cập nhật trạng thái:', error.message);
+      throw error;
     }
-    
-    // Thay vì cập nhật vào bảng users, chúng ta sẽ lưu trạng thái online trong localStorage phía client
-    // và có thể lưu vào bảng user_online nếu cần thiết trong tương lai
-    
-    return {
-      user_id: userId,
-      status
-    };
   },
 
   // Lấy lịch sử khóa tài khoản

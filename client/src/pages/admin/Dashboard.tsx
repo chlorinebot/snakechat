@@ -51,9 +51,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       
       // Debug thông tin người dùng
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const onlineData = localStorage.getItem('online_users');
       console.log('Người dùng hiện tại:', user);
-      console.log('Dữ liệu online:', onlineData);
+      
+      // Kiểm tra user_id hoặc id có tồn tại trong localStorage không
+      const userId = user.user_id || user.id;
+      if (userId) {
+        console.log('Đã xác định được ID người dùng:', userId);
+        // Cập nhật trạng thái online của người dùng đang đăng nhập
+        await api.updateUserActivity(userId);
+      } else {
+        console.error('Không tìm thấy user_id hoặc id trong localStorage:', user);
+      }
       
       // Tính toán số liệu thống kê
       const total = data.length;
@@ -68,9 +76,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       
       // Lấy số liệu người dùng đang online
       const onlineStatus = await api.getOnlineStatus();
-      console.log('Trạng thái online:', onlineStatus);
+      console.log('Trạng thái online từ API:', onlineStatus);
       setOnlineUsers(onlineStatus.onlineUsers);
       setOnlineRate(onlineStatus.onlinePercentage);
+      
+      // In ra danh sách người dùng đang online để debug
+      console.log('Danh sách người dùng đang online:',
+        data.filter(user => user.status === 'online')
+          .map(user => ({ id: user.user_id, username: user.username }))
+      );
       
       // Lấy thông tin về tài khoản bị khóa từ API
       const lockStatus = await api.getLockStatus();

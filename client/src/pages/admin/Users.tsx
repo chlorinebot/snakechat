@@ -29,6 +29,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString('vi-VN'));
   
   // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,6 +37,13 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
 
   useEffect(() => {
     fetchUsers();
+    
+    // Thiết lập interval để cập nhật danh sách người dùng theo thời gian thực
+    const intervalId = setInterval(() => {
+      fetchUsers();
+    }, 3000); // Cập nhật mỗi 3 giây
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -60,6 +68,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
       setUsers(data);
       const sorted = sortUsers([...data]);
       setFilteredUsers(sorted);
+      setLastUpdated(new Date().toLocaleTimeString('vi-VN'));
     } catch (error) {
       console.error('Lỗi khi lấy dữ liệu:', error);
       setMessage('Lỗi khi tải dữ liệu từ server');
@@ -344,6 +353,25 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
     return new Date(dateString).toLocaleString('vi-VN');
   };
 
+  // Thêm hàm hiển thị trạng thái online/offline
+  const getStatusBadge = (status?: string) => {
+    if (status === 'online') {
+      return (
+        <Badge bg="success" pill className="px-3 py-2 online-badge">
+          <i className="fas fa-circle text-white me-1 pulse-animation"></i>
+          Online
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge bg="secondary" pill className="px-3 py-2">
+          <i className="fas fa-circle-notch me-1"></i>
+          Offline
+        </Badge>
+      );
+    }
+  };
+
   return (
     <Layout onLogout={onLogout}>
       <Container fluid>
@@ -400,6 +428,13 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                 </div>
               </Card.Header>
               <Card.Body className="p-0">
+                <div className="p-3 d-flex justify-content-between align-items-center border-bottom">
+                  <small className="text-muted">Cập nhật theo thời gian thực</small>
+                  <small className="text-primary">
+                    <i className="fas fa-sync-alt me-1"></i>
+                    Cập nhật gần nhất: {lastUpdated}
+                  </small>
+                </div>
                 <Table hover responsive className="mb-0 user-table">
                   <thead>
                     <tr>
@@ -418,6 +453,9 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                       <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => handleSort('birthday')}>
                         Ngày sinh {getSortIcon('birthday')}
                       </th>
+                      <th scope="col" className="px-4 py-3">
+                        Trạng thái
+                      </th>
                       <th scope="col" className="px-4 py-3">Thao tác</th>
                     </tr>
                   </thead>
@@ -429,6 +467,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                         <td className="px-4 py-3">{user.email}</td>
                         <td className="px-4 py-3">{getRoleBadge(user.role_id)}</td>
                         <td className="px-4 py-3">{formatDate(user.birthday)}</td>
+                        <td className="px-4 py-3">{getStatusBadge(user.status)}</td>
                         <td className="px-4 py-3">
                           <Button
                             variant="outline-primary"

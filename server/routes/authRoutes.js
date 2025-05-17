@@ -54,6 +54,7 @@ router.post('/login', async (req, res) => {
         }
 
         const user = users[0];
+        console.log('Thông tin user từ database:', { user_id: user.user_id, email: user.email });
 
         // Kiểm tra mật khẩu
         const validPassword = await bcrypt.compare(password, user.password);
@@ -64,13 +65,20 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        // Cập nhật trạng thái online ngay khi đăng nhập thành công
+        await db.query('UPDATE users SET status = ? WHERE user_id = ?', ['online', user.user_id]);
+        console.log(`Đã cập nhật trạng thái online cho user ${user.user_id} khi đăng nhập`);
+
         // Tạo đối tượng user không chứa mật khẩu
         const userWithoutPassword = {
-            id: user.user_id,
+            user_id: user.user_id, // Sửa từ id thành user_id để khớp với interface bên client
+            id: user.user_id,      // Để đảm bảo tương thích với cả hai cách
             username: user.username,
             email: user.email,
             role_id: user.role_id
         };
+
+        console.log('Gửi thông tin user về client:', userWithoutPassword);
 
         res.json({
             success: true,

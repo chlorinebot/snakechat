@@ -19,18 +19,30 @@ const Login: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
+        console.log('Thông tin người dùng từ server:', result.user);
+        
+        // Đảm bảo dữ liệu người dùng có user_id
+        const userData = { ...result.user };
+        if (!userData.user_id && userData.id) {
+          console.log('Chuyển đổi id thành user_id cho tương thích với client');
+          userData.user_id = userData.id;
+        }
+        
         // Lưu token và thông tin người dùng vào localStorage
         localStorage.setItem('token', result.token);
-        localStorage.setItem('user', JSON.stringify(result.user));
+        localStorage.setItem('user', JSON.stringify(userData));
         
         // Cập nhật trạng thái online cho người dùng
-        if (result.user && result.user.user_id) {
+        const userId = userData.user_id || userData.id;
+        if (userId) {
           try {
-            await api.updateStatus(result.user.user_id, 'online');
-            console.log('Đã cập nhật trạng thái online');
+            await api.updateStatus(userId, 'online');
+            console.log('Đã cập nhật trạng thái online cho user ID:', userId);
           } catch (err) {
             console.error('Lỗi khi cập nhật trạng thái online:', err);
           }
+        } else {
+          console.error('Không tìm thấy user_id hoặc id trong dữ liệu đăng nhập:', userData);
         }
         
         // Kiểm tra role_id và điều hướng
@@ -45,6 +57,7 @@ const Login: React.FC = () => {
         setError(result.message || 'Email hoặc mật khẩu không chính xác');
       }
     } catch (error) {
+      console.error('Lỗi đăng nhập chi tiết:', error);
       setError('Đăng nhập thất bại. Vui lòng thử lại sau.');
     }
   };
