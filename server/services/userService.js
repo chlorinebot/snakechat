@@ -187,10 +187,13 @@ const userService = {
       
       if (columns.length === 0) {
         // Nếu cột status chưa tồn tại, thêm cột này vào bảng users
-        await pool.query(`ALTER TABLE users ADD COLUMN status ENUM('online', 'offline', 'away') DEFAULT 'offline'`);
-      } else if (columns[0].Type === "enum('online','offline')") {
-        // Nếu trạng thái enum chưa có 'away', cập nhật kiểu dữ liệu
-        await pool.query(`ALTER TABLE users MODIFY COLUMN status ENUM('online', 'offline', 'away') DEFAULT 'offline'`);
+        await pool.query(`ALTER TABLE users ADD COLUMN status ENUM('online', 'offline') DEFAULT 'offline'`);
+      } else if (columns[0].Type !== "enum('online','offline')") {
+        // Cập nhật kiểu dữ liệu nếu khác
+        await pool.query(`ALTER TABLE users MODIFY COLUMN status ENUM('online', 'offline') DEFAULT 'offline'`);
+        
+        // Cập nhật trạng thái away thành offline
+        await pool.query(`UPDATE users SET status = 'offline' WHERE status = 'away'`);
       }
       
       // Kiểm tra user có tồn tại không
@@ -200,7 +203,7 @@ const userService = {
         throw new Error('Không tìm thấy user');
       }
       
-      // Cập nhật trạng thái online/offline/away vào cột status của bảng users
+      // Cập nhật trạng thái online/offline vào cột status của bảng users
       const [result] = await pool.query(
         'UPDATE users SET status = ? WHERE user_id = ?',
         [status, userId]
@@ -280,8 +283,6 @@ const userService = {
         [thresholdMinutes]
       );
       
-      console.log(`Tìm thấy ${inactiveUsers.length} người dùng không hoạt động trong ${thresholdMinutes} phút qua`);
-      
       if (inactiveUsers.length === 0) {
         return {
           affected: 0,
@@ -298,66 +299,12 @@ const userService = {
         ['offline', userIds]
       );
       
-      console.log(`Đã cập nhật ${result.affectedRows} người dùng sang trạng thái offline`);
-      
       return {
         affected: result.affectedRows,
         users: inactiveUsers
       };
     } catch (error) {
       console.error('Lỗi SQL khi cập nhật người dùng không hoạt động:', error.message);
-      throw error;
-    }
-  },
-
-  // Cập nhật trạng thái offline cho người dùng away quá lâu
-  updateAwayUsers: async (awayThresholdMinutes = 10) => {
-    try {
-      // Kiểm tra xem cột last_activity đã tồn tại trong bảng users chưa
-      const [columns] = await pool.query(`SHOW COLUMNS FROM users LIKE 'last_activity'`);
-      
-      if (columns.length === 0) {
-        // Không có cột last_activity, không thể xác định người dùng không hoạt động
-        return {
-          affected: 0,
-          users: []
-        };
-      }
-      
-      // Tính thời gian ngưỡng (thời điểm trước đó awayThresholdMinutes phút)
-      const thresholdMinutes = awayThresholdMinutes || 10;
-      
-      // Tìm những người dùng đang away nhưng không hoạt động quá lâu
-      const [awayUsers] = await pool.query(
-        `SELECT user_id, username, email, status, last_activity 
-         FROM users 
-         WHERE status = 'away' 
-         AND (last_activity IS NULL OR last_activity < DATE_SUB(NOW(), INTERVAL ? MINUTE))`,
-        [thresholdMinutes]
-      );
-      
-      if (awayUsers.length === 0) {
-        return {
-          affected: 0,
-          users: []
-        };
-      }
-      
-      // Danh sách ID người dùng cần cập nhật
-      const userIds = awayUsers.map(user => user.user_id);
-      
-      // Cập nhật trạng thái offline cho tất cả người dùng away quá lâu
-      const [result] = await pool.query(
-        'UPDATE users SET status = ? WHERE user_id IN (?)',
-        ['offline', userIds]
-      );
-      
-      return {
-        affected: result.affectedRows,
-        users: awayUsers
-      };
-    } catch (error) {
-      console.error('Lỗi SQL khi cập nhật người dùng away quá lâu:', error.message);
       throw error;
     }
   },

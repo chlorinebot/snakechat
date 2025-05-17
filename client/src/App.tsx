@@ -96,6 +96,7 @@ const App: React.FC = () => {
           
           // Sử dụng navigator.sendBeacon để đảm bảo yêu cầu được gửi ngay cả khi đóng tab
           const beaconSent = navigator.sendBeacon(OFFLINE_URL, data);
+          console.log('Đã gửi beacon offline:', beaconSent);
           return beaconSent;
         }
       } catch (error) {
@@ -167,11 +168,46 @@ const App: React.FC = () => {
     }, 60000); // Kiểm tra mỗi phút
     
     // Xử lý sự kiện khi người dùng đóng tab/trình duyệt
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      console.log('Sự kiện beforeunload đã được kích hoạt');
+      
+      // Thêm message để trình duyệt hiển thị hộp thoại xác nhận
+      event.preventDefault();
+      event.returnValue = '';
+      
       // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
       if (!sendOfflineBeacon()) {
         // Fallback nếu sendBeacon không được hỗ trợ
         handleUserOffline();
+      }
+      
+      // Xóa message sau khi đã gửi beacon
+      delete event.returnValue;
+    };
+    
+    // Thêm sự kiện unload để đảm bảo hơn nữa
+    const handleUnload = () => {
+      console.log('Sự kiện unload đã được kích hoạt');
+      
+      // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
+      if (!sendOfflineBeacon()) {
+        // Fallback nếu sendBeacon không được hỗ trợ
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_URL}/user/update-status`, false); // Đặt false để làm cho nó đồng bộ
+        xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+        
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            const userId = parsedUser.user_id || parsedUser.id;
+            if (userId) {
+              xhr.send(JSON.stringify({ user_id: userId, status: 'offline' }));
+            }
+          } catch (error) {
+            console.error('Lỗi khi gửi yêu cầu offline:', error);
+          }
+        }
       }
     };
     
@@ -198,20 +234,6 @@ const App: React.FC = () => {
         if (heartbeatTimerRef.current) {
           clearInterval(heartbeatTimerRef.current);
           heartbeatTimerRef.current = null;
-        }
-        
-        // Cập nhật trạng thái "away" trên server
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          try {
-            const parsedUser = JSON.parse(userData);
-            const userId = parsedUser.user_id || parsedUser.id;
-            if (userId) {
-              api.updateUserAway(userId);
-            }
-          } catch (error) {
-            console.error('Lỗi khi cập nhật trạng thái away:', error);
-          }
         }
       } else {
         // Tab hiển thị lại
@@ -247,6 +269,7 @@ const App: React.FC = () => {
     
     // Đăng ký các sự kiện
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('unload', handleUnload);
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -263,6 +286,7 @@ const App: React.FC = () => {
         clearInterval(heartbeatTimerRef.current);
       }
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('unload', handleUnload);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);

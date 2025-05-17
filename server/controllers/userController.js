@@ -252,8 +252,8 @@ const userController = {
       // Kiểm tra trạng thái hiện tại của người dùng
       const user = await userService.getUserById(user_id);
       
-      // Nếu người dùng đang ở trạng thái away, cập nhật lại thành online
-      if (user && user.status === 'away') {
+      // Nếu người dùng đang ở trạng thái offline, cập nhật lại thành online
+      if (user && user.status === 'offline') {
         await userService.updateUserStatus(user_id, 'online');
       }
       
@@ -287,6 +287,8 @@ const userController = {
     const user_id = req.body.user_id;
     const status = req.body.status || 'offline';
     
+    console.log('Nhận yêu cầu Beacon từ client để cập nhật trạng thái:', { user_id, status });
+    
     if (!user_id) {
       console.error('Thiếu thông tin user_id trong yêu cầu Beacon');
       return;
@@ -294,7 +296,8 @@ const userController = {
     
     try {
       // Cập nhật trạng thái offline
-      await userService.updateUserStatus(user_id, status);
+      const result = await userService.updateUserStatus(user_id, status);
+      console.log(`Đã cập nhật trạng thái ${status} cho user ${user_id} qua Beacon API:`, result);
     } catch (error) {
       console.error('Lỗi khi xử lý yêu cầu Beacon:', error);
     }
@@ -318,14 +321,11 @@ const userController = {
       // Gọi service để cập nhật trạng thái người dùng không hoạt động
       const result = await userService.updateInactiveUsers(inactiveThreshold);
       
-      // Kiểm tra và cập nhật trạng thái những người dùng away quá lâu
-      const awayResult = await userService.updateAwayUsers(inactiveThreshold * 2); // Gấp đôi thời gian inactive
-      
       res.json({
         success: true,
         message: 'Đã kiểm tra và cập nhật người dùng không hoạt động',
-        affected: result.affected + awayResult.affected,
-        users: [...result.users, ...awayResult.users]
+        affected: result.affected,
+        users: result.users
       });
     } catch (error) {
       console.error('Lỗi khi kiểm tra người dùng không hoạt động:', error);
