@@ -10,6 +10,7 @@ import MessagesSidebar from '../../components/home_user/MessagesSidebar';
 import MessagesContent from '../../components/home_user/MessagesContent';
 import ContactsSidebar from '../../components/home_user/ContactsSidebar';
 import ContactsContent from '../../components/home_user/ContactsContent';
+import SettingsModal from '../../components/home_user/SettingsModal';
 
 interface UserProps {
   onLogout: () => void;
@@ -23,6 +24,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('messages');
   const [contactsTab, setContactsTab] = useState<ContactTab>('friends');
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
@@ -93,6 +95,11 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     setContactsTab(tab);
   };
 
+  const handleSettingsClick = () => {
+    setShowSettingsModal(true);
+    setShowProfileDropdown(false);
+  };
+
   if (!user) {
     return <div className="loading">Đang tải...</div>;
   }
@@ -109,6 +116,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         onTabChange={handleTabChange} 
         onAvatarClick={handleAvatarClick}
         avatarRef={avatarRef}
+        onSettingsClick={handleSettingsClick}
       />
       
       {/* Main content */}
@@ -139,6 +147,12 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
           onLogout={handleLogoutClick}
         />
       )}
+
+      {/* Modal cài đặt */}
+      <SettingsModal 
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+      />
     </div>
   );
 };

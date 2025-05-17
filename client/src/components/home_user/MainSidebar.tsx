@@ -8,6 +8,7 @@ interface MainSidebarProps {
   onTabChange: (tab: ActiveTab) => void;
   onAvatarClick: (e: React.MouseEvent) => void;
   avatarRef: React.RefObject<HTMLDivElement | null>;
+  onSettingsClick: () => void;
 }
 
 const MainSidebar: React.FC<MainSidebarProps> = ({ 
@@ -15,7 +16,8 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
   userInitial, 
   onTabChange, 
   onAvatarClick,
-  avatarRef
+  avatarRef,
+  onSettingsClick
 }) => {
   return (
     <div className="sidebar">
@@ -51,7 +53,7 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
       
       {/* Bottom items */}
       <div className="sidebar-bottom">
-        <div className="sidebar-item">
+        <div className="sidebar-item" onClick={onSettingsClick}>
           <div className="sidebar-icon settings-icon"></div>
           <div className="sidebar-tooltip">Cài đặt</div>
         </div>
