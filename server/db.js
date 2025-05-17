@@ -18,11 +18,11 @@ const pool = mysql.createPool({
 const connectToDatabase = async () => {
   try {
     const connection = await pool.getConnection();
-    console.log('✅ Kết nối MySQL thành công!');
+    console.log('✅ Kết nối MySQL thành công! ✅');
     connection.release();
     return pool;
   } catch (error) {
-    console.error('❌ Lỗi kết nối MySQL:', error.message);
+    console.error('❌ Lỗi kết nối MySQL: ', error.message, '❌');
     throw error;
   }
 };

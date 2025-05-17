@@ -6,6 +6,7 @@ import Dashboard from './pages/admin/Dashboard';
 import Users from './pages/admin/Users';
 import Roles from './pages/admin/Roles';
 import LockedAccounts from './pages/admin/LockedAccounts';
+import HomePage from './pages/home_user/HomePage';
 import api from './services/api';
 
 // URL endpoint cho cập nhật trạng thái
@@ -18,6 +19,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(localStorage.getItem('token') !== null);
   const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('user') || '{}'));
   const isAdmin = user.role_id === 1;
+  const isRegularUser = user.role_id === 2;
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isTabActive, setIsTabActive] = useState<boolean>(document.visibilityState === 'visible');
 
@@ -320,7 +322,7 @@ const App: React.FC = () => {
         />
         <Route 
           path="/dashboard" 
-          element={isAuthenticated && isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to={isRegularUser ? "/user-home" : "/login"} />} 
         />
         <Route 
           path="/users" 
@@ -344,7 +346,7 @@ const App: React.FC = () => {
         />
         <Route 
           path="/user-home" 
-          element={isAuthenticated && !isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isRegularUser ? <HomePage onLogout={handleLogout} /> : <Navigate to={isAdmin ? "/dashboard" : "/login"} />} 
         />
         <Route 
           path="/" 
