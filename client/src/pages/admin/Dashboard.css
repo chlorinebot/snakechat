@@ -625,4 +625,29 @@ h1, h2, h3, h4, h5, h6, p, span, div {
   background-color: var(--input-bg);
   border-color: transparent;
   color: var(--text-muted);
+}
+
+/* Hiệu ứng khi sắp xếp theo trạng thái */
+.table th.sorting-status {
+  position: relative;
+}
+
+.table th.sorting-status::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(to right, #28a745, #6c757d);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.table th.sorting-status:hover::after {
+  transform: scaleX(1);
+}
+
+.table th.sorting-active.sorting-status::after {
+  transform: scaleX(1);
 } 

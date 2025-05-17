@@ -6,7 +6,7 @@ import { api } from '../../services/api';
 import Layout from '../../components/admin/Layout';
 import './Dashboard.css';
 
-type SortField = 'user_id' | 'username' | 'email' | 'role_id' | 'birthday';
+type SortField = 'user_id' | 'username' | 'email' | 'role_id' | 'birthday' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 interface UsersProps {
@@ -123,6 +123,12 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
           const dateA = a.birthday ? new Date(a.birthday).getTime() : 0;
           const dateB = b.birthday ? new Date(b.birthday).getTime() : 0;
           return (dateA - dateB) * direction;
+        
+        case 'status':
+          // Online đứng trước offline khi sắp xếp tăng dần và ngược lại khi sắp xếp giảm dần
+          const statusA = a.status === 'online' ? 1 : 0;
+          const statusB = b.status === 'online' ? 1 : 0;
+          return direction === 1 ? (statusB - statusA) : (statusA - statusB);
         
         default:
           return 0;
@@ -484,8 +490,12 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                       <th scope="col" className="px-4 py-3 cursor-pointer" onClick={() => handleSort('birthday')}>
                         Ngày sinh {getSortIcon('birthday')}
                       </th>
-                      <th scope="col" className="px-4 py-3">
-                        Trạng thái
+                      <th 
+                        scope="col" 
+                        className={`px-4 py-3 cursor-pointer sorting-status ${sortField === 'status' ? 'sorting-active' : ''}`}
+                        onClick={() => handleSort('status')}
+                      >
+                        Trạng thái {getSortIcon('status')}
                       </th>
                       <th scope="col" className="px-4 py-3">Thao tác</th>
                     </tr>
