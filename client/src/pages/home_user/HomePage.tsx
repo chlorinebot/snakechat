@@ -16,11 +16,13 @@ interface UserProps {
 }
 
 type ActiveTab = 'messages' | 'contacts';
+type ContactTab = 'friends' | 'requests';
 
 const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [user, setUser] = useState<any>(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('messages');
+  const [contactsTab, setContactsTab] = useState<ContactTab>('friends');
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
@@ -87,6 +89,10 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     setShowProfileDropdown(false);
   };
 
+  const handleContactsTabChange = (tab: ContactTab) => {
+    setContactsTab(tab);
+  };
+
   if (!user) {
     return <div className="loading">Đang tải...</div>;
   }
@@ -108,7 +114,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       {/* Main content */}
       <div className="main-content">
         <div className="content-header">
-          <h2>{activeTab === 'messages' ? 'Tin nhắn' : 'Danh bạ'}</h2>
+          <h2>{activeTab === 'messages' ? 'Tin nhắn' : contactsTab === 'friends' ? 'Danh sách bạn bè' : 'Lời mời kết bạn'}</h2>
         </div>
         <div className="content-body">
           {activeTab === 'messages' ? (
@@ -118,8 +124,8 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
             </div>
           ) : (
             <div className="contacts-container">
-              <ContactsSidebar />
-              <ContactsContent />
+              <ContactsSidebar onTabChange={handleContactsTabChange} />
+              <ContactsContent activeTab={contactsTab} />
             </div>
           )}
         </div>

@@ -1,23 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-const ContactsContent: React.FC = () => {
+interface ContactsContentProps {
+  activeTab?: 'friends' | 'requests';
+}
+
+const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends' }) => {
   return (
     <div className="contacts-content">
       <div className="contacts-search-bar">
         <div className="search-icon"></div>
         <input 
           type="text" 
-          placeholder="Tìm kiếm người dùng..." 
+          placeholder={`Tìm kiếm ${activeTab === 'friends' ? 'bạn bè' : 'lời mời kết bạn'}...`} 
           className="contacts-search-input" 
         />
       </div>
       <div className="contacts-list">
-        {/* Phần danh bạ sẽ được hiển thị ở đây */}
-        <div className="contacts-empty">
-          <div className="contacts-empty-icon"></div>
-          <h3>Không có người dùng nào</h3>
-          <p>Không tìm thấy người dùng nào trong danh bạ của bạn</p>
-        </div>
+        {activeTab === 'friends' ? (
+          <div className="contacts-empty">
+            <div className="contacts-empty-icon"></div>
+            <h3>Không có bạn bè nào</h3>
+            <p>Danh sách bạn bè của bạn đang trống</p>
+          </div>
+        ) : (
+          <div className="contacts-empty">
+            <div className="contacts-empty-icon friend-request-icon"></div>
+            <h3>Không có lời mời kết bạn</h3>
+            <p>Bạn không có lời mời kết bạn nào</p>
+          </div>
+        )}
       </div>
     </div>
   );
