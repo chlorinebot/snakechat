@@ -25,6 +25,9 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   // Thêm state để lưu trữ trạng thái kết bạn của các người dùng trong kết quả tìm kiếm
   const [friendshipStatuses, setFriendshipStatuses] = useState<{ [key: number]: string }>({});
   
+  // Thêm state để lưu trữ trạng thái khóa của người dùng
+  const [lockedUsers, setLockedUsers] = useState<{ [key: number]: boolean }>({});
+  
   // Thêm state cho việc sắp xếp
   const [sortOptions] = useState<SortOption[]>([
     { id: 'name-asc', label: 'Tên (A-Z)' },
@@ -72,12 +75,50 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
             if (freshFriends && freshFriends.length > 0) {
               console.log('Cập nhật danh sách bạn bè từ server:', freshFriends);
               setFriendsList(freshFriends);
+              
+              // Kiểm tra trạng thái khóa của từng người dùng trong danh sách bạn bè
+              const lockedStatusMap: { [key: number]: boolean } = {};
+              for (const friend of freshFriends) {
+                if (friend.user_id) {
+                  try {
+                    const lockStatus = await api.checkAccountLockStatus(friend.user_id);
+                    console.log(`Thông tin khóa của ${friend.username}:`, {
+                      userId: friend.user_id,
+                      isLocked: lockStatus.isLocked,
+                      lock_status: friend.lock_status
+                    });
+                    lockedStatusMap[friend.user_id] = friend.lock_status === 'locked';
+                  } catch (err) {
+                    console.error(`Lỗi khi kiểm tra trạng thái khóa của người dùng ${friend.username}:`, err);
+                  }
+                }
+              }
+              setLockedUsers(lockedStatusMap);
             }
           } else {
             // Không có cache, gọi API trực tiếp
             friends = await api.getFriends(currentUser.user_id!);
             console.log('Lấy danh sách bạn bè trực tiếp từ API:', friends);
             setFriendsList(friends);
+            
+            // Kiểm tra trạng thái khóa của từng người dùng trong danh sách bạn bè
+            const lockedStatusMap: { [key: number]: boolean } = {};
+            for (const friend of friends) {
+              if (friend.user_id) {
+                try {
+                  const lockStatus = await api.checkAccountLockStatus(friend.user_id);
+                  console.log(`Thông tin khóa của ${friend.username}:`, {
+                    userId: friend.user_id,
+                    isLocked: lockStatus.isLocked,
+                    lock_status: friend.lock_status
+                  });
+                  lockedStatusMap[friend.user_id] = friend.lock_status === 'locked';
+                } catch (err) {
+                  console.error(`Lỗi khi kiểm tra trạng thái khóa của người dùng ${friend.username}:`, err);
+                }
+              }
+            }
+            setLockedUsers(lockedStatusMap);
           }
         } catch (error) {
           console.error('Lỗi khi lấy danh sách bạn bè:', error);
@@ -87,6 +128,25 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
           const requests = await api.getReceivedFriendRequests(currentUser.user_id!);
           console.log('Danh sách lời mời kết bạn:', requests);
           setFriendRequests(requests);
+          
+          // Kiểm tra trạng thái khóa của người gửi lời mời kết bạn
+          const lockedStatusMap: { [key: number]: boolean } = {};
+          for (const request of requests) {
+            if (request.user.user_id) {
+              try {
+                const lockStatus = await api.checkAccountLockStatus(request.user.user_id);
+                console.log(`Thông tin khóa của ${request.user.username}:`, {
+                  userId: request.user.user_id,
+                  isLocked: lockStatus.isLocked,
+                  lock_status: request.user.lock_status
+                });
+                lockedStatusMap[request.user.user_id] = request.user.lock_status === 'locked';
+              } catch (err) {
+                console.error(`Lỗi khi kiểm tra trạng thái khóa của người dùng ${request.user.username}:`, err);
+              }
+            }
+          }
+          setLockedUsers(prevState => ({...prevState, ...lockedStatusMap}));
         } catch (error) {
           console.error('Lỗi khi lấy danh sách lời mời kết bạn:', error);
         }
@@ -112,25 +172,38 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       setSearchResults(results);
       setHasSearched(true);
       
-      // Kiểm tra trạng thái kết bạn của mỗi người dùng trong kết quả tìm kiếm
+      // Kiểm tra trạng thái kết bạn và khóa của mỗi người dùng trong kết quả tìm kiếm
       if (currentUser && currentUser.user_id) {
         const statuses: { [key: number]: string } = {};
+        const lockedStatusMap: { [key: number]: boolean } = {};
         
         for (const user of results) {
           if (user.user_id && user.user_id !== currentUser.user_id) {
             try {
+              // Kiểm tra trạng thái kết bạn
               const status = await api.checkFriendshipStatus(currentUser.user_id, user.user_id);
               console.log(`Trạng thái kết bạn với ${user.username}:`, status);
               if (status && status.status) {
                 statuses[user.user_id] = status.status;
               }
+              
+              // Kiểm tra trạng thái khóa tài khoản
+              const lockStatus = await api.checkAccountLockStatus(user.user_id);
+              console.log(`Thông tin khóa của ${user.username}:`, {
+                userId: user.user_id,
+                isLocked: lockStatus.isLocked,
+                lock_status: user.lock_status
+              });
+              lockedStatusMap[user.user_id] = user.lock_status === 'locked';
+              console.log(`Trạng thái khóa của ${user.username}:`, user.lock_status === 'locked');
             } catch (err) {
-              console.error(`Lỗi khi kiểm tra trạng thái kết bạn với ${user.username}:`, err);
+              console.error(`Lỗi khi kiểm tra trạng thái người dùng ${user.username}:`, err);
             }
           }
         }
         
         setFriendshipStatuses(statuses);
+        setLockedUsers(prevState => ({...prevState, ...lockedStatusMap}));
       }
     } catch (error) {
       console.error('Lỗi khi tìm kiếm người dùng:', error);
@@ -279,39 +352,16 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     }
   };
 
-  // Xử lý khi có cập nhật từ modal hồ sơ người dùng
+  // Xử lý sau khi cập nhật từ ProfileModal
   const handleProfileModalUpdate = () => {
-    // Cập nhật lại danh sách tìm kiếm nếu cần
-    if (activeTab === 'explore' && hasSearched && searchTerm.length >= 2) {
-      handleSearch(searchTerm);
-    } else if (activeTab === 'explore' && selectedUserId) {
-      // Nếu không cần tìm kiếm lại toàn bộ, thì cập nhật trạng thái cho người dùng đã được xem
-      if (currentUser && currentUser.user_id && selectedUserId) {
-        api.checkFriendshipStatus(currentUser.user_id, selectedUserId)
-          .then(status => {
-            if (status && status.status) {
-              // Đảm bảo status.status không phải là null
-              const friendshipStatus = status.status as string;
-              setFriendshipStatuses(prev => ({
-                ...prev,
-                [selectedUserId]: friendshipStatus
-              }));
-              console.log(`Cập nhật trạng thái kết bạn với userId ${selectedUserId}: ${friendshipStatus}`);
-            }
-          })
-          .catch(error => {
-            console.error('Lỗi khi cập nhật trạng thái kết bạn:', error);
-          });
-      }
-    }
-    
-    // Gọi callback nếu có
+    console.log('ProfileModal đã được cập nhật, làm mới dữ liệu...');
+    // Gọi callback để cập nhật danh sách bạn bè và lời mời kết bạn
     if (onFriendRequestUpdate) {
       onFriendRequestUpdate();
     }
   };
 
-  // Format thời gian tạo yêu cầu kết bạn
+  // Format thời gian lời mời kết bạn
   const formatTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -329,39 +379,40 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
         return `${diffDays} ngày trước`;
       }
     } catch (error) {
+      console.error('Lỗi khi format thời gian:', error);
       return 'N/A';
     }
   };
 
-  // Hàm kiểm tra trạng thái online/offline cải tiến (được đặt ở cấp độ module)
+  // Kiểm tra trạng thái online
   const isOnline = (status?: string) => {
-    console.log('Kiểm tra trạng thái contacts:', status);
     if (status === undefined || status === null) {
       return false;
     }
     return status.toLowerCase() === 'online';
   };
 
-  // Kiểm tra xem có thể xem trạng thái của một người dùng không
+  // Kiểm tra quyền xem trạng thái người dùng
   const canViewUserStatus = async (userId: number | undefined) => {
-    // Nếu không có userId hoặc currentUser thì không thể kiểm tra
     if (!userId || !currentUser || !currentUser.user_id) return false;
     
-    // Người dùng có thể xem trạng thái của chính mình
+    // Nếu là chính mình
     if (userId === currentUser.user_id) return true;
     
-    // Kiểm tra trạng thái kết bạn
-    try {
-      const status = await api.checkFriendshipStatus(currentUser.user_id, userId);
-      return status.status === 'accepted'; // Chỉ có thể xem nếu đã là bạn bè
-    } catch (error) {
-      console.error('Lỗi khi kiểm tra trạng thái kết bạn:', error);
-      return false;
-    }
+    // Kiểm tra xem có phải bạn bè không
+    const isFriend = friendsList.some(friend => friend.user_id === userId);
+    
+    // Nếu là bạn bè thì được xem trạng thái
+    return isFriend;
   };
 
   // Hàm tạo lớp CSS cho trạng thái hoạt động
   const getStatusIndicatorClass = (status?: string, userId?: number) => {
+    // Kiểm tra xem có bị khóa không
+    if (userId && lockedUsers[userId]) {
+      return 'status-banned';
+    }
+    
     // Nếu là bản thân người dùng, luôn hiển thị trạng thái
     if (userId && currentUser && userId === currentUser.user_id) {
       return isOnline(status) ? 'status-online' : 'status-offline';
@@ -389,6 +440,31 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     // Kiểm tra từ state các trạng thái kết bạn đã lưu
     return friendshipStatuses[userId] || null;
   };
+  
+  // Kiểm tra xem người dùng có bị khóa không
+  const isUserLocked = (userId?: number) => {
+    if (!userId) return false;
+    return !!lockedUsers[userId];
+  };
+  
+  // Hiển thị avatar theo trạng thái khóa
+  const renderAvatar = (user: User) => {
+    if (isUserLocked(user.user_id)) {
+      return (
+        <div className="contact-avatar banned-avatar">
+          BAN
+          <div className={`status-indicator ${getStatusIndicatorClass(user.status, user.user_id)}`}></div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="contact-avatar">
+        {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+        <div className={`status-indicator ${getStatusIndicatorClass(user.status, user.user_id)}`}></div>
+      </div>
+    );
+  };
 
   // Render danh sách bạn bè
   const renderFriendsList = () => {
@@ -408,10 +484,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
         <div className="friends-container">
           {friendsList.map((friend) => (
             <div key={friend.user_id} className="contact-item" onClick={() => handleUserClick(friend)}>
-              <div className="contact-avatar">
-                {friend.username ? friend.username.charAt(0).toUpperCase() : 'U'}
-                <div className={`status-indicator ${getStatusIndicatorClass(friend.status, friend.user_id)}`}></div>
-              </div>
+              {renderAvatar(friend)}
               <div className="contact-info">
                 <div className="contact-name">{friend.username}</div>
               </div>
@@ -447,10 +520,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
             </div>
             {groupedFriends[letter].map((friend) => (
               <div key={friend.user_id} className="contact-item" onClick={() => handleUserClick(friend)}>
-                <div className="contact-avatar">
-                  {friend.username ? friend.username.charAt(0).toUpperCase() : 'U'}
-                  <div className={`status-indicator ${getStatusIndicatorClass(friend.status, friend.user_id)}`}></div>
-                </div>
+                {renderAvatar(friend)}
                 <div className="contact-info">
                   <div className="contact-name">{friend.username}</div>
                 </div>
@@ -504,9 +574,15 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
               onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
               onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <div className="friend-request-avatar">
-                {request.user.username ? request.user.username.charAt(0).toUpperCase() : 'U'}
-              </div>
+              {isUserLocked(request.user.user_id) ? (
+                <div className="friend-request-avatar banned-avatar">
+                  BAN
+                </div>
+              ) : (
+                <div className="friend-request-avatar">
+                  {request.user.username ? request.user.username.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
               <div className="friend-request-info">
                 <div className="friend-request-name">{request.user.username}</div>
                 <div className="friend-request-time">{formatTime(request.created_at)}</div>
@@ -516,7 +592,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
               <button 
                 className="accept-request-btn"
                 onClick={() => handleAcceptFriendRequest(request.friendship_id)}
-                disabled={!!processingRequest[request.friendship_id]}
+                disabled={!!processingRequest[request.friendship_id] || isUserLocked(request.user.user_id)}
               >
                 {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Chấp nhận'}
               </button>
@@ -591,10 +667,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
                   console.log("Hiển thị người dùng:", user);
                   return (
                     <div key={user.user_id} className="contact-item" onClick={() => handleUserClick(user)}>
-                      <div className="contact-avatar">
-                        {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-                        <div className={`status-indicator ${getStatusIndicatorClass(user.status, user.user_id)}`}></div>
-                      </div>
+                      {renderAvatar(user)}
                       <div className="contact-info">
                         <div className="contact-name">{user.username}</div>
                       </div>
@@ -602,6 +675,11 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
                         <div className="current-user-label">
                           <i className="fas fa-user"></i>
                           Đây là bạn
+                        </div>
+                      ) : isUserLocked(user.user_id) ? (
+                        <div className="locked-user-label">
+                          <i className="fas fa-ban"></i>
+                          Tài khoản bị khóa
                         </div>
                       ) : checkFriendshipStatus(user.user_id) === 'accepted' ? (
                         <div className="friend-status-label">
@@ -658,7 +736,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
 
       <style>
         {`
-          .friend-status-label, .pending-request-label, .current-user-label {
+          .friend-status-label, .pending-request-label, .current-user-label, .locked-user-label {
             display: flex;
             align-items: center;
             gap: 6px;
@@ -681,6 +759,35 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
           .current-user-label {
             background-color: #f5f5f5;
             color: #607d8b;
+          }
+          
+          .locked-user-label {
+            background-color: #ffebee;
+            color: #f44336;
+          }
+          
+          .banned-avatar {
+            background-color: #f44336 !important;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          .status-banned {
+            background-color: #f44336 !important;
+          }
+          
+          .friend-request-avatar.banned-avatar {
+            background-color: #f44336;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
         `}
       </style>

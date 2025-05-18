@@ -113,6 +113,43 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     fetchFriendRequests();
   }, [user]);
 
+  // Kiểm tra trạng thái khóa tài khoản khi trang được tải
+  useEffect(() => {
+    const checkAccountStatus = async () => {
+      const userJson = localStorage.getItem('user');
+      if (userJson) {
+        try {
+          const user = JSON.parse(userJson);
+          const userId = user.user_id || user.id;
+          
+          if (userId) {
+            const lockStatus = await api.checkAccountLockStatus(userId);
+            
+            if (lockStatus.isLocked && lockStatus.lockInfo) {
+              console.log('Tài khoản bị khóa:', lockStatus.lockInfo);
+              
+              // Điều hướng về trang đăng nhập với thông tin khóa tài khoản
+              navigate('/login', {
+                state: {
+                  isLocked: true,
+                  lockInfo: {
+                    ...lockStatus.lockInfo,
+                    username: user.username,
+                    email: user.email
+                  }
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Lỗi khi kiểm tra trạng thái tài khoản:', error);
+        }
+      }
+    };
+    
+    checkAccountStatus();
+  }, [navigate]);
+
   const handleLogoutClick = () => {
     socketService.disconnect();
     onLogout();

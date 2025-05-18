@@ -34,6 +34,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [removingFriend, setRemovingFriend] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [processingRequest, setProcessingRequest] = useState<boolean>(false);
+  const [isUserLocked, setIsUserLocked] = useState<boolean>(false);
+  const [lockInfo, setLockInfo] = useState<{reason: string, lock_time: string, unlock_time: string} | null>(null);
 
   useEffect(() => {
     // Lấy thông tin người dùng hiện tại từ localStorage
@@ -76,13 +78,50 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         }
         
         if (!userFromAPI.status) {
-          console.warn("Không có thông tin trạng thái cho người dùng:", userFromAPI);
+          console.warn("Không có thông tin trạng thái hoạt động cho người dùng:", userFromAPI);
           // Mặc định trạng thái là offline nếu không có
           userFromAPI.status = 'offline';
         }
         
         console.log("Thông tin người dùng từ API:", userFromAPI);
         setUserData(userFromAPI);
+
+        try {
+          // Lấy thông tin từ bảng lock_users
+          const response = await api.getUsers();
+          const userWithLockInfo = response.find(u => u.user_id === userId);
+          
+          // Kiểm tra trạng thái khóa từ trường lock_status trong bảng
+          const isLocked = userWithLockInfo?.lock_status === 'locked';
+          
+          console.log("Trạng thái khóa của tài khoản:", {
+            userId: userId,
+            username: userFromAPI.username,
+            lockStatus: userWithLockInfo?.lock_status,
+            isLocked: isLocked,
+            hasLockID: !!userWithLockInfo?.lock_id
+          });
+          
+          if (isLocked) {
+            setIsUserLocked(true);
+            
+            // Lấy thông tin khóa từ dữ liệu người dùng
+            setLockInfo({
+              reason: userWithLockInfo?.reason || 'Không xác định',
+              lock_time: userWithLockInfo?.lock_time || new Date().toISOString(),
+              unlock_time: userWithLockInfo?.unlock_time || new Date().toISOString()
+            });
+          } else {
+            // Đảm bảo trạng thái không bị khóa nếu status là 'unlocked' hoặc trạng thái khác
+            setIsUserLocked(false);
+            setLockInfo(null);
+          }
+        } catch (error) {
+          console.error("Lỗi khi kiểm tra trạng thái khóa:", error);
+          // Mặc định là không bị khóa nếu có lỗi
+          setIsUserLocked(false);
+          setLockInfo(null);
+        }
 
         // Kiểm tra trạng thái kết bạn
         if (storedUser) {
@@ -140,6 +179,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   // Hiển thị trạng thái hoạt động phù hợp
   const getStatusDisplay = () => {
+    if (isUserLocked) {
+      return 'Tài khoản bị khóa';
+    }
+    
     if (!canViewStatus()) {
       return 'Không có quyền xem';
     }
@@ -149,11 +192,20 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   // Lấy lớp CSS cho chỉ báo trạng thái
   const getStatusIndicatorClass = () => {
+    if (isUserLocked) {
+      return 'status-banned';
+    }
+    
     if (!canViewStatus()) {
       return 'status-unknown'; // CSS đặc biệt cho trường hợp không có quyền xem
     }
     
     return isOnline(userData?.status) ? 'status-online' : 'status-offline';
+  };
+
+  // Trả về lớp CSS cho avatar
+  const getAvatarClass = () => {
+    return isUserLocked ? 'profile-avatar banned-avatar' : 'profile-avatar';
   };
 
   const handleAddFriend = async () => {
@@ -414,6 +466,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
       return null; // Không hiển thị nút nếu là chính mình
     }
 
+    // Không hiển thị nút kết bạn thông thường cho người dùng bị khóa
+    if (isUserLocked) {
+      return null; 
+    }
+
     if (friendshipStatus === 'accepted') {
       return (
         <div className="friendship-buttons">
@@ -477,6 +534,27 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   };
 
+  // Render nút hủy kết bạn cho người dùng bị khóa (nếu đã là bạn bè)
+  const renderLockedUserActions = () => {
+    if (!isUserLocked || isCurrentUser()) return null;
+    
+    if (friendshipStatus === 'accepted') {
+      return (
+        <div className="locked-user-actions">
+          <button 
+            className="remove-friend-button full-width" 
+            onClick={handleRemoveFriendClick}
+          >
+            <i className="fas fa-user-minus"></i>
+            Hủy kết bạn
+          </button>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <div className="profile-modal-overlay">
       <div className="profile-modal">
@@ -494,14 +572,15 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 email: userData.email,
                 status: userData.status,
                 join_date: userData.join_date,
-                friendshipStatus
+                friendshipStatus,
+                isUserLocked
               });
               
               return (
                 <div className="profile-content">
                   <div className="profile-avatar-section">
-                    <div className="profile-avatar">
-                      {userData.username ? userData.username.charAt(0).toUpperCase() : '?'}
+                    <div className={getAvatarClass()}>
+                      {isUserLocked ? 'BAN' : userData.username ? userData.username.charAt(0).toUpperCase() : '?'}
                       <div className={`profile-status-indicator ${getStatusIndicatorClass()}`}></div>
                     </div>
                     <div className="profile-user-info">
@@ -525,7 +604,16 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <div className="info-value">{getStatusDisplay()}</div>
                     </div>
                     
-                    {canViewStatus() && !isOnline(userData.status) && userData.last_activity && (
+                    {isUserLocked && lockInfo && (
+                      <div className="locked-account-info">
+                        <div className="info-group">
+                          <div className="info-label">Thời gian khóa:</div>
+                          <div className="info-value">{formatDate(lockInfo.lock_time)}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {canViewStatus() && !isOnline(userData.status) && userData.last_activity && !isUserLocked && (
                       <div className="info-group">
                         <div className="info-label">Hoạt động cuối:</div>
                         <div className="info-value">{getLastActivityTime(userData.last_activity)}</div>
@@ -538,6 +626,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     </div>
                     
                     {renderFriendshipButton()}
+                    {renderLockedUserActions()}
                   </div>
                 </div>
               );
@@ -607,6 +696,45 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         .accept-friend-button:disabled, .reject-friend-button:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+        }
+        
+        .banned-avatar {
+          background-color: #f44336 !important;
+          color: white;
+          font-weight: bold;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .status-banned {
+          background-color: #f44336 !important;
+        }
+        
+        .locked-account-info {
+          margin-top: 10px;
+          padding: 10px;
+          border-radius: 6px;
+          background-color: rgba(244, 67, 54, 0.1);
+          border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        
+        .lock-reason {
+          color: #d32f2f;
+          font-weight: 500;
+        }
+        
+        .locked-user-actions {
+          margin-top: 20px;
+          border-top: 1px solid #e0e0e0;
+          padding-top: 20px;
+        }
+        
+        .full-width {
+          width: 100%;
+          padding: 10px;
+          justify-content: center;
         }
         `}
       </style>

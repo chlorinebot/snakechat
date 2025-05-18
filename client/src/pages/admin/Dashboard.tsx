@@ -4,6 +4,11 @@ import type { UserLockStatus, OnlineStatus } from '../../services/api';
 import api from '../../services/api';
 import AdminLayout from '../../components/admin/Layout';
 import './Dashboard.css';
+import { useNavigate } from 'react-router-dom';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title, LineElement, PointElement);
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -21,6 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [adminCount, setAdminCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
   const [lastUpdate, setLastUpdate] = useState<string>(new Date().toLocaleTimeString('vi-VN'));
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Khi component mount, cập nhật trạng thái người dùng hiện tại nếu đã đăng nhập
@@ -43,6 +49,42 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
     return () => clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    const checkAccountStatus = async () => {
+      const userJson = localStorage.getItem('user');
+      if (userJson) {
+        try {
+          const user = JSON.parse(userJson);
+          const userId = user.user_id || user.id;
+          
+          if (userId) {
+            const lockStatus = await api.checkAccountLockStatus(userId);
+            
+            if (lockStatus.isLocked && lockStatus.lockInfo) {
+              console.log('Tài khoản bị khóa:', lockStatus.lockInfo);
+              
+              // Điều hướng về trang đăng nhập với thông tin khóa tài khoản
+              navigate('/login', {
+                state: {
+                  isLocked: true,
+                  lockInfo: {
+                    ...lockStatus.lockInfo,
+                    username: user.username,
+                    email: user.email
+                  }
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Lỗi khi kiểm tra trạng thái tài khoản:', error);
+        }
+      }
+    };
+    
+    checkAccountStatus();
+  }, [navigate]);
 
   const fetchData = async () => {
     try {

@@ -383,6 +383,42 @@ export const api = {
     }
   },
 
+  // Gửi khiếu nại cho tài khoản bị khóa
+  sendAccountAppeal: async (appealData: {
+    userId: number;
+    username: string;
+    email: string;
+    reason: string;
+    explanation: string;
+  }) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string }>(`${API_URL}/user/appeal`, appealData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Lỗi khi gửi khiếu nại:', error.message);
+      throw error;
+    }
+  },
+
+  // Kiểm tra trạng thái khóa của tài khoản
+  checkAccountLockStatus: async (userId: number) => {
+    try {
+      const response = await axios.get<{ 
+        isLocked: boolean;
+        lockInfo?: {
+          user_id: number;
+          reason: string;
+          lock_time: string;
+          unlock_time: string;
+        }
+      }>(`${API_URL}/user/check-lock-status/${userId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Lỗi khi kiểm tra trạng thái khóa tài khoản:', error.message);
+      return { isLocked: false };
+    }
+  },
+
   // Lấy danh sách vai trò
   getRoles: async () => {
     const response = await axios.get<{ items: Role[] }>(`${API_URL}/role/data`);

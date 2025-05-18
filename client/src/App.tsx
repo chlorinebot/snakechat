@@ -7,6 +7,7 @@ import Users from './pages/admin/Users';
 import Roles from './pages/admin/Roles';
 import LockedAccounts from './pages/admin/LockedAccounts';
 import HomePage from './pages/home_user/HomePage';
+import AccountLockGuard from './components/common/AccountLockGuard';
 import api from './services/api';
 
 // URL endpoint cho cập nhật trạng thái
@@ -466,27 +467,57 @@ const App: React.FC = () => {
         {/* Admin Routes */}
         <Route 
           path="/admin/dashboard" 
-          element={isAuthenticated && isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to={isRegularUser ? "/user-home" : "/login"} />} 
+          element={isAuthenticated && isAdmin ? 
+            <AccountLockGuard>
+              <Dashboard onLogout={handleLogout} />
+            </AccountLockGuard> 
+            : <Navigate to={isRegularUser ? "/user-home" : "/login"} />
+          } 
         />
         <Route 
           path="/admin/users" 
-          element={isAuthenticated && isAdmin ? <Users onLogout={handleLogout} /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? 
+            <AccountLockGuard>
+              <Users onLogout={handleLogout} />
+            </AccountLockGuard> 
+            : <Navigate to="/login" />
+          } 
         />
         <Route 
           path="/admin/roles" 
-          element={isAuthenticated && isAdmin ? <Roles onLogout={handleLogout} /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? 
+            <AccountLockGuard>
+              <Roles onLogout={handleLogout} />
+            </AccountLockGuard> 
+            : <Navigate to="/login" />
+          } 
         />
         <Route 
           path="/admin/locked-accounts" 
-          element={isAuthenticated && isAdmin ? <LockedAccounts onLogout={handleLogout} /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? 
+            <AccountLockGuard>
+              <LockedAccounts onLogout={handleLogout} />
+            </AccountLockGuard>
+            : <Navigate to="/login" />
+          } 
         />
         <Route 
           path="/admin/settings" 
-          element={isAuthenticated && isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? 
+            <AccountLockGuard>
+              <Navigate to="/admin/dashboard" />
+            </AccountLockGuard>
+            : <Navigate to="/login" />
+          } 
         />
         <Route 
           path="/admin/logs" 
-          element={isAuthenticated && isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/login" />} 
+          element={isAuthenticated && isAdmin ? 
+            <AccountLockGuard>
+              <Navigate to="/admin/dashboard" />
+            </AccountLockGuard>
+            : <Navigate to="/login" />
+          } 
         />
         
         {/* Backward compatibility for old routes */}
@@ -500,7 +531,12 @@ const App: React.FC = () => {
         {/* User Routes */}
         <Route 
           path="/user-home" 
-          element={isAuthenticated && isRegularUser ? <HomePage onLogout={handleLogout} /> : <Navigate to={isAdmin ? "/admin/dashboard" : "/login"} />} 
+          element={isAuthenticated && isRegularUser ? 
+            <AccountLockGuard>
+              <HomePage onLogout={handleLogout} />
+            </AccountLockGuard>
+            : <Navigate to={isAdmin ? "/admin/dashboard" : "/login"} />
+          } 
         />
         <Route 
           path="/" 
