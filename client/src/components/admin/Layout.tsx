@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'react-bootstrap';
-import Sidebar from './Sidebar';
+import AdminSidebar from './Sidebar';
 import './Layout.css';
 
-interface LayoutProps {
+interface AdminLayoutProps {
   children: React.ReactNode;
   onLogout?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onLogout }) => {
   const [sidebarVisible, setSidebarVisible] = useState(window.innerWidth > 992);
   const [darkMode, setDarkMode] = useState(false);
   
@@ -101,21 +101,21 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
   }, []);
 
   return (
-    <div className={`app-container ${sidebarVisible ? 'sidebar-visible' : 'sidebar-hidden'}`}>
-      <Sidebar />
-      <div className="content-wrapper">
-        <div className="content-header">
+    <div className={`admin-app-container ${sidebarVisible ? 'admin-sidebar-visible' : 'admin-sidebar-hidden'}`}>
+      <AdminSidebar visible={sidebarVisible} />
+      <div className="admin-content-wrapper">
+        <div className="admin-content-header">
           <Button
             variant="link"
-            className="sidebar-toggle"
+            className="admin-sidebar-toggle"
             onClick={toggleSidebar}
             aria-label="Toggle sidebar"
           >
             <i className="fas fa-bars"></i>
           </Button>
-          <div className="header-right">
+          <div className="admin-header-right">
             <button
-              className="theme-toggle-btn"
+              className="admin-theme-toggle-btn"
               onClick={toggleTheme}
               title={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
               aria-label={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
@@ -132,7 +132,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
             </Button>
           </div>
         </div>
-        <div className="content">
+        <div className="admin-content">
           {children}
         </div>
       </div>
@@ -140,4 +140,4 @@ const Layout: React.FC<LayoutProps> = ({ children, onLogout }) => {
   );
 };
 
-export default Layout; 
+export default AdminLayout; 

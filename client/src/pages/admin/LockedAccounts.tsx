@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert, Button, Table, Badge, Card, Modal, Form, Pagination } from 'react-bootstrap';
-import Layout from '../../components/admin/Layout';
+import AdminLayout from '../../components/admin/Layout';
 import { api } from '../../services/api';
 import type { User } from '../../services/api';
 import './Dashboard.css';
@@ -196,7 +196,7 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
   };
 
   return (
-    <Layout onLogout={onLogout}>
+    <AdminLayout onLogout={onLogout}>
       <h2 className="page-title mb-4">Danh sách tài khoản bị khóa</h2>
       <Container fluid className="admin-container">
         {message && (
@@ -454,7 +454,7 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
           </Modal.Footer>
         </Modal>
       </Container>
-    </Layout>
+    </AdminLayout>
   );
 };
 

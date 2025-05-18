@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert, Button, Table, Card, Modal, Form, Pagination } from 'react-bootstrap';
-import Layout from '../../components/admin/Layout';
+import AdminLayout from '../../components/admin/Layout';
 import { api } from '../../services/api';
 import type { Role } from '../../services/api';
 import './Dashboard.css';
@@ -273,7 +273,7 @@ const Roles: React.FC<RolesProps> = ({ onLogout }) => {
   };
 
   return (
-    <Layout onLogout={onLogout}>
+    <AdminLayout onLogout={onLogout}>
       <h2 className="page-title mb-4">Quản lý vai trò</h2>
       <Container fluid className="admin-container">
         {message && (
@@ -470,7 +470,7 @@ const Roles: React.FC<RolesProps> = ({ onLogout }) => {
           </Modal.Footer>
         </Modal>
       </Container>
-    </Layout>
+    </AdminLayout>
   );
 };
 

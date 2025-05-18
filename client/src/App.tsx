@@ -314,43 +314,55 @@ const App: React.FC = () => {
       <Routes>
         <Route 
           path="/login" 
-          element={!isAuthenticated ? <Login /> : <Navigate to={isAdmin ? "/dashboard" : "/user-home"} />} 
+          element={!isAuthenticated ? <Login /> : <Navigate to={isAdmin ? "/admin/dashboard" : "/user-home"} />} 
         />
         <Route 
           path="/register" 
-          element={!isAuthenticated ? <Register /> : <Navigate to={isAdmin ? "/dashboard" : "/user-home"} />} 
+          element={!isAuthenticated ? <Register /> : <Navigate to={isAdmin ? "/admin/dashboard" : "/user-home"} />} 
         />
+        
+        {/* Admin Routes */}
         <Route 
-          path="/dashboard" 
+          path="/admin/dashboard" 
           element={isAuthenticated && isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to={isRegularUser ? "/user-home" : "/login"} />} 
         />
         <Route 
-          path="/users" 
+          path="/admin/users" 
           element={isAuthenticated && isAdmin ? <Users onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
         <Route 
-          path="/roles" 
+          path="/admin/roles" 
           element={isAuthenticated && isAdmin ? <Roles onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
         <Route 
-          path="/locked-accounts" 
+          path="/admin/locked-accounts" 
           element={isAuthenticated && isAdmin ? <LockedAccounts onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
         <Route 
-          path="/settings" 
-          element={isAuthenticated && isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
+          path="/admin/settings" 
+          element={isAuthenticated && isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/login" />} 
         />
         <Route 
-          path="/logs" 
-          element={isAuthenticated && isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
+          path="/admin/logs" 
+          element={isAuthenticated && isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/login" />} 
         />
+        
+        {/* Backward compatibility for old routes */}
+        <Route path="/dashboard" element={<Navigate to="/admin/dashboard" />} />
+        <Route path="/users" element={<Navigate to="/admin/users" />} />
+        <Route path="/roles" element={<Navigate to="/admin/roles" />} />
+        <Route path="/locked-accounts" element={<Navigate to="/admin/locked-accounts" />} />
+        <Route path="/settings" element={<Navigate to="/admin/settings" />} />
+        <Route path="/logs" element={<Navigate to="/admin/logs" />} />
+        
+        {/* User Routes */}
         <Route 
           path="/user-home" 
-          element={isAuthenticated && isRegularUser ? <HomePage onLogout={handleLogout} /> : <Navigate to={isAdmin ? "/dashboard" : "/login"} />} 
+          element={isAuthenticated && isRegularUser ? <HomePage onLogout={handleLogout} /> : <Navigate to={isAdmin ? "/admin/dashboard" : "/login"} />} 
         />
         <Route 
           path="/" 
-          element={<Navigate to={isAuthenticated ? (isAdmin ? "/dashboard" : "/user-home") : "/login"} />} 
+          element={<Navigate to={isAuthenticated ? (isAdmin ? "/admin/dashboard" : "/user-home") : "/login"} />} 
         />
       </Routes>
     </Router>

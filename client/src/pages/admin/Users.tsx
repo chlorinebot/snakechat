@@ -3,7 +3,7 @@ import { Container, Row, Col, Alert, Button, Table, Badge, Card, Modal, Form, In
 import UserForm from '../../components/admin/UserForm';
 import type { User, UserLock } from '../../services/api';
 import { api } from '../../services/api';
-import Layout from '../../components/admin/Layout';
+import AdminLayout from '../../components/admin/Layout';
 import './Dashboard.css';
 
 type SortField = 'user_id' | 'username' | 'email' | 'role_id' | 'birthday' | 'status';
@@ -407,7 +407,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   };
 
   return (
-    <Layout onLogout={onLogout}>
+    <AdminLayout onLogout={onLogout}>
       <Container fluid>
         {message && (
           <Alert variant="info" onClose={() => setMessage('')} dismissible>
@@ -812,7 +812,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
           </Button>
         </Modal.Footer>
       </Modal>
-    </Layout>
+    </AdminLayout>
   );
 };
 
