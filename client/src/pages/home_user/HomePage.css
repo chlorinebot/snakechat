@@ -613,12 +613,19 @@ body, html {
   padding: 10px;
   border-radius: 10px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   margin-bottom: 5px;
+  position: relative;
 }
 
 .contact-item:hover {
-  background-color: #f5f5f5;
+  background-color: #f0f7ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.contact-item:active {
+  transform: translateY(0);
 }
 
 .contact-avatar {
@@ -760,10 +767,51 @@ body, html {
   background-color: #d1e7ff;
 }
 
+.current-user-label {
+  background-color: #f0f0f0;
+  color: #666;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .contacts-loading {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100px;
   color: #777;
+}
+
+/* Nút kết bạn trong user profile modal */
+.add-friend-button {
+  background-color: #0084ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.add-friend-button:hover {
+  background-color: #0064c2;
+}
+
+.add-friend-button:disabled {
+  background-color: #b3d9ff;
+  cursor: not-allowed;
 } 

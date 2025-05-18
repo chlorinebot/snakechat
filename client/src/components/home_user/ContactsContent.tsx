@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import type { User } from '../../services/api';
+import UserProfileModal from './UserProfileModal';
 
 interface ContactsContentProps {
   activeTab?: 'friends' | 'requests' | 'explore';
@@ -11,6 +12,25 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
+  const [showUserProfileModal, setShowUserProfileModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Lấy thông tin người dùng hiện tại từ localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        console.log("Thông tin người dùng hiện tại từ localStorage:", parsedUser);
+        setCurrentUser(parsedUser);
+      } catch (error) {
+        console.error('Lỗi khi parse thông tin người dùng:', error);
+      }
+    } else {
+      console.log("Không tìm thấy thông tin người dùng trong localStorage");
+    }
+  }, []);
 
   // Xử lý tìm kiếm khi người dùng nhập
   const handleSearch = async (term: string) => {
@@ -39,6 +59,54 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     if (e.key === 'Enter') {
       handleSearch(searchTerm);
     }
+  };
+
+  // Kiểm tra xem user có phải là người dùng hiện tại không
+  const isCurrentUser = (user: User) => {
+    if (!currentUser || !user) return false;
+    
+    console.log("So sánh người dùng:", {
+      userEmail: user.email,
+      currentUserEmail: currentUser.email,
+      userUsername: user.username,
+      currentUserUsername: currentUser.username,
+      userId: user.user_id,
+      currentUserId: currentUser.user_id
+    });
+    
+    // Kiểm tra xác thực bằng email (cách chính xác nhất)
+    if (user.email && currentUser.email && user.email === currentUser.email) {
+      console.log("Trùng khớp theo email!");
+      return true;
+    }
+    
+    // Kiểm tra bằng username nếu email không có hoặc không khớp
+    if (user.username && currentUser.username && user.username === currentUser.username) {
+      console.log("Trùng khớp theo username!");
+      return true;
+    }
+    
+    // Kiểm tra bằng ID nếu có
+    if (user.user_id && currentUser.user_id && user.user_id === currentUser.user_id) {
+      console.log("Trùng khớp theo user_id!");
+      return true;
+    }
+    
+    console.log("Không trùng khớp!");
+    // Nếu tất cả đều không khớp
+    return false;
+  };
+
+  // Xử lý khi click vào user để mở modal
+  const handleUserClick = (user: User) => {
+    setSelectedUserId(user.user_id);
+    setShowUserProfileModal(true);
+  };
+
+  // Đóng modal
+  const handleCloseUserProfileModal = () => {
+    setShowUserProfileModal(false);
+    setSelectedUserId(undefined);
   };
 
   return (
@@ -85,24 +153,44 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
             <p>Đang tìm kiếm...</p>
           </div>
         ) : activeTab === 'explore' && hasSearched && searchResults.length > 0 ? (
-          <div className="search-results">
-            <h3 className="search-results-title">Kết quả tìm kiếm ({searchResults.length})</h3>
-            {searchResults.map((user) => (
-              <div key={user.user_id} className="contact-item">
-                <div className="contact-avatar">
-                  {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="contact-info">
-                  <div className="contact-name">{user.username}</div>
-                  <div className="contact-email">{user.email}</div>
-                </div>
-                <button className="add-friend-btn">
-                  <i className="fas fa-user-plus"></i>
-                  Kết bạn
-                </button>
+          (() => {
+            console.log("Đang hiển thị kết quả tìm kiếm:", searchResults);
+            return (
+              <div className="search-results">
+                <h3 className="search-results-title">Kết quả tìm kiếm ({searchResults.length})</h3>
+                {searchResults.map((user) => {
+                  console.log("Hiển thị người dùng:", user);
+                  return (
+                    <div key={user.user_id} className="contact-item" onClick={() => handleUserClick(user)}>
+                      <div className="contact-avatar">
+                        {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div className="contact-info">
+                        <div className="contact-name">{user.username}</div>
+                      </div>
+                      {isCurrentUser(user) ? (
+                        <div className="current-user-label">
+                          <i className="fas fa-user"></i>
+                          Đây là bạn
+                        </div>
+                      ) : (
+                        <button 
+                          className="add-friend-btn"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Ngăn việc mở modal khi click vào nút kết bạn
+                            // TODO: Thêm xử lý gửi lời mời kết bạn trực tiếp từ đây nếu cần
+                          }}
+                        >
+                          <i className="fas fa-user-plus"></i>
+                          Kết bạn
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            );
+          })()
         ) : activeTab === 'explore' && hasSearched && searchResults.length === 0 ? (
           <div className="contacts-empty">
             <div className="contacts-empty-icon"></div>
@@ -117,6 +205,13 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
           </div>
         )}
       </div>
+
+      {/* User Profile Modal */}
+      <UserProfileModal 
+        isOpen={showUserProfileModal}
+        onClose={handleCloseUserProfileModal}
+        userId={selectedUserId}
+      />
     </div>
   );
 };

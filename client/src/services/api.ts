@@ -254,15 +254,29 @@ export const api = {
       const response = await axios.get<{ items: User[] }>(`${API_URL}/user/data`);
       const users = response.data.items;
       
+      // Log tất cả người dùng để kiểm tra dữ liệu
+      console.log("Dữ liệu người dùng từ server:", users);
+      
       // Lọc người dùng theo tên hoặc email
       if (!searchTerm) return [];
       
       const searchTermLower = searchTerm.toLowerCase();
-      const filteredUsers = users.filter(user => 
+      let filteredUsers = users.filter(user => 
         user.username.toLowerCase().includes(searchTermLower) || 
         user.email.toLowerCase().includes(searchTermLower)
       );
       
+      // Đảm bảo tất cả người dùng có trạng thái
+      filteredUsers = filteredUsers.map(user => {
+        // Lưu trữ đầy đủ thông tin người dùng
+        return {
+          ...user,
+          // Đảm bảo có trạng thái, mặc định là 'offline' nếu không có
+          status: user.status || 'offline'
+        };
+      });
+      
+      console.log("Kết quả tìm kiếm đã xử lý:", filteredUsers);
       return filteredUsers;
     } catch (error) {
       console.error('Lỗi khi tìm kiếm người dùng:', error);
