@@ -10,9 +10,18 @@ interface UserProfileModalProps {
   onClose: () => void;
   userId?: number;
   onFriendRequestSent?: () => void; // Callback khi gửi lời mời kết bạn thành công
+  fromFriendRequest?: boolean; // Đánh dấu modal được mở từ lời mời kết bạn
+  friendshipId?: number; // ID của lời mời kết bạn nếu có
 }
 
-const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, userId, onFriendRequestSent }) => {
+const UserProfileModal: React.FC<UserProfileModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  userId, 
+  onFriendRequestSent, 
+  fromFriendRequest = false,
+  friendshipId: propFriendshipId
+}) => {
   const [userData, setUserData] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -20,16 +29,27 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
   const [addingFriend, setAddingFriend] = useState<boolean>(false);
   const [friendRequestSent, setFriendRequestSent] = useState<boolean>(false);
   const [friendshipStatus, setFriendshipStatus] = useState<string | null>(null);
-  const [friendshipId, setFriendshipId] = useState<number | undefined>(undefined);
+  const [friendshipId, setFriendshipId] = useState<number | undefined>(propFriendshipId);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [removingFriend, setRemovingFriend] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [processingRequest, setProcessingRequest] = useState<boolean>(false);
 
   useEffect(() => {
     // Lấy thông tin người dùng hiện tại từ localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
+    }
+    
+    // Cập nhật friendshipId từ prop nếu có
+    if (propFriendshipId) {
+      setFriendshipId(propFriendshipId);
+    }
+    
+    // Đặt friendshipStatus thành 'pending' nếu mở từ lời mời kết bạn
+    if (fromFriendRequest) {
+      setFriendshipStatus('pending');
     }
 
     const fetchUserData = async () => {
@@ -263,6 +283,79 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
     setShowConfirmModal(false);
   };
 
+  // Xử lý khi chấp nhận lời mời kết bạn
+  const handleAcceptFriendRequest = async () => {
+    if (!friendshipId) {
+      console.error('Không thể chấp nhận lời mời kết bạn: friendshipId không tồn tại');
+      return;
+    }
+    
+    setProcessingRequest(true);
+    try {
+      const result = await api.acceptFriendRequest(friendshipId);
+      
+      if (result.success) {
+        console.log('Đã chấp nhận lời mời kết bạn');
+        setSuccessMessage('Đã chấp nhận lời mời kết bạn!');
+        setFriendshipStatus('accepted');
+        
+        // Gọi callback nếu có
+        if (onFriendRequestSent) {
+          onFriendRequestSent();
+        }
+        
+        setTimeout(() => {
+          setSuccessMessage('');
+          onClose();
+        }, 2000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error: any) {
+      console.error('Lỗi khi chấp nhận lời mời kết bạn:', error);
+      setError('Không thể chấp nhận lời mời. Vui lòng thử lại sau.');
+    } finally {
+      setProcessingRequest(false);
+    }
+  };
+  
+  // Xử lý khi từ chối lời mời kết bạn
+  const handleRejectFriendRequest = async () => {
+    if (!friendshipId) {
+      console.error('Không thể từ chối lời mời kết bạn: friendshipId không tồn tại');
+      return;
+    }
+    
+    setProcessingRequest(true);
+    try {
+      const result = await api.rejectFriendRequest(friendshipId);
+      
+      if (result.success) {
+        console.log('Đã từ chối lời mời kết bạn');
+        setSuccessMessage('Đã từ chối lời mời kết bạn!');
+        setFriendshipStatus(null);
+        setFriendshipId(undefined);
+        
+        // Gọi callback nếu có
+        if (onFriendRequestSent) {
+          onFriendRequestSent();
+        }
+        
+        setTimeout(() => {
+          setSuccessMessage('');
+          onClose();
+        }, 2000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error: any) {
+      console.error('Lỗi khi từ chối lời mời kết bạn:', error);
+      setError('Không thể từ chối lời mời. Vui lòng thử lại sau.');
+    } finally {
+      setProcessingRequest(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // Format ngày thành dd/mm/yyyy
@@ -347,6 +440,28 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
           <i className="fas fa-user-times"></i>
           {addingFriend ? 'Đang hủy...' : 'Hủy lời mời kết bạn'}
         </button>
+      );
+    } else if (friendshipStatus === 'pending' && fromFriendRequest) {
+      // Thêm UI cho trường hợp nhận được lời mời kết bạn
+      return (
+        <div className="friendship-request-buttons">
+          <button 
+            className="accept-friend-button" 
+            onClick={handleAcceptFriendRequest}
+            disabled={processingRequest}
+          >
+            <i className="fas fa-user-check"></i>
+            {processingRequest ? 'Đang xử lý...' : 'Chấp nhận'}
+          </button>
+          <button 
+            className="reject-friend-button" 
+            onClick={handleRejectFriendRequest}
+            disabled={processingRequest}
+          >
+            <i className="fas fa-user-times"></i>
+            {processingRequest ? 'Đang xử lý...' : 'Từ chối'}
+          </button>
+        </div>
       );
     } else {
       return (
@@ -449,6 +564,52 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
           duration={3000}
         />
       )}
+
+      <style>
+        {`
+        .friendship-request-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 15px;
+        }
+        
+        .accept-friend-button, .reject-friend-button {
+          padding: 8px 16px;
+          border-radius: 6px;
+          border: none;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: background-color 0.2s;
+        }
+        
+        .accept-friend-button {
+          background-color: #4CAF50;
+          color: white;
+        }
+        
+        .accept-friend-button:hover {
+          background-color: #3e8e41;
+        }
+        
+        .reject-friend-button {
+          background-color: #f44336;
+          color: white;
+        }
+        
+        .reject-friend-button:hover {
+          background-color: #d32f2f;
+        }
+        
+        .accept-friend-button:disabled, .reject-friend-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        `}
+      </style>
     </div>
   );
 };

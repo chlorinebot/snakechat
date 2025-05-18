@@ -22,6 +22,9 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [processingRequest, setProcessingRequest] = useState<{ [key: number]: boolean }>({});
   
+  // Thêm state để lưu trữ trạng thái kết bạn của các người dùng trong kết quả tìm kiếm
+  const [friendshipStatuses, setFriendshipStatuses] = useState<{ [key: number]: string }>({});
+  
   // Thêm state cho việc sắp xếp
   const [sortOptions] = useState<SortOption[]>([
     { id: 'name-asc', label: 'Tên (A-Z)' },
@@ -108,6 +111,27 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       const results = await api.searchUsers(term);
       setSearchResults(results);
       setHasSearched(true);
+      
+      // Kiểm tra trạng thái kết bạn của mỗi người dùng trong kết quả tìm kiếm
+      if (currentUser && currentUser.user_id) {
+        const statuses: { [key: number]: string } = {};
+        
+        for (const user of results) {
+          if (user.user_id && user.user_id !== currentUser.user_id) {
+            try {
+              const status = await api.checkFriendshipStatus(currentUser.user_id, user.user_id);
+              console.log(`Trạng thái kết bạn với ${user.username}:`, status);
+              if (status && status.status) {
+                statuses[user.user_id] = status.status;
+              }
+            } catch (err) {
+              console.error(`Lỗi khi kiểm tra trạng thái kết bạn với ${user.username}:`, err);
+            }
+          }
+        }
+        
+        setFriendshipStatuses(statuses);
+      }
     } catch (error) {
       console.error('Lỗi khi tìm kiếm người dùng:', error);
     } finally {
@@ -171,8 +195,19 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   };
 
   // Xử lý khi click vào user để mở modal
-  const handleUserClick = (user: User) => {
+  const handleUserClick = (user: User, friendshipId?: number, fromFriendRequest = false) => {
     setSelectedUserId(user.user_id);
+    // Thêm vào state thông tin về lời mời kết bạn nếu có
+    if (fromFriendRequest && friendshipId) {
+      // Lưu lại thông tin về lời mời kết bạn vào localStorage để sử dụng trong UserProfileModal
+      localStorage.setItem('currentFriendRequest', JSON.stringify({
+        friendshipId,
+        fromFriendRequest: true
+      }));
+    } else {
+      // Nếu không phải mở từ lời mời kết bạn, xóa dữ liệu này nếu có
+      localStorage.removeItem('currentFriendRequest');
+    }
     setShowUserProfileModal(true);
   };
 
@@ -249,6 +284,25 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     // Cập nhật lại danh sách tìm kiếm nếu cần
     if (activeTab === 'explore' && hasSearched && searchTerm.length >= 2) {
       handleSearch(searchTerm);
+    } else if (activeTab === 'explore' && selectedUserId) {
+      // Nếu không cần tìm kiếm lại toàn bộ, thì cập nhật trạng thái cho người dùng đã được xem
+      if (currentUser && currentUser.user_id && selectedUserId) {
+        api.checkFriendshipStatus(currentUser.user_id, selectedUserId)
+          .then(status => {
+            if (status && status.status) {
+              // Đảm bảo status.status không phải là null
+              const friendshipStatus = status.status as string;
+              setFriendshipStatuses(prev => ({
+                ...prev,
+                [selectedUserId]: friendshipStatus
+              }));
+              console.log(`Cập nhật trạng thái kết bạn với userId ${selectedUserId}: ${friendshipStatus}`);
+            }
+          })
+          .catch(error => {
+            console.error('Lỗi khi cập nhật trạng thái kết bạn:', error);
+          });
+      }
     }
     
     // Gọi callback nếu có
@@ -322,6 +376,18 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     }
     
     return isOnline(status) ? 'status-online' : 'status-offline';
+  };
+
+  // Kiểm tra trạng thái kết bạn của một người dùng
+  const checkFriendshipStatus = (userId?: number) => {
+    if (!userId || !currentUser) return null;
+    
+    // Kiểm tra xem người dùng có trong danh sách bạn bè không
+    const isFriend = friendsList.some(friend => friend.user_id === userId);
+    if (isFriend) return 'accepted';
+    
+    // Kiểm tra từ state các trạng thái kết bạn đã lưu
+    return friendshipStatuses[userId] || null;
   };
 
   // Render danh sách bạn bè
@@ -408,32 +474,59 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       );
     }
 
+    const friendRequestItemStyle = {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '15px',
+      padding: '5px',
+      borderRadius: '10px',
+      border: '1px solid #e0e0e0'
+    };
+
+    const userInfoStyle = {
+      display: 'flex',
+      alignItems: 'center',
+      cursor: 'pointer',
+      padding: '10px',
+      borderRadius: '8px',
+      transition: 'background-color 0.2s'
+    };
+
     return (
       <div className="friend-requests-container">
         {friendRequests.map((request) => (
-          <div key={request.friendship_id} className="friend-request-item">
-            <div className="friend-request-avatar">
-              {request.user.username ? request.user.username.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="friend-request-info">
-              <div className="friend-request-name">{request.user.username}</div>
-              <div className="friend-request-time">{formatTime(request.created_at)}</div>
-              <div className="friend-request-actions">
-                <button 
-                  className="accept-request-btn"
-                  onClick={() => handleAcceptFriendRequest(request.friendship_id)}
-                  disabled={!!processingRequest[request.friendship_id]}
-                >
-                  {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Chấp nhận'}
-                </button>
-                <button 
-                  className="reject-request-btn"
-                  onClick={() => handleRejectFriendRequest(request.friendship_id)}
-                  disabled={!!processingRequest[request.friendship_id]}
-                >
-                  {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Từ chối'}
-                </button>
+          <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
+            <div 
+              className="user-info-container"
+              onClick={() => handleUserClick(request.user, request.friendship_id, true)}
+              style={userInfoStyle}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <div className="friend-request-avatar">
+                {request.user.username ? request.user.username.charAt(0).toUpperCase() : 'U'}
               </div>
+              <div className="friend-request-info">
+                <div className="friend-request-name">{request.user.username}</div>
+                <div className="friend-request-time">{formatTime(request.created_at)}</div>
+              </div>
+            </div>
+            <div className="friend-request-actions">
+              <button 
+                className="accept-request-btn"
+                onClick={() => handleAcceptFriendRequest(request.friendship_id)}
+                disabled={!!processingRequest[request.friendship_id]}
+              >
+                {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Chấp nhận'}
+              </button>
+              <button 
+                className="reject-request-btn"
+                onClick={() => handleRejectFriendRequest(request.friendship_id)}
+                disabled={!!processingRequest[request.friendship_id]}
+              >
+                {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Từ chối'}
+              </button>
             </div>
           </div>
         ))}
@@ -510,6 +603,16 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
                           <i className="fas fa-user"></i>
                           Đây là bạn
                         </div>
+                      ) : checkFriendshipStatus(user.user_id) === 'accepted' ? (
+                        <div className="friend-status-label">
+                          <i className="fas fa-user-check"></i>
+                          Đã là bạn bè
+                        </div>
+                      ) : checkFriendshipStatus(user.user_id) === 'pending' ? (
+                        <div className="pending-request-label">
+                          <i className="fas fa-clock"></i>
+                          Đã gửi lời mời
+                        </div>
                       ) : (
                         <button 
                           className="add-friend-btn"
@@ -549,7 +652,38 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
         onClose={handleCloseUserProfileModal}
         userId={selectedUserId}
         onFriendRequestSent={handleProfileModalUpdate}
+        fromFriendRequest={JSON.parse(localStorage.getItem('currentFriendRequest') || '{"fromFriendRequest": false}').fromFriendRequest} 
+        friendshipId={JSON.parse(localStorage.getItem('currentFriendRequest') || '{"friendshipId": null}').friendshipId}
       />
+
+      <style>
+        {`
+          .friend-status-label, .pending-request-label, .current-user-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+          }
+          
+          .friend-status-label {
+            background-color: #e3f2fd;
+            color: #2196f3;
+          }
+          
+          .pending-request-label {
+            background-color: #fff8e1;
+            color: #ffa000;
+          }
+          
+          .current-user-label {
+            background-color: #f5f5f5;
+            color: #607d8b;
+          }
+        `}
+      </style>
     </div>
   );
 };
