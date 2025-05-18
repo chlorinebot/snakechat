@@ -109,6 +109,45 @@
   font-size: 36px;
   font-weight: 500;
   flex-shrink: 0;
+  position: relative;
+}
+
+.profile-status-indicator {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  border: 2px solid white;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+}
+
+.status-online {
+  background-color: #4caf50; /* Màu xanh lá cây cho trạng thái online */
+}
+
+.status-offline {
+  background-color: #bdbdbd; /* Màu xám cho trạng thái offline */
+}
+
+.status-unknown {
+  background-color: #9e9e9e; /* Màu xám đậm hơn cho trạng thái không xác định */
+  position: relative;
+  overflow: hidden;
+}
+
+/* Tạo hiệu ứng cho status-unknown bằng cách thêm dấu hỏi */
+.status-unknown::after {
+  content: "?";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
 }
 
 .profile-user-info {
@@ -129,33 +168,9 @@
   gap: 6px;
 }
 
-.status-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #95a5a6;
-}
-
-.status-indicator.online {
-  background-color: #2ecc71;
-}
-
 .status-text {
   font-size: 14px;
   color: #555;
-}
-
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  background-color: #95a5a6;
-}
-
-.status-dot.online {
-  background-color: #2ecc71;
 }
 
 .account-status {

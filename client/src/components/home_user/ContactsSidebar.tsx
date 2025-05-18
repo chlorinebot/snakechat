@@ -4,9 +4,10 @@ type ContactTab = 'friends' | 'requests' | 'explore';
 
 interface ContactsSidebarProps {
   onTabChange?: (tab: ContactTab) => void;
+  friendRequestCount?: number; // Số lượng lời mời kết bạn
 }
 
-const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ onTabChange }) => {
+const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ onTabChange, friendRequestCount = 0 }) => {
   const [activeTab, setActiveTab] = useState<ContactTab>('friends');
 
   const handleTabChange = (tab: ContactTab) => {
@@ -15,6 +16,11 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ onTabChange }) => {
       onTabChange(tab);
     }
   };
+
+  // Hiển thị badge chỉ khi có ít nhất 1 lời mời kết bạn
+  const showBadge = friendRequestCount > 0;
+  // Hiển thị số +9 nếu có hơn 9 lời mời kết bạn
+  const badgeText = friendRequestCount > 9 ? '+9' : friendRequestCount.toString();
 
   return (
     <div className="contacts-sidebar">
@@ -37,6 +43,7 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ onTabChange }) => {
         <div 
           className={`contact-sidebar-item ${activeTab === 'requests' ? 'active' : ''}`}
           onClick={() => handleTabChange('requests')}
+          style={{ position: 'relative' }}
         >
           <div className="contact-sidebar-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'requests' ? "#0084ff" : "#777"}>
@@ -44,6 +51,13 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ onTabChange }) => {
             </svg>
           </div>
           <span style={{ color: activeTab === 'requests' ? '#0084ff' : '#000' }}>Lời mời kết bạn</span>
+          
+          {/* Hiển thị badge khi có lời mời kết bạn */}
+          {showBadge && (
+            <div className="friend-request-badge-sidebar">
+              {badgeText}
+            </div>
+          )}
         </div>
         <div 
           className={`contact-sidebar-item ${activeTab === 'explore' ? 'active' : ''}`}

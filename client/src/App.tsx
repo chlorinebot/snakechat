@@ -12,7 +12,7 @@ import api from './services/api';
 // URL endpoint cho cập nhật trạng thái
 const API_URL = 'http://localhost:5000/api';
 const OFFLINE_URL = `${API_URL}/user/update-status-beacon`;
-const HEARTBEAT_INTERVAL = 30000; // 30 giây
+const HEARTBEAT_INTERVAL = 10000; // 10 giây
 
 const App: React.FC = () => {
   // Kiểm tra authentication và role từ localStorage
@@ -95,10 +95,24 @@ const App: React.FC = () => {
           const data = new FormData();
           data.append('user_id', userId.toString());
           data.append('status', 'offline');
+          data.append('timestamp', new Date().getTime().toString()); // Thêm timestamp để tránh cache
+          data.append('force', 'true'); // Thêm flag force để đảm bảo cập nhật ngay lập tức
           
           // Sử dụng navigator.sendBeacon để đảm bảo yêu cầu được gửi ngay cả khi đóng tab
           const beaconSent = navigator.sendBeacon(OFFLINE_URL, data);
           console.log('Đã gửi beacon offline:', beaconSent);
+          
+          // Thêm dữ liệu dự phòng vào localStorage
+          localStorage.setItem('lastOfflineAction', JSON.stringify({
+            userId,
+            timestamp: new Date().getTime(),
+            sent: beaconSent
+          }));
+          
+          // Lưu trạng thái offline vào localStorage để các tab khác biết
+          localStorage.setItem('userStatus', 'offline');
+          localStorage.setItem('offlineTimestamp', new Date().getTime().toString());
+          
           return beaconSent;
         }
       } catch (error) {
@@ -116,8 +130,14 @@ const App: React.FC = () => {
       const lastActiveTime = parseInt(lastActivity, 10);
       const inactiveTime = now - lastActiveTime;
       
-      // Nếu không hoạt động trong 5 phút (300000ms), đánh dấu là offline
-      if (inactiveTime > 300000) {
+      // Log thời gian không hoạt động (debug)
+      if (inactiveTime > 10000) { // 10 giây
+        console.log(`Thời gian không hoạt động: ${Math.floor(inactiveTime / 1000)} giây`);
+      }
+      
+      // Nếu không hoạt động trong 30 giây (30000ms), đánh dấu là offline
+      if (inactiveTime > 30000) {
+        console.log('Người dùng không hoạt động trong 30 giây, đánh dấu là offline');
         handleUserOffline();
         return false;
       }
@@ -143,6 +163,19 @@ const App: React.FC = () => {
         // Kiểm tra cả id và user_id
         const userId = parsedUser.user_id || parsedUser.id;
         if (userId) {
+          // Kiểm tra localStorage xem người dùng trước đó có ở trạng thái offline không
+          const offlineTimestamp = localStorage.getItem('offlineTimestamp');
+          if (offlineTimestamp) {
+            const now = new Date().getTime();
+            const lastOfflineTime = parseInt(offlineTimestamp, 10);
+            // Nếu mới đánh dấu offline < 3 giây trước, không cập nhật lại online
+            if ((now - lastOfflineTime) < 3000) {
+              console.log('Đã đánh dấu offline gần đây, không cập nhật lại online');
+              return;
+            }
+          }
+          
+          // Cập nhật trạng thái online
           api.updateUserActivity(userId);
           updateLastActivityTime();
         }
@@ -157,51 +190,137 @@ const App: React.FC = () => {
       if (checkUserActivity()) {
         updateOnlineStatus();
       }
-    }, 30000); // Cập nhật mỗi 30 giây
+    }, 10000); // Cập nhật mỗi 10 giây
     
     // Thiết lập interval cho heartbeat
     heartbeatTimerRef.current = setInterval(() => {
       sendHeartbeat();
-    }, HEARTBEAT_INTERVAL);
+    }, 10000); // Gửi heartbeat mỗi 10 giây
     
     // Thiết lập interval để kiểm tra định kỳ sự hoạt động của người dùng
     const activityCheckId = setInterval(() => {
       checkUserActivity();
-    }, 60000); // Kiểm tra mỗi phút
+    }, 10000); // Kiểm tra mỗi 10 giây
     
-    // Xử lý sự kiện khi người dùng đóng tab/trình duyệt
-    const handleBeforeUnload = () => {
-      console.log('Sự kiện beforeunload đã được kích hoạt');
-      
-      // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
-      if (!sendOfflineBeacon()) {
-        // Fallback nếu sendBeacon không được hỗ trợ
-        handleUserOffline();
-      }
-    };
-    
-    // Thêm sự kiện unload để đảm bảo hơn nữa
-    const handleUnload = () => {
-      console.log('Sự kiện unload đã được kích hoạt');
-      
-      // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
-      if (!sendOfflineBeacon()) {
-        // Fallback nếu sendBeacon không được hỗ trợ
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${API_URL}/user/update-status`, false); // Đặt false để làm cho nó đồng bộ
-        xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-        
+    // Thiết lập interval để cập nhật thông tin bạn bè
+    const friendsUpdateId = setInterval(() => {
+      // Cập nhật trạng thái bạn bè mỗi 10 giây
+      if (isTabActive && isAuthenticated) {
         const userData = localStorage.getItem('user');
         if (userData) {
           try {
             const parsedUser = JSON.parse(userData);
             const userId = parsedUser.user_id || parsedUser.id;
             if (userId) {
-              xhr.send(JSON.stringify({ user_id: userId, status: 'offline' }));
+              // Cập nhật thông tin bạn bè để lấy trạng thái mới nhất
+              console.log('Cập nhật trạng thái bạn bè...');
+              // Sử dụng hàm refreshFriendStatus mới để cập nhật
+              api.refreshFriendStatus(userId);
             }
           } catch (error) {
-            console.error('Lỗi khi gửi yêu cầu offline:', error);
+            console.error('Lỗi khi cập nhật trạng thái bạn bè:', error);
           }
+        }
+      }
+    }, 10000); // 10 giây
+    
+    // Kiểm tra trạng thái khi reload
+    const checkOfflineOnReload = () => {
+      const lastOfflineAction = localStorage.getItem('lastOfflineAction');
+      if (lastOfflineAction) {
+        try {
+          const offlineData = JSON.parse(lastOfflineAction);
+          const now = new Date().getTime();
+          // Nếu có dữ liệu offline được lưu trong vòng 5 giây gần đây, gửi lại yêu cầu để đảm bảo
+          if (now - offlineData.timestamp < 5000) {
+            console.log('Phát hiện yêu cầu offline gần đây, gửi lại để đảm bảo...');
+            api.updateUserOffline(offlineData.userId);
+          }
+          // Xóa dữ liệu sau khi xử lý
+          localStorage.removeItem('lastOfflineAction');
+        } catch (error) {
+          console.error('Lỗi khi xử lý dữ liệu offline tại lúc tải lại:', error);
+        }
+      }
+    };
+    
+    // Thực hiện kiểm tra ngay khi tải trang
+    checkOfflineOnReload();
+    
+    // Xử lý sự kiện khi người dùng đóng tab/trình duyệt
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      console.log('Sự kiện beforeunload đã được kích hoạt');
+      
+      // Thực hiện các hành động offline ngay lập tức
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          const userId = parsedUser.user_id || parsedUser.id;
+          
+          // Đánh dấu offline ngay lập tức
+          localStorage.setItem('userStatus', 'offline');
+          localStorage.setItem('offlineTimestamp', new Date().getTime().toString());
+          
+          // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
+          if (!sendOfflineBeacon()) {
+            // Fallback nếu sendBeacon không được hỗ trợ
+            // Lưu vào localStorage để xử lý khi tải lại
+            localStorage.setItem('lastOfflineAction', JSON.stringify({
+              userId,
+              timestamp: new Date().getTime(),
+              sent: false
+            }));
+            
+            handleUserOffline();
+          }
+        } catch (error) {
+          console.error('Lỗi khi xử lý đóng tab:', error);
+        }
+      }
+      
+      // Không cần hiển thị cảnh báo, chỉ cần cập nhật trạng thái offline
+    };
+    
+    // Thêm sự kiện unload để đảm bảo hơn nữa
+    const handleUnload = () => {
+      console.log('Sự kiện unload đã được kích hoạt');
+      
+      // Cũng thực hiện các hành động giống như beforeunload
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          const userId = parsedUser.user_id || parsedUser.id;
+          
+          // Đánh dấu offline ngay lập tức
+          localStorage.setItem('userStatus', 'offline');
+          localStorage.setItem('offlineTimestamp', new Date().getTime().toString());
+          
+          // Sử dụng Beacon API để đảm bảo yêu cầu được gửi
+          if (!sendOfflineBeacon()) {
+            // Fallback nếu sendBeacon không được hỗ trợ
+            localStorage.setItem('lastOfflineAction', JSON.stringify({
+              userId,
+              timestamp: new Date().getTime(),
+              sent: false
+            }));
+            
+            // Thử sử dụng XMLHttpRequest đồng bộ
+            try {
+              const xhr = new XMLHttpRequest();
+              xhr.open('POST', `${API_URL}/user/update-status`, false); // Đặt false để làm cho nó đồng bộ
+              xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+              
+              if (userId) {
+                xhr.send(JSON.stringify({ user_id: userId, status: 'offline', force: true }));
+              }
+            } catch (xhrError) {
+              console.error('Lỗi khi gửi yêu cầu offline đồng bộ:', xhrError);
+            }
+          }
+        } catch (error) {
+          console.error('Lỗi khi gửi yêu cầu offline:', error);
         }
       }
     };
@@ -223,23 +342,45 @@ const App: React.FC = () => {
       
       if (!isVisible) {
         // Tab không còn hiển thị
-        localStorage.setItem('tabHiddenTime', new Date().getTime().toString());
+        const currentTime = new Date().getTime();
+        localStorage.setItem('tabHiddenTime', currentTime.toString());
         
         // Dừng heartbeat khi tab không hiển thị
         if (heartbeatTimerRef.current) {
           clearInterval(heartbeatTimerRef.current);
           heartbeatTimerRef.current = null;
         }
+        
+        // Đặt hẹn giờ để chuyển trạng thái thành offline nếu tab không hiển thị trong 30 giây
+        const offlineTimerId = setTimeout(() => {
+          console.log('Tab đã ẩn quá lâu, đánh dấu người dùng là offline');
+          handleUserOffline();
+          localStorage.setItem('userStatus', 'offline');
+        }, 30000); // 30 giây
+        
+        // Lưu timer ID để có thể xóa nếu tab hiển thị lại trước khi hết thời gian
+        localStorage.setItem('offlineTimerId', offlineTimerId.toString());
       } else {
         // Tab hiển thị lại
         const hiddenTime = localStorage.getItem('tabHiddenTime');
+        const userStatus = localStorage.getItem('userStatus');
+        const offlineTimerId = localStorage.getItem('offlineTimerId');
+        
+        // Xóa timer đánh dấu offline nếu có
+        if (offlineTimerId) {
+          clearTimeout(parseInt(offlineTimerId, 10));
+          localStorage.removeItem('offlineTimerId');
+        }
+        
         if (hiddenTime) {
           const now = new Date().getTime();
           const hiddenDuration = now - parseInt(hiddenTime, 10);
           
-          // Nếu tab đã ẩn hơn 5 phút, cập nhật lại trạng thái online
-          if (hiddenDuration > 300000) {
+          // Nếu tab đã ẩn quá lâu (30 giây) hoặc đã được đánh dấu là offline
+          if (hiddenDuration > 30000 || userStatus === 'offline') {
+            console.log('Tab trở lại sau thời gian dài, cập nhật trạng thái online');
             updateOnlineStatus();
+            localStorage.setItem('userStatus', 'online');
           }
         }
         
@@ -247,7 +388,7 @@ const App: React.FC = () => {
         if (!heartbeatTimerRef.current) {
           heartbeatTimerRef.current = setInterval(() => {
             sendHeartbeat();
-          }, HEARTBEAT_INTERVAL);
+          }, 10000);
         }
         
         // Cập nhật lại thời gian hoạt động
@@ -277,6 +418,7 @@ const App: React.FC = () => {
       // Xóa đăng ký sự kiện và dừng interval khi component unmount
       clearInterval(intervalId);
       clearInterval(activityCheckId);
+      clearInterval(friendsUpdateId);
       if (heartbeatTimerRef.current) {
         clearInterval(heartbeatTimerRef.current);
       }

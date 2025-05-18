@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './HomePage.css';
 import api from '../../services/api';
+import socketService from '../../services/socketService';
 
 // Import các components
 import MainSidebar from '../../components/home_user/MainSidebar';
@@ -21,15 +22,16 @@ type ActiveTab = 'messages' | 'contacts';
 type ContactTab = 'friends' | 'requests' | 'explore';
 
 const HomePage: React.FC<UserProps> = ({ onLogout }) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('user') || '{}'));
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('messages');
   const [contactsTab, setContactsTab] = useState<ContactTab>('friends');
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [friendRequestCount, setFriendRequestCount] = useState<number>(0);
   const navigate = useNavigate();
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const avatarRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const avatarRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
     // Lấy thông tin người dùng từ localStorage
@@ -45,6 +47,20 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
           navigate('/login');
         } else {
           setUser(parsedUser);
+          
+          // Kết nối socket khi xác định user
+          socketService.connect(parsedUser.user_id);
+          
+          // Lắng nghe sự kiện cập nhật số lượng lời mời kết bạn
+          socketService.on('friend_request', (data) => {
+            console.log('Nhận lời mời kết bạn mới:', data);
+            setFriendRequestCount(data.count);
+          });
+          
+          socketService.on('friend_request_count_update', (data) => {
+            console.log('Cập nhật số lượng lời mời kết bạn:', data);
+            setFriendRequestCount(data.count);
+          });
         }
       } catch (error) {
         console.error('Lỗi khi parse thông tin người dùng:', error);
@@ -67,12 +83,38 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
+    
+    // Cleanup khi component unmount
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      socketService.disconnect();
+      socketService.off('friend_request');
+      socketService.off('friend_request_count_update');
     };
   }, [navigate]);
 
+  useEffect(() => {
+    // Lấy số lượng lời mời kết bạn khi component mount
+    const fetchFriendRequests = async () => {
+      if (user && user.user_id) {
+        try {
+          const requests = await api.getReceivedFriendRequests(user.user_id);
+          if (requests && Array.isArray(requests)) {
+            setFriendRequestCount(requests.length);
+            console.log(`Đã cập nhật số lượng lời mời kết bạn: ${requests.length}`);
+          }
+        } catch (error) {
+          console.error('Lỗi khi lấy số lượng lời mời kết bạn:', error);
+        }
+      }
+    };
+
+    // Gọi lần đầu khi component mount
+    fetchFriendRequests();
+  }, [user]);
+
   const handleLogoutClick = () => {
+    socketService.disconnect();
     onLogout();
     navigate('/login');
   };
@@ -90,7 +132,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
 
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
-    setShowProfileDropdown(false);
+    // Không đóng dropdown khi chuyển tab
   };
 
   const handleContactsTabChange = (tab: ContactTab) => {
@@ -105,6 +147,36 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const handleProfileClick = () => {
     setShowProfileModal(true);
     setShowProfileDropdown(false);
+  };
+
+  const handleUpdateLastActivity = async () => {
+    try {
+      const result = await api.updateLastActivitySystem();
+      alert(`Cập nhật thành công: ${result.message}`);
+      
+      // Nếu người dùng hiện tại đăng nhập, cập nhật trạng thái
+      if (user && user.user_id) {
+        await api.updateUserActivity(user.user_id);
+        console.log('Đã cập nhật trạng thái người dùng hiện tại');
+      }
+    } catch (error) {
+      console.error('Lỗi khi cập nhật:', error);
+      alert('Lỗi khi cập nhật hệ thống');
+    }
+  };
+
+  // Hàm cập nhật lại số lượng lời mời kết bạn (gọi sau khi chấp nhận/từ chối)
+  const handleFriendRequestUpdate = async () => {
+    if (user && user.user_id) {
+      try {
+        const requests = await api.getReceivedFriendRequests(user.user_id);
+        if (requests && Array.isArray(requests)) {
+          setFriendRequestCount(requests.length);
+        }
+      } catch (error) {
+        console.error('Lỗi khi cập nhật số lượng lời mời kết bạn:', error);
+      }
+    }
   };
 
   if (!user) {
@@ -137,6 +209,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         onAvatarClick={handleAvatarClick}
         avatarRef={avatarRef}
         onSettingsClick={handleSettingsClick}
+        friendRequestCount={friendRequestCount}
       />
       
       {/* Main content */}
@@ -154,20 +227,27 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
             <div className="content-header">
               <h2>{getContactsHeaderTitle()}</h2>
             </div>
-            <ContactsSidebar onTabChange={handleContactsTabChange} />
-            <ContactsContent activeTab={contactsTab} />
+            <ContactsSidebar 
+              onTabChange={handleContactsTabChange} 
+              friendRequestCount={friendRequestCount}
+            />
+            <ContactsContent 
+              activeTab={contactsTab} 
+              onFriendRequestUpdate={handleFriendRequestUpdate}
+            />
           </div>
         )}
       </div>
 
-      {/* Dropdown khi click vào avatar */}
+      {/* Dropdown khi click vào avatar - sử dụng component UserDropdown thay vì tự tạo */}
       {showProfileDropdown && (
-        <UserDropdown 
+        <UserDropdown
           username={user.username}
           dropdownRef={dropdownRef}
           onLogout={handleLogoutClick}
           onProfileClick={handleProfileClick}
           onSettingsClick={handleSettingsClick}
+          onUpdateLastActivity={handleUpdateLastActivity}
         />
       )}
 

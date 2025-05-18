@@ -2,20 +2,28 @@ import React, { useState, useEffect } from 'react';
 import './ProfileModal.css'; // Sử dụng lại CSS của ProfileModal
 import api from '../../services/api';
 import type { User } from '../../services/api';
+import ConfirmRemoveFriendModal from './ConfirmRemoveFriendModal';
+import SuccessToast from '../common/SuccessToast';
 
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId?: number;
+  onFriendRequestSent?: () => void; // Callback khi gửi lời mời kết bạn thành công
 }
 
-const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, userId }) => {
+const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, userId, onFriendRequestSent }) => {
   const [userData, setUserData] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [addingFriend, setAddingFriend] = useState<boolean>(false);
   const [friendRequestSent, setFriendRequestSent] = useState<boolean>(false);
+  const [friendshipStatus, setFriendshipStatus] = useState<string | null>(null);
+  const [friendshipId, setFriendshipId] = useState<number | undefined>(undefined);
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [removingFriend, setRemovingFriend] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   useEffect(() => {
     // Lấy thông tin người dùng hiện tại từ localStorage
@@ -55,6 +63,20 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
         
         console.log("Thông tin người dùng từ API:", userFromAPI);
         setUserData(userFromAPI);
+
+        // Kiểm tra trạng thái kết bạn
+        if (storedUser) {
+          const currentUserData = JSON.parse(storedUser);
+          const status = await api.checkFriendshipStatus(currentUserData.user_id, userId);
+          console.log("Trạng thái kết bạn:", status);
+          setFriendshipStatus(status.status);
+          setFriendshipId(status.friendship_id);
+          
+          if (status.status === 'pending') {
+            // Nếu đã gửi lời mời kết bạn trước đó
+            setFriendRequestSent(true);
+          }
+        }
       } catch (error) {
         console.error('Lỗi khi lấy thông tin người dùng:', error);
         setError('Không thể tải thông tin người dùng. Vui lòng thử lại sau.');
@@ -89,27 +111,156 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
     return false;
   };
 
+  // Kiểm tra xem có quyền xem trạng thái không
+  const canViewStatus = () => {
+    // Người dùng có thể xem trạng thái nếu:
+    return isCurrentUser() || // Là chính bản thân
+      friendshipStatus === 'accepted'; // Đã là bạn bè
+  };
+
+  // Hiển thị trạng thái hoạt động phù hợp
+  const getStatusDisplay = () => {
+    if (!canViewStatus()) {
+      return 'Không có quyền xem';
+    }
+    
+    return isOnline(userData?.status) ? 'Đang hoạt động' : 'Không hoạt động';
+  };
+
+  // Lấy lớp CSS cho chỉ báo trạng thái
+  const getStatusIndicatorClass = () => {
+    if (!canViewStatus()) {
+      return 'status-unknown'; // CSS đặc biệt cho trường hợp không có quyền xem
+    }
+    
+    return isOnline(userData?.status) ? 'status-online' : 'status-offline';
+  };
+
   const handleAddFriend = async () => {
     if (!userData || !currentUser) return;
     
+    // Đảm bảo cả hai user_id đều tồn tại
+    if (!userData.user_id || !currentUser.user_id) {
+      setError('Không thể gửi lời mời: Thiếu thông tin người dùng');
+      return;
+    }
+    
     setAddingFriend(true);
     try {
-      // TODO: Thêm API gửi lời mời kết bạn ở đây
-      // await api.sendFriendRequest(userData.user_id);
+      // Gửi lời mời kết bạn
+      const result = await api.sendFriendRequest(currentUser.user_id, userData.user_id);
       
-      console.log(`Đã gửi lời mời kết bạn đến ${userData.username}`);
-      setFriendRequestSent(true);
-      
-      setTimeout(() => {
-        // Đóng modal sau khi gửi lời mời kết bạn thành công
-        onClose();
-      }, 1500);
+      if (result.success) {
+        console.log(`Đã gửi lời mời kết bạn đến ${userData.username}`);
+        setFriendRequestSent(true);
+        setFriendshipStatus('pending');
+        setFriendshipId(result.data?.friendship_id);
+        
+        // Gọi callback nếu có
+        if (onFriendRequestSent) {
+          onFriendRequestSent();
+        }
+        
+        setTimeout(() => {
+          // Đóng modal sau khi gửi lời mời kết bạn thành công
+          onClose();
+        }, 1500);
+      } else {
+        setError(result.message);
+      }
     } catch (error) {
       console.error('Lỗi khi gửi lời mời kết bạn:', error);
       setError('Không thể gửi lời mời kết bạn. Vui lòng thử lại sau.');
     } finally {
       setAddingFriend(false);
     }
+  };
+
+  const handleCancelFriendRequest = async () => {
+    if (!friendshipId) {
+      console.error('Không thể hủy lời mời kết bạn: friendshipId không tồn tại');
+      return;
+    }
+    
+    setAddingFriend(true);
+    try {
+      // Hủy lời mời kết bạn, sử dụng non-null assertion để khắc phục TypeScript error
+      const result = await api.rejectFriendRequest(friendshipId as number);
+      
+      if (result.success) {
+        console.log('Đã hủy lời mời kết bạn');
+        setFriendRequestSent(false);
+        setFriendshipStatus(null);
+        setFriendshipId(undefined);
+        
+        setTimeout(() => {
+          // Đóng modal sau khi hủy lời mời kết bạn thành công
+          onClose();
+        }, 1500);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('Lỗi khi hủy lời mời kết bạn:', error);
+      setError('Không thể hủy lời mời kết bạn. Vui lòng thử lại sau.');
+    } finally {
+      setAddingFriend(false);
+    }
+  };
+  
+  // Xử lý khi người dùng nhấn nút hủy kết bạn
+  const handleRemoveFriendClick = () => {
+    setShowConfirmModal(true); // Hiển thị modal xác nhận
+  };
+  
+  // Xử lý khi người dùng xác nhận hủy kết bạn
+  const handleRemoveFriend = async () => {
+    if (!friendshipId) {
+      console.error('Không thể hủy kết bạn: friendshipId không tồn tại');
+      setShowConfirmModal(false);
+      return;
+    }
+    
+    setRemovingFriend(true);
+    try {
+      // Gọi API hủy kết bạn
+      const result = await api.removeFriend(friendshipId);
+      
+      if (result.success) {
+        console.log('Đã hủy kết bạn thành công');
+        setSuccessMessage('Đã hủy kết bạn thành công!');
+        setFriendshipStatus(null);
+        setFriendshipId(undefined);
+        
+        // Gọi callback nếu có
+        if (onFriendRequestSent) {
+          onFriendRequestSent();
+        }
+        
+        // Đóng modal xác nhận ngay lập tức nhưng giữ lại modal thông tin người dùng
+        setShowConfirmModal(false);
+        
+        // Đóng modal thông tin người dùng sau khi hết thời gian hiển thị thông báo
+        setTimeout(() => {
+          // Xóa thông báo thành công và đóng modal
+          setSuccessMessage('');
+          onClose();
+        }, 3000);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('Lỗi khi hủy kết bạn:', error);
+      setError('Không thể hủy kết bạn. Vui lòng thử lại sau.');
+    } finally {
+      setRemovingFriend(false);
+      setShowConfirmModal(false); // Đóng modal xác nhận
+    }
+  };
+  
+  // Đóng modal xác nhận
+  const handleCancelRemove = () => {
+    setShowConfirmModal(false);
   };
 
   if (!isOpen) return null;
@@ -125,6 +276,89 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
     } catch (error) {
       console.error('Lỗi khi format date:', error);
       return 'N/A';
+    }
+  };
+
+  // Kiểm tra trạng thái online
+  const isOnline = (status?: string) => {
+    console.log('Kiểm tra trạng thái profile modal:', status);
+    if (status === undefined || status === null) {
+      return false;
+    }
+    return status.toLowerCase() === 'online';
+  };
+
+  // Tính toán thời gian hoạt động cuối cùng
+  const getLastActivityTime = (lastActivity?: string) => {
+    if (!lastActivity) return 'N/A';
+    try {
+      const date = new Date(lastActivity);
+      // Kiểm tra xem ngày có hợp lệ không
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) {
+        return `${diffMins} phút trước`;
+      } else if (diffHours < 24) {
+        return `${diffHours} giờ trước`;
+      } else {
+        return `${diffDays} ngày trước`;
+      }
+    } catch (error) {
+      console.error('Lỗi khi tính thời gian hoạt động cuối cùng:', error);
+      return 'N/A';
+    }
+  };
+
+  // Render button dựa trên trạng thái kết bạn
+  const renderFriendshipButton = () => {
+    if (isCurrentUser()) {
+      return null; // Không hiển thị nút nếu là chính mình
+    }
+
+    if (friendshipStatus === 'accepted') {
+      return (
+        <div className="friendship-buttons">
+          <button className="friend-status-button">
+            <i className="fas fa-user-check"></i>
+            Đã là bạn bè
+          </button>
+          <button 
+            className="remove-friend-button" 
+            onClick={handleRemoveFriendClick}
+          >
+            <i className="fas fa-user-minus"></i>
+            Hủy kết bạn
+          </button>
+        </div>
+      );
+    } else if (friendshipStatus === 'pending' && friendRequestSent) {
+      return (
+        <button 
+          className="cancel-friend-button" 
+          onClick={handleCancelFriendRequest}
+          disabled={addingFriend}
+        >
+          <i className="fas fa-user-times"></i>
+          {addingFriend ? 'Đang hủy...' : 'Hủy lời mời kết bạn'}
+        </button>
+      );
+    } else {
+      return (
+        <button 
+          className="add-friend-button" 
+          onClick={handleAddFriend}
+          disabled={addingFriend || friendRequestSent}
+        >
+          <i className="fas fa-user-plus"></i>
+          {addingFriend ? 'Đang gửi...' : friendRequestSent ? 'Đã gửi lời mời' : 'Kết bạn'}
+        </button>
+      );
     }
   };
 
@@ -144,7 +378,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
               console.log("Render UserProfileModal với thông tin:", {
                 email: userData.email,
                 status: userData.status,
-                join_date: userData.join_date
+                join_date: userData.join_date,
+                friendshipStatus
               });
               
               return (
@@ -152,6 +387,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
                   <div className="profile-avatar-section">
                     <div className="profile-avatar">
                       {userData.username ? userData.username.charAt(0).toUpperCase() : '?'}
+                      <div className={`profile-status-indicator ${getStatusIndicatorClass()}`}></div>
                     </div>
                     <div className="profile-user-info">
                       <div className="profile-username">{userData.username}</div>
@@ -170,20 +406,23 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
                     </div>
                     
                     <div className="info-group">
+                      <div className="info-label">Trạng thái:</div>
+                      <div className="info-value">{getStatusDisplay()}</div>
+                    </div>
+                    
+                    {canViewStatus() && !isOnline(userData.status) && userData.last_activity && (
+                      <div className="info-group">
+                        <div className="info-label">Hoạt động cuối:</div>
+                        <div className="info-value">{getLastActivityTime(userData.last_activity)}</div>
+                      </div>
+                    )}
+                    
+                    <div className="info-group">
                       <div className="info-label">Ngày tham gia:</div>
                       <div className="info-value">{formatDate(userData.join_date)}</div>
                     </div>
                     
-                    {!isCurrentUser() && (
-                      <button 
-                        className="add-friend-button" 
-                        onClick={handleAddFriend}
-                        disabled={addingFriend || friendRequestSent}
-                      >
-                        <i className="fas fa-user-plus"></i>
-                        {addingFriend ? 'Đang gửi...' : friendRequestSent ? 'Đã gửi lời mời' : 'Kết bạn'}
-                      </button>
-                    )}
+                    {renderFriendshipButton()}
                   </div>
                 </div>
               );
@@ -192,7 +431,24 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onClose, us
             <div className="profile-error">Không thể tải thông tin người dùng</div>
           )}
         </div>
+        
+        {/* Sử dụng component modal xác nhận hủy kết bạn */}
+        <ConfirmRemoveFriendModal 
+          isOpen={showConfirmModal}
+          username={userData?.username}
+          isProcessing={removingFriend}
+          onConfirm={handleRemoveFriend}
+          onCancel={handleCancelRemove}
+        />
       </div>
+      
+      {/* Hiển thị thông báo toast thành công */}
+      {successMessage && (
+        <SuccessToast 
+          message={successMessage} 
+          duration={3000}
+        />
+      )}
     </div>
   );
 };

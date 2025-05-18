@@ -11,7 +11,8 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+  keepAliveInitialDelay: 0,
+  timezone: '+07:00', // Thiết lập múi giờ Việt Nam
 });
 
 // Kiểm tra kết nối
@@ -19,6 +20,11 @@ const connectToDatabase = async () => {
   try {
     const connection = await pool.getConnection();
     console.log('✅ Kết nối MySQL thành công! ✅');
+    
+    // Thiết lập múi giờ cho phiên làm việc
+    await connection.query("SET time_zone = '+07:00'");
+    console.log('✅ Đã thiết lập múi giờ cho MySQL: UTC+7 (Việt Nam) ✅');
+    
     connection.release();
     return pool;
   } catch (error) {

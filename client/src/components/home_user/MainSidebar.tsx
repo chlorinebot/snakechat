@@ -9,6 +9,7 @@ interface MainSidebarProps {
   onAvatarClick: (e: React.MouseEvent) => void;
   avatarRef: React.RefObject<HTMLDivElement | null>;
   onSettingsClick: () => void;
+  friendRequestCount?: number; // Số lượng lời mời kết bạn
 }
 
 const MainSidebar: React.FC<MainSidebarProps> = ({ 
@@ -17,8 +18,14 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
   onTabChange, 
   onAvatarClick,
   avatarRef,
-  onSettingsClick
+  onSettingsClick,
+  friendRequestCount = 0
 }) => {
+  // Hiển thị badge chỉ khi có ít nhất 1 lời mời kết bạn
+  const showBadge = friendRequestCount > 0;
+  // Hiển thị số +9 nếu có hơn 9 lời mời kết bạn
+  const badgeText = friendRequestCount > 9 ? '+9' : friendRequestCount.toString();
+
   return (
     <div className="sidebar">
       {/* Avatar người dùng */}
@@ -27,7 +34,13 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
           className="user-avatar" 
           ref={avatarRef}
           onClick={onAvatarClick}
-          style={{ cursor: 'pointer' }}
+          style={{ 
+            cursor: 'pointer',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+            transition: 'all 0.3s ease',
+            backgroundColor: '#0084ff'
+          }}
+          title="Nhấp để mở menu cài đặt"
         >
           {userInitial}
         </div>
@@ -45,9 +58,17 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
         <div 
           className={`sidebar-item ${activeTab === 'contacts' ? 'active' : ''}`}
           onClick={() => onTabChange('contacts')}
+          style={{ position: 'relative' }}
         >
           <div className="sidebar-icon contacts-icon"></div>
           <div className="sidebar-tooltip">Danh bạ</div>
+          
+          {/* Hiển thị badge khi có lời mời kết bạn */}
+          {showBadge && (
+            <div className="friend-request-badge">
+              {badgeText}
+            </div>
+          )}
         </div>
       </div>
       

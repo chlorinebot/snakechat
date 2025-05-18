@@ -2,40 +2,71 @@ const userController = require('../controllers/userController');
 
 // Server side CRON job để tự động cập nhật trạng thái người dùng không hoạt động
 const setupInactiveUsersCron = () => {
-  // Chạy mỗi 1 phút để kiểm tra người dùng không hoạt động
+  console.log('Đã khởi động cron job kiểm tra người dùng không hoạt động');
+  
+  // Thực hiện kiểm tra ngay khi khởi động
+  setTimeout(async () => {
+    try {
+      console.log('Kiểm tra người dùng không hoạt động lúc khởi động...');
+      await checkAndUpdateInactiveUsers();
+    } catch (error) {
+      console.error('Lỗi khi kiểm tra người dùng không hoạt động lúc khởi động:', error);
+    }
+  }, 2000); // Chờ 2 giây để đảm bảo server đã khởi động đầy đủ
+  
+  // Chạy mỗi 10 giây để kiểm tra người dùng không hoạt động
   setInterval(async () => {
     try {
-      // Gọi controller kiểm tra người dùng không hoạt động
-      const req = {
-        ip: '127.0.0.1',
-        body: { threshold: 3 }, // Người dùng không hoạt động quá 3 phút
-        headers: {}
-      };
-      
-      const res = {
-        json: (data) => {
-          // Loại bỏ thông báo log khi cập nhật trạng thái người dùng không hoạt động
-          /* if (data.affected > 0) {
-            console.log(`Cập nhật trạng thái offline cho ${data.affected} người dùng không hoạt động`);
-          } */
-        },
-        status: (code) => {
-          return {
-            json: (data) => {
-              // Chỉ hiển thị lỗi nghiêm trọng
-              if (data && data.message !== 'Đã kiểm tra và cập nhật người dùng không hoạt động') {
-                console.error('Lỗi khi kiểm tra người dùng không hoạt động:', data);
-              }
-            }
-          };
-        }
-      };
-      
-      await userController.checkInactiveUsers(req, res);
+      console.log('CRON: Bắt đầu kiểm tra người dùng không hoạt động...');
+      await checkAndUpdateInactiveUsers();
     } catch (error) {
       console.error('Lỗi khi kiểm tra người dùng không hoạt động:', error);
     }
-  }, 60 * 1000); // 1 phút
+  }, 10 * 1000); // Kiểm tra mỗi 10 giây
+};
+
+// Hàm trợ giúp để kiểm tra và cập nhật người dùng không hoạt động
+const checkAndUpdateInactiveUsers = async () => {
+  // Tạo object req và res giả lập cho controller
+  const req = {
+    ip: '127.0.0.1',
+    body: { threshold_minutes: 0.5 }, // Người dùng không hoạt động quá 30 giây (0.5 phút)
+    headers: {}
+  };
+  
+  const res = {
+    json: (data) => {
+      // Hiển thị log nếu có người dùng bị đánh dấu offline
+      if (data && data.data && data.data.affected > 0) {
+        console.log(`CRON: Đã cập nhật trạng thái offline cho ${data.data.affected} người dùng không hoạt động`);
+        // Log thông tin chi tiết về người dùng bị đánh dấu offline
+        if (data.data.users && data.data.users.length > 0) {
+          console.log('CRON: Danh sách người dùng bị đánh dấu offline:');
+          data.data.users.forEach(user => {
+            console.log(`  - ID: ${user.user_id}, Username: ${user.username}, Hoạt động cuối: ${user.last_activity || 'N/A'}`);
+          });
+        }
+      } else {
+        console.log('CRON: Không có người dùng nào cần cập nhật trạng thái offline');
+      }
+    },
+    status: (code) => {
+      return {
+        json: (data) => {
+          // Hiển thị lỗi nếu có
+          if (code !== 200) {
+            console.error(`CRON: Lỗi (${code}) khi kiểm tra người dùng không hoạt động:`, data);
+          }
+        }
+      };
+    }
+  };
+  
+  // Gọi controller để kiểm tra và cập nhật
+  await userController.checkInactiveUsers(req, res);
+  
+  // Thêm dấu thời gian cho những lần chạy tiếp theo
+  console.log(`CRON: Hoàn tất kiểm tra người dùng không hoạt động vào lúc ${new Date().toISOString()}`);
 };
 
 module.exports = {

@@ -180,7 +180,7 @@ const userService = {
   },
 
   // Cập nhật trạng thái user (online/offline)
-  updateUserStatus: async (userId, status) => {
+  updateUserStatus: async (userId, status, force = false) => {
     try {
       // Kiểm tra xem cột status đã tồn tại trong bảng users chưa
       const [columns] = await pool.query(`SHOW COLUMNS FROM users LIKE 'status'`);
@@ -203,19 +203,57 @@ const userService = {
         throw new Error('Không tìm thấy user');
       }
       
-      // Cập nhật trạng thái online/offline vào cột status của bảng users
-      const [result] = await pool.query(
-        'UPDATE users SET status = ? WHERE user_id = ?',
-        [status, userId]
-      );
+      // Kiểm tra trạng thái hiện tại để tránh cập nhật không cần thiết
+      const currentStatus = userRows[0].status;
       
-      if (result.affectedRows === 0) {
-        throw new Error('Không thể cập nhật trạng thái');
+      // Nếu đang yêu cầu cập nhật giống với trạng thái hiện tại và không có force
+      if (currentStatus === status && !force) {
+        console.log(`User ${userId} đã ở trạng thái ${status}, bỏ qua cập nhật`);
+        return {
+          user_id: userId,
+          status,
+          unchanged: true
+        };
+      }
+      
+      // Xử lý cập nhật trạng thái với các tùy chọn khác nhau
+      let query = '';
+      let params = [];
+      
+      // Nếu cập nhật trạng thái offline và force = true, cập nhật cả last_activity
+      if (status === 'offline' && force) {
+        // Cập nhật cả status và last_activity
+        query = 'UPDATE users SET status = ?, last_activity = NOW() WHERE user_id = ?';
+        params = [status, userId];
+        
+        await pool.query(query, params);
+        
+        // Log cập nhật
+        console.log(`Đã cập nhật trạng thái ${status} (force) và last_activity cho user ${userId}`);
+      } else if (status === 'online') {
+        // Cập nhật trạng thái và thời gian hoạt động khi online
+        query = 'UPDATE users SET status = ?, last_activity = NOW() WHERE user_id = ?';
+        params = [status, userId];
+        
+        await pool.query(query, params);
+        
+        // Log cập nhật
+        console.log(`Đã cập nhật trạng thái ${status} và last_activity cho user ${userId}`);
+      } else {
+        // Cập nhật chỉ status cho các trường hợp khác
+        query = 'UPDATE users SET status = ? WHERE user_id = ?';
+        params = [status, userId];
+        
+        await pool.query(query, params);
+        
+        // Log cập nhật
+        console.log(`Đã cập nhật trạng thái ${status} cho user ${userId}`);
       }
       
       return {
         user_id: userId,
-        status
+        status,
+        force
       };
     } catch (error) {
       console.error('Lỗi SQL khi cập nhật trạng thái:', error.message);
@@ -235,11 +273,11 @@ const userService = {
         console.log('Đã thêm cột last_activity vào bảng users');
       }
       
-      // Cập nhật thời gian hoạt động cuối cùng
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      // Cập nhật thời gian hoạt động cuối cùng theo múi giờ Việt Nam (UTC+7)
+      // Sử dụng NOW() trực tiếp vì MySQL đã được cấu hình múi giờ UTC+7 trong db.js
       const [result] = await pool.query(
-        'UPDATE users SET last_activity = ? WHERE user_id = ?',
-        [now, userId]
+        'UPDATE users SET last_activity = NOW() WHERE user_id = ?',
+        [userId]
       );
       
       if (result.affectedRows === 0) {
@@ -247,24 +285,69 @@ const userService = {
         throw new Error('Không thể cập nhật thời gian hoạt động');
       }
       
+      // Lấy thời gian đã cập nhật
+      const [updatedTime] = await pool.query(
+        'SELECT last_activity FROM users WHERE user_id = ?',
+        [userId]
+      );
+      
       return {
         user_id: userId,
-        last_activity: now
+        last_activity: updatedTime[0]?.last_activity || null
       };
     } catch (error) {
       console.error('Lỗi SQL khi cập nhật thời gian hoạt động:', error.message);
       throw error;
     }
   },
+
+  // Kiểm tra và thêm cột last_activity nếu chưa tồn tại
+  checkLastActivityColumn: async () => {
+    try {
+      // Kiểm tra xem cột last_activity đã tồn tại trong bảng users chưa
+      const [columns] = await pool.query(`SHOW COLUMNS FROM users LIKE 'last_activity'`);
+      
+      if (columns.length === 0) {
+        // Nếu cột last_activity chưa tồn tại, thêm cột này vào bảng users
+        await pool.query(`ALTER TABLE users ADD COLUMN last_activity TIMESTAMP NULL DEFAULT NULL`);
+        console.log('Đã thêm cột last_activity vào bảng users');
+        return { exists: false, added: true };
+      }
+      
+      return { exists: true, added: false };
+    } catch (error) {
+      console.error('Lỗi SQL khi kiểm tra cột last_activity:', error.message);
+      throw error;
+    }
+  },
+  
+  // Cập nhật thời gian hoạt động cho tất cả người dùng đang online
+  updateOnlineUsersActivity: async () => {
+    try {
+      // Cập nhật thời gian hoạt động cuối cùng cho tất cả người dùng đang online
+      const [result] = await pool.query(
+        'UPDATE users SET last_activity = NOW() WHERE status = "online"'
+      );
+      
+      return { 
+        success: true, 
+        count: result.affectedRows 
+      };
+    } catch (error) {
+      console.error('Lỗi SQL khi cập nhật thời gian hoạt động cho người dùng online:', error.message);
+      throw error;
+    }
+  },
   
   // Cập nhật trạng thái offline cho người dùng không hoạt động
-  updateInactiveUsers: async (inactiveThresholdMinutes = 5) => {
+  updateInactiveUsers: async (inactiveThresholdMinutes = 0.5) => {
     try {
       // Kiểm tra xem cột last_activity đã tồn tại trong bảng users chưa
       const [columns] = await pool.query(`SHOW COLUMNS FROM users LIKE 'last_activity'`);
       
       if (columns.length === 0) {
         // Không có cột last_activity, không thể xác định người dùng không hoạt động
+        console.log('Không có cột last_activity, không thể xác định người dùng không hoạt động');
         return {
           affected: 0,
           users: []
@@ -272,9 +355,12 @@ const userService = {
       }
       
       // Tính thời gian ngưỡng (thời điểm trước đó inactiveThresholdMinutes phút)
-      const thresholdMinutes = inactiveThresholdMinutes || 5;
+      const thresholdMinutes = inactiveThresholdMinutes || 0.5; // Mặc định 0.5 phút (30 giây) nếu không có giá trị
+      
+      console.log(`Kiểm tra người dùng không hoạt động trong ${thresholdMinutes} phút qua...`);
       
       // Tìm những người dùng đang online nhưng không hoạt động trong khoảng thời gian quy định
+      // Sử dụng NOW() trực tiếp vì MySQL đã được cấu hình múi giờ UTC+7 trong db.js
       const [inactiveUsers] = await pool.query(
         `SELECT user_id, username, email, status, last_activity 
          FROM users 
@@ -284,24 +370,39 @@ const userService = {
       );
       
       if (inactiveUsers.length === 0) {
+        console.log('Không tìm thấy người dùng không hoạt động');
         return {
           affected: 0,
           users: []
         };
       }
       
+      console.log(`Tìm thấy ${inactiveUsers.length} người dùng không hoạt động:`);
+      inactiveUsers.forEach(user => {
+        console.log(`- User ${user.username} (ID: ${user.user_id}), hoạt động cuối: ${user.last_activity}`);
+      });
+      
       // Danh sách ID người dùng cần cập nhật
       const userIds = inactiveUsers.map(user => user.user_id);
       
-      // Cập nhật trạng thái offline cho tất cả người dùng không hoạt động
-      const [result] = await pool.query(
-        'UPDATE users SET status = ? WHERE user_id IN (?)',
-        ['offline', userIds]
-      );
+      if (userIds.length > 0) {
+        // Cập nhật trạng thái offline cho tất cả người dùng không hoạt động
+        const [result] = await pool.query(
+          'UPDATE users SET status = ? WHERE user_id IN (?)',
+          ['offline', userIds]
+        );
+        
+        console.log(`Đã cập nhật ${result.affectedRows} người dùng sang trạng thái offline`);
+        
+        return {
+          affected: result.affectedRows,
+          users: inactiveUsers
+        };
+      }
       
       return {
-        affected: result.affectedRows,
-        users: inactiveUsers
+        affected: 0,
+        users: []
       };
     } catch (error) {
       console.error('Lỗi SQL khi cập nhật người dùng không hoạt động:', error.message);
@@ -320,7 +421,43 @@ const userService = {
        ORDER BY lock_time DESC`
     );
     return rows;
-  }
+  },
+
+  // Cập nhật thời gian hoạt động cuối cùng của người dùng khi offline
+  updateLastActivityTimeForOffline: async (userId) => {
+    try {
+      // Kiểm tra xem cột last_activity đã tồn tại trong bảng users chưa
+      const [columns] = await pool.query(`SHOW COLUMNS FROM users LIKE 'last_activity'`);
+      
+      if (columns.length === 0) {
+        // Nếu cột last_activity chưa tồn tại, thêm cột này vào bảng users
+        await pool.query(`ALTER TABLE users ADD COLUMN last_activity TIMESTAMP NULL DEFAULT NULL`);
+        console.log('Đã thêm cột last_activity vào bảng users');
+      }
+      
+      // Cập nhật thời gian hoạt động cuối cùng theo múi giờ Việt Nam (UTC+7)
+      // Sử dụng NOW() trực tiếp vì MySQL đã được cấu hình múi giờ UTC+7 trong db.js
+      const [result] = await pool.query(
+        'UPDATE users SET last_activity = NOW(), status = "offline" WHERE user_id = ?',
+        [userId]
+      );
+      
+      if (result.affectedRows === 0) {
+        console.log('Không thể cập nhật thời gian hoạt động - affected rows = 0');
+        throw new Error('Không thể cập nhật thời gian hoạt động');
+      }
+      
+      console.log(`Đã cập nhật thời gian hoạt động cuối cùng và trạng thái offline cho user ${userId}`);
+      
+      return {
+        user_id: userId,
+        status: 'offline'
+      };
+    } catch (error) {
+      console.error('Lỗi SQL khi cập nhật thời gian hoạt động khi offline:', error.message);
+      throw error;
+    }
+  },
 };
 
 module.exports = userService; 

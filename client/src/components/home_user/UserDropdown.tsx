@@ -6,6 +6,7 @@ interface UserDropdownProps {
   onLogout: () => void;
   onProfileClick: () => void;
   onSettingsClick: () => void;
+  onUpdateLastActivity?: () => void;
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ 
@@ -13,7 +14,8 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
   dropdownRef, 
   onLogout, 
   onProfileClick,
-  onSettingsClick
+  onSettingsClick,
+  onUpdateLastActivity
 }) => {
   return (
     <div 
@@ -21,8 +23,8 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
       ref={dropdownRef}
       style={{
         position: 'absolute',
-        top: '10px',
-        left: '80px',
+        top: '70px',
+        left: '15px',
         zIndex: 99999,
         boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
         backgroundColor: 'white',
@@ -31,20 +33,9 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
       }}
     >
       <div style={{ padding: '15px 20px', borderBottom: '1px solid #f5f5f5' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#888' }}>{username}</div>
+        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#444' }}>{username}</div>
       </div>
       <div style={{ padding: '8px 0' }}>
-        <div style={{ padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#0084ff" style={{ marginRight: '8px' }}>
-              <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/>
-            </svg>
-            <span style={{ color: '#444' }}>Nâng cấp tài khoản</span>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#0084ff">
-            <path d="M10 17l5-5-5-5v10z"></path>
-          </svg>
-        </div>
         <div 
           style={{ padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
           onClick={onProfileClick}
@@ -63,8 +54,22 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
           </svg>
           <span style={{ color: '#444' }}>Cài đặt</span>
         </div>
+        {onUpdateLastActivity && (
+          <div 
+            style={{ padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            onClick={onUpdateLastActivity}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#0084ff" style={{ marginRight: '8px' }}>
+              <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 9h7V2l-2.35 4.35z"/>
+            </svg>
+            <span style={{ color: '#444' }}>Cập nhật thời gian hoạt động</span>
+          </div>
+        )}
         <div style={{ height: '1px', backgroundColor: '#f5f5f5', margin: '5px 0' }}></div>
-        <div style={{ padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={onLogout}>
+        <div 
+          style={{ padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+          onClick={onLogout}
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="#0084ff" style={{ marginRight: '8px' }}>
             <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
           </svg>

@@ -196,7 +196,7 @@ const userController = {
 
   // Cập nhật trạng thái người dùng (online/offline)
   updateUserStatus: async (req, res) => {
-    const { user_id, status } = req.body;
+    const { user_id, status, force } = req.body;
 
     if (!user_id || !status) {
       return res.status(400).json({
@@ -206,7 +206,10 @@ const userController = {
     }
 
     try {
-      const result = await userService.updateUserStatus(user_id, status);
+      // Chuyển force thành boolean
+      const forceUpdate = force === true || force === 'true';
+      
+      const result = await userService.updateUserStatus(user_id, status, forceUpdate);
       
       // Cập nhật thời gian hoạt động cuối cùng nếu đang online
       if (status === 'online') {
@@ -215,7 +218,7 @@ const userController = {
       
       res.json({
         success: true,
-        message: `Đã cập nhật trạng thái user thành ${status}`,
+        message: `Đã cập nhật trạng thái user thành ${status}${forceUpdate ? ' (forced)' : ''}`,
         data: result
       });
     } catch (error) {
@@ -287,18 +290,26 @@ const userController = {
       // Lấy dữ liệu từ form data (Beacon API sử dụng FormData)
       const user_id = req.body && req.body.user_id;
       const status = req.body && (req.body.status || 'offline');
+      const force = req.body && req.body.force === 'true';
       
       if (!user_id) {
         // Không hiển thị log cho lỗi này do xảy ra quá thường xuyên
         return;
       }
       
-      // Tắt tất cả log không cần thiết
-      // console.log('Nhận yêu cầu Beacon từ client để cập nhật trạng thái:', { user_id, status });
+      console.log('Nhận yêu cầu Beacon từ client để cập nhật trạng thái:', { user_id, status, force });
       
-      // Cập nhật trạng thái offline
-      await userService.updateUserStatus(user_id, status);
-      // console.log(`Đã cập nhật trạng thái ${status} cho user ${user_id} qua Beacon API:`, result);
+      // Cập nhật trạng thái offline với tham số force
+      await userService.updateUserStatus(user_id, status, force);
+      
+      // Nếu có flag force = true, đảm bảo cập nhật ngay lập tức
+      if (force) {
+        console.log(`Cập nhật trạng thái offline (force) cho user ${user_id}`);
+        // Cập nhật thời gian hoạt động cuối cùng
+        await userService.updateLastActivityTimeForOffline(user_id);
+      }
+      
+      console.log(`Đã cập nhật trạng thái ${status} cho user ${user_id} qua Beacon API`);
     } catch (error) {
       // Chỉ log lỗi nghiêm trọng, không phải lỗi thường gặp
       if (error.message !== 'Không tìm thấy user') {
@@ -307,35 +318,52 @@ const userController = {
     }
   },
   
-  // Kiểm tra và cập nhật người dùng không hoạt động
+  // Kiểm tra các user không hoạt động và cập nhật trạng thái offline
   checkInactiveUsers: async (req, res) => {
     try {
-      // Chỉ cho phép request từ server local hoặc có API key hợp lệ
-      const apiKey = req.headers['x-api-key'] || '';
-      if (req.ip !== '127.0.0.1' && req.ip !== '::1' && apiKey !== process.env.INTERNAL_API_KEY) {
-        return res.status(403).json({
-          success: false,
-          message: 'Không có quyền truy cập'
-        });
-      }
+      const { threshold_minutes } = req.body;
       
-      // Lấy thời gian không hoạt động tối đa (mặc định 5 phút)
-      const inactiveThreshold = parseInt(req.body.threshold || 5, 10);
+      // Mặc định là 5 phút nếu không có giá trị từ client
+      const inactiveThreshold = threshold_minutes || 5;
       
-      // Gọi service để cập nhật trạng thái người dùng không hoạt động
       const result = await userService.updateInactiveUsers(inactiveThreshold);
       
       res.json({
         success: true,
-        message: 'Đã kiểm tra và cập nhật người dùng không hoạt động',
-        affected: result.affected,
-        users: result.users
+        message: `Đã kiểm tra hoạt động người dùng. ${result.affected} người dùng đã bị đánh dấu offline.`,
+        data: result
       });
     } catch (error) {
       console.error('Lỗi khi kiểm tra người dùng không hoạt động:', error);
       res.status(500).json({
         success: false,
         message: 'Lỗi khi kiểm tra người dùng không hoạt động'
+      });
+    }
+  },
+
+  // Cập nhật cấu trúc cơ sở dữ liệu và thời gian hoạt động
+  updateLastActivitySystem: async (req, res) => {
+    try {
+      // Kiểm tra và thêm cột last_activity nếu chưa tồn tại
+      const hasLastActivity = await userService.checkLastActivityColumn();
+      
+      // Cập nhật thời gian hoạt động cho người dùng online
+      const updated = await userService.updateOnlineUsersActivity();
+      
+      res.json({
+        success: true,
+        message: 'Cập nhật thành công',
+        data: {
+          columnAdded: hasLastActivity.added,
+          updatedUsers: updated.count
+        }
+      });
+    } catch (error) {
+      console.error('Lỗi khi cập nhật hệ thống:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi khi cập nhật hệ thống'
       });
     }
   },

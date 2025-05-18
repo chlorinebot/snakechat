@@ -87,6 +87,11 @@ body, html {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   width: 240px;
+  position: absolute;
+  top: 70px;
+  left: 15px;
+  z-index: 99999;
+  animation: fadeIn 0.2s ease forwards;
 }
 
 .profile-dropdown.show {
@@ -105,52 +110,72 @@ body, html {
 }
 
 .dropdown-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid #f1f1f1;
-}
-
-.dropdown-username-top {
-  font-weight: 600;
-  font-size: 16px;
-  color: #2c2c2c;
-}
-
-.dropdown-menu {
-  padding: 6px 0;
-}
-
-.dropdown-item {
-  padding: 10px 16px;
+  padding: 15px;
+  border-bottom: 1px solid #eaeaea;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  color: #404040;
-  font-size: 14px;
 }
 
-.dropdown-item:hover {
-  background-color: #f8f9fa;
+.dropdown-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #3498db;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 500;
+  margin-right: 10px;
 }
 
-.dropdown-item span {
-  display: block;
+.dropdown-info {
+  flex: 1;
+}
+
+.dropdown-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.dropdown-email {
+  font-size: 12px;
+  color: #777;
 }
 
 .dropdown-divider {
   height: 1px;
-  background-color: #e9ecef;
-  margin: 6px 0;
+  background-color: #eaeaea;
+  margin: 5px 0;
 }
 
-.upgrade-icon {
-  width: 18px;
-  height: 18px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%230d6efd' viewBox='0 0 24 24'%3E%3Cpath d='M16.01 11H4v2h12.01v3L20 12l-3.99-4z'/%3E%3C/svg%3E");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
+.dropdown-item {
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-item i {
+  margin-right: 10px;
+  color: #0084ff;
+  font-size: 16px;
+}
+
+.dropdown-item.logout {
+  color: #ff3b30;
+}
+
+.dropdown-item.logout i {
+  color: #ff3b30;
 }
 
 /* Sidebar menu */
@@ -258,6 +283,44 @@ body, html {
 .settings-icon {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ffffff' viewBox='0 0 24 24'%3E%3Cpath d='M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z'/%3E%3C/svg%3E");
   filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.3));
+}
+
+/* Badge cho thông báo lời mời kết bạn */
+.friend-request-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #ff3b30;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 10;
+  padding: 0 2px;
+}
+
+.friend-request-badge-sidebar {
+  position: absolute;
+  top: 3px;
+  right: 10px;
+  background-color: #ff3b30;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* Màu xanh cho các icon trong dropdown */
@@ -641,6 +704,7 @@ body, html {
   font-weight: 500;
   margin-right: 12px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .contact-info {
@@ -652,7 +716,7 @@ body, html {
 .contact-name {
   font-weight: 500;
   font-size: 15px;
-  color: #333;
+  color: #000 !important;
   margin-bottom: 4px;
 }
 
@@ -814,4 +878,240 @@ body, html {
 .add-friend-button:disabled {
   background-color: #b3d9ff;
   cursor: not-allowed;
+}
+
+/* Nút hủy lời mời kết bạn */
+.cancel-friend-button {
+  background-color: #f0f0f0;
+  color: #666;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.cancel-friend-button:hover {
+  background-color: #e0e0e0;
+}
+
+.cancel-friend-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Nút trạng thái là bạn bè */
+.friend-status-button {
+  background-color: #e7f3ff;
+  color: #0084ff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* Lời mời kết bạn container */
+.friend-requests-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.friend-request-item {
+  display: flex;
+  align-items: center;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.friend-request-item:hover {
+  background-color: #f0f7ff;
+}
+
+.friend-request-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #3498db;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 500;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.friend-request-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.friend-request-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+}
+
+.friend-request-time {
+  font-size: 12px;
+  color: #777;
+  margin-top: 3px;
+}
+
+.friend-request-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.accept-request-btn {
+  background-color: #0084ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.accept-request-btn:hover {
+  background-color: #0064c2;
+}
+
+.reject-request-btn {
+  background-color: #f0f0f0;
+  color: #666;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reject-request-btn:hover {
+  background-color: #e0e0e0;
+}
+
+/* Header cho contacts với thanh tìm kiếm và nút sắp xếp */
+.contacts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 20px 15px 20px;
+  gap: 10px;
+}
+
+.friends-count {
+  font-weight: 600;
+  font-size: 15px;
+  color: #000 !important;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.contacts-header .contacts-search-bar {
+  flex: 1;
+  margin: 0;
+}
+
+.sort-dropdown-container {
+  margin-left: 8px;
+}
+
+/* Danh sách bạn bè có nhóm chữ cái */
+.friends-container-with-groups {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.friends-group {
+  margin-bottom: 15px;
+}
+
+.friends-group-header {
+  position: sticky;
+  top: 0;
+  padding: 5px 10px;
+  z-index: 10;
+}
+
+.friends-group-letter {
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+  background-color: #f9f9f9;
+  padding: 4px 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-bottom: 8px;
+  margin-left: 4px;
+  width: 28px;
+  height: 28px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Hiển thị trạng thái online/offline */
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  border: 2px solid white;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  z-index: 5;
+  background-color: #bdbdbd; /* Màu xám mặc định cho offline */
+}
+
+.status-online {
+  background-color: #44b700 !important; /* Sử dụng !important để đảm bảo ghi đè */
+}
+
+.status-offline {
+  background-color: #bdbdbd !important;
+}
+
+/* Hiển thị trạng thái trong modal profile */
+.profile-avatar {
+  position: relative;
+}
+
+.profile-status-indicator {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  border: 2px solid white;
 } 

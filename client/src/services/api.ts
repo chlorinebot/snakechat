@@ -30,6 +30,22 @@ export interface UserLock {
   unlock_time: string;
 }
 
+export interface Friendship {
+  friendship_id?: number;
+  user_id_1: number; // Người gửi lời mời kết bạn
+  user_id_2: number; // Người nhận lời mời kết bạn
+  status: 'pending' | 'accepted'; // Trạng thái: pending - chưa chấp nhận, accepted - đã chấp nhận
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FriendRequest {
+  friendship_id: number;
+  user: User; // Thông tin người dùng gửi lời mời
+  status: string;
+  created_at: string;
+}
+
 export interface UserLockStatus {
   totalUsers: number;
   lockedUsers: number;
@@ -106,6 +122,132 @@ export const api = {
     }
   },
 
+  // Gửi lời mời kết bạn
+  sendFriendRequest: async (userId1: number, userId2: number) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: Friendship }>(`${API_URL}/friendship/send`, {
+        user_id_1: userId1,
+        user_id_2: userId2,
+        status: 'pending'
+      });
+      
+      return { 
+        success: true, 
+        message: 'Đã gửi lời mời kết bạn thành công', 
+        data: response.data.data 
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi gửi lời mời kết bạn:', error.message);
+      return { success: false, message: 'Lỗi khi gửi lời mời kết bạn' };
+    }
+  },
+
+  // Chấp nhận lời mời kết bạn
+  acceptFriendRequest: async (friendshipId: number) => {
+    try {
+      const response = await axios.put<{ success: boolean; message: string }>(`${API_URL}/friendship/accept/${friendshipId}`, {
+        status: 'accepted'
+      });
+      
+      return { success: true, message: 'Đã chấp nhận lời mời kết bạn' };
+    } catch (error: any) {
+      console.error('Lỗi khi chấp nhận lời mời kết bạn:', error.message);
+      return { success: false, message: 'Lỗi khi chấp nhận lời mời kết bạn' };
+    }
+  },
+
+  // Từ chối hoặc hủy lời mời kết bạn
+  rejectFriendRequest: async (friendshipId: number) => {
+    try {
+      const response = await axios.delete<{ success: boolean; message: string }>(`${API_URL}/friendship/reject/${friendshipId}`);
+      
+      return { success: true, message: 'Đã từ chối/hủy lời mời kết bạn' };
+    } catch (error: any) {
+      console.error('Lỗi khi từ chối lời mời kết bạn:', error.message);
+      return { success: false, message: 'Lỗi khi từ chối lời mời kết bạn' };
+    }
+  },
+
+  // Hủy kết bạn
+  removeFriend: async (friendshipId: number) => {
+    try {
+      const response = await axios.delete<{ success: boolean; message: string }>(`${API_URL}/friendship/remove/${friendshipId}`);
+      
+      return { 
+        success: true, 
+        message: 'Đã hủy kết bạn thành công' 
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi hủy kết bạn:', error.message);
+      return { success: false, message: 'Lỗi khi hủy kết bạn' };
+    }
+  },
+
+  // Lấy danh sách bạn bè
+  getFriends: async (userId: number) => {
+    try {
+      const response = await axios.get<{ items: any[] }>(`${API_URL}/friendship/friends/${userId}`);
+      
+      // Kiểm tra và log trạng thái của từng người bạn
+      const friends = response.data.items.map(friend => {
+        const normalizedStatus = friend.status?.toLowerCase();
+        
+        // Xử lý trạng thái - đảm bảo luôn trả về chuỗi "online" hoặc "offline" 
+        if (!normalizedStatus || (normalizedStatus !== 'online' && normalizedStatus !== 'offline')) {
+          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái không hợp lệ: ${friend.status}, đặt thành offline`);
+          friend.status = 'offline';
+        } else {
+          // Chuẩn hóa trạng thái
+          friend.status = normalizedStatus;
+          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái: ${friend.status}`);
+        }
+        return friend;
+      });
+      
+      console.log('Danh sách bạn bè sau khi xử lý:', friends);
+      return friends;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách bạn bè:', error);
+      return [];
+    }
+  },
+
+  // Lấy danh sách lời mời kết bạn đã nhận
+  getReceivedFriendRequests: async (userId: number) => {
+    try {
+      const response = await axios.get<{ items: any[] }>(`${API_URL}/friendship/received/${userId}`);
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách lời mời kết bạn:', error);
+      return [];
+    }
+  },
+
+  // Lấy danh sách lời mời kết bạn đã gửi
+  getSentFriendRequests: async (userId: number) => {
+    try {
+      const response = await axios.get<{ items: any[] }>(`${API_URL}/friendship/sent/${userId}`);
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách lời mời đã gửi:', error);
+      return [];
+    }
+  },
+
+  // Kiểm tra trạng thái kết bạn giữa hai người dùng
+  checkFriendshipStatus: async (userId1: number, userId2: number) => {
+    try {
+      const response = await axios.get<{ status: string | null; friendship_id?: number }>(`${API_URL}/friendship/status`, {
+        params: { user_id_1: userId1, user_id_2: userId2 }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi kiểm tra trạng thái kết bạn:', error);
+      return { status: null };
+    }
+  },
+
   // Lấy trạng thái khóa tài khoản
   getLockStatus: async () => {
     try {
@@ -149,10 +291,51 @@ export const api = {
     try {
       if (!userId) return;
       
-      // Cập nhật trạng thái offline
-      await api.updateStatus(userId, 'offline');
+      console.log(`Cập nhật trạng thái offline cho người dùng ID ${userId}`);
+      
+      // Đặt trạng thái người dùng trong localStorage là offline
+      localStorage.setItem('userStatus', 'offline');
+      
+      // Sử dụng Beacon API nếu có (đáng tin cậy hơn khi đóng tab)
+      if (navigator.sendBeacon) {
+        const data = new FormData();
+        data.append('user_id', userId.toString());
+        data.append('status', 'offline');
+        data.append('force', 'true');
+        data.append('timestamp', new Date().getTime().toString());
+        const beaconSent = navigator.sendBeacon(`${API_URL}/user/update-status-beacon`, data);
+        console.log('Đã gửi beacon offline:', beaconSent);
+      }
+      
+      // Song song sử dụng axios đối với các yêu cầu bình thường
+      // Sử dụng timeout ngắn (1s) để tránh treo hệ thống
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000);
+        
+        const response = await axios.post<{ success: boolean; message: string }>(
+          `${API_URL}/user/update-status`,
+          {
+            user_id: userId,
+            status: 'offline',
+            force: true,
+            timestamp: new Date().getTime()
+          },
+          // Sử dụng dạng không kiểm tra kiểu để bỏ qua lỗi linter
+          { signal: controller.signal } as any
+        );
+        
+        clearTimeout(timeoutId);
+        console.log('Kết quả cập nhật offline qua axios:', response.data);
+      } catch (axiosError) {
+        // Lỗi có thể xảy ra khi tab đóng, không cần xử lý
+        console.log('Cập nhật offline qua axios không thành công, đã sử dụng beacon');
+      }
+      
+      return { success: true, message: 'Trạng thái đã được cập nhật thành offline' };
     } catch (error) {
       console.error('Lỗi khi cập nhật trạng thái offline:', error);
+      return { success: false, message: 'Lỗi khi cập nhật trạng thái offline' };
     }
   },
 
@@ -281,6 +464,55 @@ export const api = {
     } catch (error) {
       console.error('Lỗi khi tìm kiếm người dùng:', error);
       return [];
+    }
+  },
+
+  // Làm mới trạng thái bạn bè (gọi thủ công)
+  refreshFriendStatus: async (userId: number) => {
+    try {
+      console.log('Đang làm mới trạng thái bạn bè...');
+      
+      // Lấy danh sách bạn bè với trạng thái mới nhất từ server
+      const response = await axios.get<{ items: any[] }>(`${API_URL}/friendship/friends/${userId}?t=${new Date().getTime()}`);
+      
+      // Kiểm tra và log trạng thái của từng người bạn
+      const friends = response.data.items.map(friend => {
+        const normalizedStatus = friend.status?.toLowerCase();
+        
+        // Xử lý trạng thái - đảm bảo luôn trả về chuỗi "online" hoặc "offline" 
+        if (!normalizedStatus || (normalizedStatus !== 'online' && normalizedStatus !== 'offline')) {
+          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái không hợp lệ: ${friend.status}, đặt thành offline`);
+          friend.status = 'offline';
+        } else {
+          // Chuẩn hóa trạng thái
+          friend.status = normalizedStatus;
+          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái: ${friend.status}`);
+        }
+        return friend;
+      });
+      
+      console.log('Đã làm mới trạng thái bạn bè:', friends);
+      
+      // Lưu danh sách bạn bè đã cập nhật vào localStorage để có thể dùng ngay lập tức
+      localStorage.setItem('cachedFriends', JSON.stringify(friends));
+      
+      return friends;
+    } catch (error) {
+      console.error('Lỗi khi làm mới trạng thái bạn bè:', error);
+      return [];
+    }
+  },
+
+  // Cập nhật cơ sở dữ liệu và thời gian hoạt động
+  updateLastActivitySystem: async () => {
+    try {
+      console.log('Đang cập nhật cấu trúc cơ sở dữ liệu và thời gian hoạt động...');
+      const response = await axios.get<{ success: boolean; message: string; data: any }>(`${API_URL}/user/update-last-activity`);
+      console.log('Kết quả cập nhật:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi cập nhật:', error);
+      return { success: false, message: 'Lỗi khi cập nhật hệ thống' };
     }
   }
 };

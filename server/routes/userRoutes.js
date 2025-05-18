@@ -23,7 +23,7 @@ router.post('/unlock/:id', userController.unlockUser);
 // Route cập nhật trạng thái user (online/offline)
 router.post('/update-status', userController.updateUserStatus);
 
-// Route nhận heartbeat từ client
+// Route xử lý heartbeat từ client
 router.post('/heartbeat', userController.receiveUserHeartbeat);
 
 // Route cập nhật trạng thái offline qua Beacon API (khi đóng tab)
@@ -34,5 +34,8 @@ router.get('/lock-history', userController.getLockHistory);
 
 // Route kiểm tra các user không hoạt động và cập nhật trạng thái offline
 router.post('/check-inactive-users', userController.checkInactiveUsers);
+
+// Route cập nhật cấu trúc cơ sở dữ liệu và thời gian hoạt động
+router.get('/update-last-activity', userController.updateLastActivitySystem);
 
 module.exports = router; 
