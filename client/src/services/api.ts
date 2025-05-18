@@ -244,6 +244,29 @@ export const api = {
       console.error('Lỗi khi lấy danh sách tài khoản bị khóa:', error);
       return [];
     }
+  },
+
+  // Tìm kiếm người dùng theo tên hoặc email
+  searchUsers: async (searchTerm: string) => {
+    try {
+      // Lấy tất cả người dùng
+      const response = await axios.get<{ items: User[] }>(`${API_URL}/user/data`);
+      const users = response.data.items;
+      
+      // Lọc người dùng theo tên hoặc email
+      if (!searchTerm) return [];
+      
+      const searchTermLower = searchTerm.toLowerCase();
+      const filteredUsers = users.filter(user => 
+        user.username.toLowerCase().includes(searchTermLower) || 
+        user.email.toLowerCase().includes(searchTermLower)
+      );
+      
+      return filteredUsers;
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm người dùng:', error);
+      return [];
+    }
   }
 };
 

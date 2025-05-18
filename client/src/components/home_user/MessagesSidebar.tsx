@@ -7,6 +7,14 @@ const MessagesSidebar: React.FC = () => {
       <div className="messages-sidebar-header">
         <h3>Tất cả tin nhắn</h3>
       </div>
+      <div className="messages-search-bar">
+        <div className="search-icon"></div>
+        <input 
+          type="text" 
+          placeholder="Tìm kiếm tin nhắn..."
+          className="messages-search-input" 
+        />
+      </div>
       <div className="messages-sidebar-content">
         {/* Sidebar còn trống */}
       </div>

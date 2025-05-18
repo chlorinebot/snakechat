@@ -17,7 +17,7 @@ interface UserProps {
 }
 
 type ActiveTab = 'messages' | 'contacts';
-type ContactTab = 'friends' | 'requests';
+type ContactTab = 'friends' | 'requests' | 'explore';
 
 const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [user, setUser] = useState<any>(null);
@@ -104,6 +104,19 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     return <div className="loading">Đang tải...</div>;
   }
 
+  const getContactsHeaderTitle = () => {
+    switch (contactsTab) {
+      case 'friends':
+        return 'Danh sách bạn bè';
+      case 'requests':
+        return 'Lời mời kết bạn';
+      case 'explore':
+        return 'Khám phá người dùng';
+      default:
+        return 'Danh bạ';
+    }
+  };
+
   // Tạo chữ cái đầu của username để hiển thị làm avatar
   const userInitial = user.username ? user.username.charAt(0).toUpperCase() : '?';
 
@@ -121,22 +134,23 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       
       {/* Main content */}
       <div className="main-content">
-        <div className="content-header">
-          <h2>{activeTab === 'messages' ? 'Tin nhắn' : contactsTab === 'friends' ? 'Danh sách bạn bè' : 'Lời mời kết bạn'}</h2>
-        </div>
-        <div className="content-body">
-          {activeTab === 'messages' ? (
-            <div className="messages-container">
-              <MessagesSidebar />
-              <MessagesContent />
+        {activeTab === 'messages' ? (
+          <div className="messages-container">
+            <div className="content-header">
+              <h2>Tin nhắn</h2>
             </div>
-          ) : (
-            <div className="contacts-container">
-              <ContactsSidebar onTabChange={handleContactsTabChange} />
-              <ContactsContent activeTab={contactsTab} />
+            <MessagesSidebar />
+            <MessagesContent />
+          </div>
+        ) : (
+          <div className="contacts-container">
+            <div className="content-header">
+              <h2>{getContactsHeaderTitle()}</h2>
             </div>
-          )}
-        </div>
+            <ContactsSidebar onTabChange={handleContactsTabChange} />
+            <ContactsContent activeTab={contactsTab} />
+          </div>
+        )}
       </div>
 
       {/* Dropdown khi click vào avatar */}
