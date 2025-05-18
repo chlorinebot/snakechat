@@ -20,6 +20,7 @@ export interface User {
   // Trạng thái online/offline
   status?: string; // 'online' hoặc 'offline'
   join_date?: string;
+  last_activity?: string; // Thời gian hoạt động gần nhất
 }
 
 export interface UserLock {
