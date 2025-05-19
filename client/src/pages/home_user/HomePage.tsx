@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './HomePage.css';
 import api from '../../services/api';
 import socketService from '../../services/socketService';
+import type { Conversation } from '../../services/api';
 
 // Import các components
 import MainSidebar from '../../components/home_user/MainSidebar';
@@ -29,38 +30,116 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [friendRequestCount, setFriendRequestCount] = useState<number>(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const avatarRef = useRef<HTMLDivElement | null>(null);
+  const socketEventsRegistered = useRef(false);
+  
+  const calculateTotalUnreadMessages = (conversations: Conversation[]) => {
+    return conversations.reduce((total, conversation) => {
+      return total + (conversation.unread_count || 0);
+    }, 0);
+  };
+
+  const refreshConversations = async () => {
+    if (user && user.user_id) {
+      try {
+        const userConversations = await api.getUserConversations(user.user_id);
+        setConversations(userConversations);
+        const totalUnread = calculateTotalUnreadMessages(userConversations);
+        setUnreadMessageCount(totalUnread);
+        console.log(`Tổng số tin nhắn chưa đọc: ${totalUnread}`);
+      } catch (error) {
+        console.error('Lỗi khi lấy danh sách cuộc trò chuyện:', error);
+      }
+    }
+  };
   
   useEffect(() => {
-    // Lấy thông tin người dùng từ localStorage
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'messages') {
+      setActiveTab('messages');
+      navigate('/', { replace: true });
+    }
+
     const userData = localStorage.getItem('user');
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        // Kiểm tra xem người dùng có role ID 2 không
         if (parsedUser.role_id !== 2) {
-          // Nếu không phải role ID 2, điều hướng về trang đăng nhập
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           navigate('/login');
         } else {
           setUser(parsedUser);
           
-          // Kết nối socket khi xác định user
           socketService.connect(parsedUser.user_id);
           
-          // Lắng nghe sự kiện cập nhật số lượng lời mời kết bạn
-          socketService.on('friend_request', (data) => {
-            console.log('Nhận lời mời kết bạn mới:', data);
-            setFriendRequestCount(data.count);
-          });
+          if (!socketEventsRegistered.current) {
+            socketService.on('friend_request', (data) => {
+              console.log('Nhận lời mời kết bạn mới:', data);
+              setFriendRequestCount(data.count);
+            });
+            
+            socketService.on('friend_request_count_update', (data) => {
+              console.log('Cập nhật số lượng lời mời kết bạn:', data);
+              setFriendRequestCount(data.count);
+            });
+
+            socketService.on('new_message', (data) => {
+              console.log('Nhận tin nhắn mới:', data);
+              
+              if (data.sender_id !== parsedUser.user_id) {
+                if (!(currentConversation && currentConversation.conversation_id === data.conversation_id)) {
+                  setUnreadMessageCount(prev => prev + 1);
+                }
+                
+                setConversations(prevConversations => {
+                  return prevConversations.map(conv => {
+                    if (conv.conversation_id === data.conversation_id) {
+                      const newUnreadCount = !(currentConversation && 
+                        currentConversation.conversation_id === data.conversation_id) 
+                        ? (conv.unread_count || 0) + 1 
+                        : conv.unread_count;
+                      
+                      return {
+                        ...conv,
+                        last_message_id: data.message_id,
+                        last_message_content: data.content,
+                        last_message_time: data.created_at,
+                        unread_count: newUnreadCount
+                      };
+                    }
+                    return conv;
+                  });
+                });
+              }
+            });
+            
+            socketService.on('unread_count_update', (data) => {
+              console.log('Cập nhật số tin nhắn chưa đọc:', data);
+              
+              refreshConversations();
+            });
+            
+            socketService.on('message_read_receipt', (data) => {
+              console.log('Nhận xác nhận đã đọc:', data);
+              
+              if (data.conversation_id && data.reader_id && data.message_ids) {
+                // Cập nhật trạng thái "đã xem" cho tin nhắn nếu đang hiển thị
+                // Thực hiện trong MessagesContent
+              }
+            });
+            
+            socketEventsRegistered.current = true;
+          }
           
-          socketService.on('friend_request_count_update', (data) => {
-            console.log('Cập nhật số lượng lời mời kết bạn:', data);
-            setFriendRequestCount(data.count);
-          });
+          refreshConversations();
         }
       } catch (error) {
         console.error('Lỗi khi parse thông tin người dùng:', error);
@@ -70,7 +149,24 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       navigate('/login');
     }
 
-    // Handle click outside to close dropdown
+    const handleOpenConversation = (event: any) => {
+      console.log('Nhận sự kiện mở cuộc trò chuyện:', event.detail);
+      
+      if (event.detail && event.detail.conversation) {
+        const conversation = event.detail.conversation;
+        console.log('Đang chuyển đến cuộc trò chuyện:', conversation);
+        
+        setCurrentConversation(conversation);
+        
+        setActiveTab('messages');
+      } else {
+        console.error('Sự kiện openConversation không chứa thông tin cuộc trò chuyện');
+      }
+    };
+
+    window.removeEventListener('openConversation', handleOpenConversation as EventListener);
+    window.addEventListener('openConversation', handleOpenConversation as EventListener);
+
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current && 
@@ -84,17 +180,39 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
 
     document.addEventListener('mousedown', handleClickOutside);
     
-    // Cleanup khi component unmount
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('openConversation', handleOpenConversation as EventListener);
       socketService.disconnect();
       socketService.off('friend_request');
       socketService.off('friend_request_count_update');
+      socketService.off('new_message');
+      socketService.off('unread_count_update');
+      socketService.off('message_read_receipt');
     };
-  }, [navigate]);
+  }, [navigate, location]);
 
   useEffect(() => {
-    // Lấy số lượng lời mời kết bạn khi component mount
+    if (currentConversation && user?.user_id) {
+      api.markAllMessagesAsRead(currentConversation.conversation_id, user.user_id)
+        .then(() => {
+          setConversations(prevConversations => {
+            const updatedConversations = prevConversations.map(conv => {
+              if (conv.conversation_id === currentConversation.conversation_id) {
+                setUnreadMessageCount(prev => Math.max(0, prev - (conv.unread_count || 0)));
+                
+                return { ...conv, unread_count: 0 };
+              }
+              return conv;
+            });
+            return updatedConversations;
+          });
+        })
+        .catch(error => console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error));
+    }
+  }, [currentConversation, user]);
+
+  useEffect(() => {
     const fetchFriendRequests = async () => {
       if (user && user.user_id) {
         try {
@@ -109,11 +227,15 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       }
     };
 
-    // Gọi lần đầu khi component mount
     fetchFriendRequests();
+    
+    const intervalId = setInterval(() => {
+      refreshConversations();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
   }, [user]);
 
-  // Kiểm tra trạng thái khóa tài khoản khi trang được tải
   useEffect(() => {
     const checkAccountStatus = async () => {
       const userJson = localStorage.getItem('user');
@@ -128,7 +250,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
             if (lockStatus.isLocked && lockStatus.lockInfo) {
               console.log('Tài khoản bị khóa:', lockStatus.lockInfo);
               
-              // Điều hướng về trang đăng nhập với thông tin khóa tài khoản
               navigate('/login', {
                 state: {
                   isLocked: true,
@@ -169,7 +290,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
 
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
-    // Không đóng dropdown khi chuyển tab
   };
 
   const handleContactsTabChange = (tab: ContactTab) => {
@@ -191,7 +311,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       const result = await api.updateLastActivitySystem();
       alert(`Cập nhật thành công: ${result.message}`);
       
-      // Nếu người dùng hiện tại đăng nhập, cập nhật trạng thái
       if (user && user.user_id) {
         await api.updateUserActivity(user.user_id);
         console.log('Đã cập nhật trạng thái người dùng hiện tại');
@@ -202,7 +321,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     }
   };
 
-  // Hàm cập nhật lại số lượng lời mời kết bạn (gọi sau khi chấp nhận/từ chối)
   const handleFriendRequestUpdate = async () => {
     if (user && user.user_id) {
       try {
@@ -233,12 +351,21 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     }
   };
 
-  // Tạo chữ cái đầu của username để hiển thị làm avatar
   const userInitial = user.username ? user.username.charAt(0).toUpperCase() : '?';
+
+  const handleConversationUpdate = (updatedConversation: Conversation) => {
+    setConversations(prevConversations => 
+      prevConversations.map(conv => 
+        conv.conversation_id === updatedConversation.conversation_id 
+          ? updatedConversation 
+          : conv
+      )
+    );
+    setCurrentConversation(updatedConversation);
+  };
 
   return (
     <div className="user-home-container">
-      {/* Sidebar chính */}
       <MainSidebar 
         activeTab={activeTab} 
         userInitial={userInitial} 
@@ -247,17 +374,26 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         avatarRef={avatarRef}
         onSettingsClick={handleSettingsClick}
         friendRequestCount={friendRequestCount}
+        unreadMessageCount={unreadMessageCount}
       />
       
-      {/* Main content */}
       <div className="main-content">
         {activeTab === 'messages' ? (
           <div className="messages-container">
             <div className="content-header">
               <h2>Tin nhắn</h2>
             </div>
-            <MessagesSidebar />
-            <MessagesContent />
+            <MessagesSidebar 
+              userId={user.user_id} 
+              currentConversation={currentConversation}
+              setCurrentConversation={handleConversationUpdate}
+              conversations={conversations}
+              setConversations={setConversations}
+            />
+            <MessagesContent 
+              userId={user.user_id}
+              currentConversation={currentConversation}
+            />
           </div>
         ) : (
           <div className="contacts-container">
@@ -265,18 +401,19 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
               <h2>{getContactsHeaderTitle()}</h2>
             </div>
             <ContactsSidebar 
+              activeTab={contactsTab}
               onTabChange={handleContactsTabChange} 
               friendRequestCount={friendRequestCount}
             />
             <ContactsContent 
               activeTab={contactsTab} 
               onFriendRequestUpdate={handleFriendRequestUpdate}
+              userId={user.user_id}
             />
           </div>
         )}
       </div>
 
-      {/* Dropdown khi click vào avatar - sử dụng component UserDropdown thay vì tự tạo */}
       {showProfileDropdown && (
         <UserDropdown
           username={user.username}
@@ -288,13 +425,11 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         />
       )}
 
-      {/* Modal cài đặt */}
       <SettingsModal 
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
       />
 
-      {/* Modal hồ sơ người dùng */}
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}

@@ -39,6 +39,51 @@ export interface Friendship {
   updated_at?: string;
 }
 
+// Interface cho tin nhắn
+export interface Message {
+  message_id: number;
+  conversation_id: number;
+  sender_id: number;
+  sender_name?: string;
+  content: string;
+  message_type?: string;
+  created_at: string;
+  is_read: boolean;
+  send_failed?: boolean; // Trạng thái gửi không thành công
+}
+
+// Interface cho cuộc trò chuyện
+export interface Conversation {
+  conversation_id: number;
+  conversation_type: string;
+  created_at: string;
+  updated_at: string;
+  last_message_id?: number;
+  last_message_content?: string;
+  last_message_time?: string;
+  members?: ConversationMember[];
+  unread_count?: number;
+}
+
+// Interface cho thành viên trong cuộc trò chuyện
+export interface ConversationMember {
+  user_id: number;
+  username?: string;
+  status?: string;
+  joined_at: string;
+  left_at?: string;
+}
+
+// Interface cho tệp đính kèm tin nhắn
+export interface MessageAttachment {
+  attachment_id: number;
+  message_id: number;
+  file_uri: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+}
+
 export interface FriendRequest {
   friendship_id: number;
   user: User; // Thông tin người dùng gửi lời mời
@@ -550,7 +595,122 @@ export const api = {
       console.error('Lỗi khi cập nhật:', error);
       return { success: false, message: 'Lỗi khi cập nhật hệ thống' };
     }
-  }
+  },
+
+  // PHẦN QUẢN LÝ TIN NHẮN
+
+  // Lấy danh sách cuộc trò chuyện của người dùng
+  getUserConversations: async (userId: number) => {
+    try {
+      const response = await axios.get<{ items: Conversation[] }>(
+        `${API_URL}/conversations/user/${userId}`
+      );
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách cuộc trò chuyện:', error);
+      return [];
+    }
+  },
+
+  // Lấy chi tiết cuộc trò chuyện
+  getConversationDetails: async (conversationId: number) => {
+    try {
+      const response = await axios.get<{ data: Conversation }>(
+        `${API_URL}/conversations/${conversationId}`
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết cuộc trò chuyện:', error);
+      throw error;
+    }
+  },
+
+  // Tạo cuộc trò chuyện mới
+  createConversation: async (userIds: number[]) => {
+    try {
+      const response = await axios.post<{ success: boolean; data: Conversation }>(
+        `${API_URL}/conversations/create`,
+        { user_ids: userIds }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi tạo cuộc trò chuyện mới:', error);
+      throw error;
+    }
+  },
+
+  // Lấy tin nhắn trong cuộc trò chuyện
+  getConversationMessages: async (conversationId: number) => {
+    try {
+      const response = await axios.get<{ items: Message[] }>(
+        `${API_URL}/messages/conversation/${conversationId}`
+      );
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy tin nhắn trong cuộc trò chuyện:', error);
+      return [];
+    }
+  },
+
+  // Gửi tin nhắn mới
+  sendMessage: async (message: {
+    conversation_id: number;
+    sender_id: number;
+    content: string;
+    message_type?: string;
+  }) => {
+    try {
+      const response = await axios.post<{ success: boolean; data: Message }>(
+        `${API_URL}/messages/send`,
+        message
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi gửi tin nhắn:', error);
+      throw error;
+    }
+  },
+
+  // Đánh dấu tin nhắn đã đọc
+  markMessageAsRead: async (messageId: number) => {
+    try {
+      const response = await axios.put<{ success: boolean }>(
+        `${API_URL}/messages/mark-read/${messageId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error);
+      throw error;
+    }
+  },
+
+  // Đánh dấu tất cả tin nhắn trong cuộc trò chuyện đã đọc
+  markAllMessagesAsRead: async (conversationId: number, userId: number) => {
+    try {
+      const response = await axios.put<{ success: boolean }>(
+        `${API_URL}/messages/mark-all-read`,
+        { conversation_id: conversationId, user_id: userId }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu tất cả tin nhắn đã đọc:', error);
+      throw error;
+    }
+  },
+
+  // Kiểm tra và tạo cuộc trò chuyện với một người dùng (nếu chưa tồn tại)
+  getOrCreateOneToOneConversation: async (currentUserId: number, otherUserId: number) => {
+    try {
+      const response = await axios.post<{ success: boolean; data: Conversation }>(
+        `${API_URL}/conversations/one-to-one`,
+        { user_id_1: currentUserId, user_id_2: otherUserId }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi tạo/lấy cuộc trò chuyện 1-1:', error);
+      throw error;
+    }
+  },
 };
 
 export default api; 

@@ -477,12 +477,50 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="main-actions">
             <button 
               className="message-friend-button"
-              onClick={() => {
-                console.log("Mở cuộc trò chuyện với:", userData?.username);
-                // Đóng modal thông tin người dùng trước khi chuyển sang tab tin nhắn
-                onClose();
-                // Chức năng mở cuộc trò chuyện sẽ được triển khai sau
-                // Có thể xử lý việc chuyển tab và mở cuộc trò chuyện ở đây
+              onClick={async () => {
+                try {
+                  if (!userData?.user_id || !currentUser?.user_id) {
+                    console.error("Không tìm thấy ID người dùng");
+                    return;
+                  }
+
+                  console.log(`Đang tạo/mở cuộc trò chuyện giữa ${currentUser.user_id} và ${userData.user_id}`);
+                  
+                  // Tạo hoặc lấy cuộc trò chuyện 1-1 với người dùng này
+                  const result = await api.getOrCreateOneToOneConversation(
+                    currentUser.user_id, 
+                    userData.user_id
+                  );
+                  
+                  if (result.success && result.data) {
+                    console.log("Đã tạo/mở cuộc trò chuyện:", result.data);
+                    
+                    // Lưu thông tin cuộc trò chuyện hiện tại vào localStorage
+                    localStorage.setItem('currentConversation', JSON.stringify({
+                      conversation_id: result.data.conversation_id,
+                      with_user_id: userData.user_id,
+                      with_username: userData.username
+                    }));
+
+                    // Hiển thị thông báo đang chuyển hướng
+                    setSuccessMessage("Đang chuyển đến khung chat...");
+                    
+                    // Đóng modal thông tin người dùng
+                    onClose();
+                    
+                    // Chuyển đến tab messages sau 1 giây để đảm bảo thông báo được hiển thị
+                    setTimeout(() => {
+                      // Force reload trang với tham số tab=messages
+                      window.location.href = '/?tab=messages';
+                    }, 1000);
+                  } else {
+                    console.error("Không thể tạo cuộc trò chuyện");
+                    setError("Không thể tạo cuộc trò chuyện. Vui lòng thử lại sau.");
+                  }
+                } catch (error) {
+                  console.error("Lỗi khi tạo cuộc trò chuyện:", error);
+                  setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
+                }
               }}
             >
               <i className="fas fa-comment"></i>

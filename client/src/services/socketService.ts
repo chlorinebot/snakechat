@@ -41,9 +41,13 @@ class SocketService {
     }
   }
 
-  public off(event: string): void {
+  public off(event: string, callback?: (...args: any[]) => void): void {
     if (this.socket) {
-      this.socket.off(event);
+      if (callback) {
+        this.socket.off(event, callback);
+      } else {
+        this.socket.off(event);
+      }
     }
   }
 

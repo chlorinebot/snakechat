@@ -8,9 +8,10 @@ import type { SortOption } from '../common/SortDropdown';
 interface ContactsContentProps {
   activeTab?: 'friends' | 'requests' | 'explore';
   onFriendRequestUpdate?: () => void; // Callback khi có thay đổi về lời mời kết bạn
+  userId?: number; // ID của người dùng hiện tại
 }
 
-const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends', onFriendRequestUpdate }) => {
+const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends', onFriendRequestUpdate, userId }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
