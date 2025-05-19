@@ -473,31 +473,36 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
     if (friendshipStatus === 'accepted') {
       return (
-        <div className="friendship-buttons">
-          <button className="friend-status-button">
-            <i className="fas fa-user-check"></i>
-            Đã là bạn bè
-          </button>
-          <button 
-            className="message-friend-button"
-            onClick={() => {
-              console.log("Mở cuộc trò chuyện với:", userData?.username);
-              // Đóng modal thông tin người dùng trước khi chuyển sang tab tin nhắn
-              onClose();
-              // Chức năng mở cuộc trò chuyện sẽ được triển khai sau
-              // Có thể xử lý việc chuyển tab và mở cuộc trò chuyện ở đây
-            }}
-          >
-            <i className="fas fa-comment"></i>
-            Nhắn tin
-          </button>
-          <button 
-            className="remove-friend-button" 
-            onClick={handleRemoveFriendClick}
-          >
-            <i className="fas fa-user-minus"></i>
-            Hủy kết bạn
-          </button>
+        <div className="friendship-actions">
+          <div className="main-actions">
+            <button 
+              className="message-friend-button"
+              onClick={() => {
+                console.log("Mở cuộc trò chuyện với:", userData?.username);
+                // Đóng modal thông tin người dùng trước khi chuyển sang tab tin nhắn
+                onClose();
+                // Chức năng mở cuộc trò chuyện sẽ được triển khai sau
+                // Có thể xử lý việc chuyển tab và mở cuộc trò chuyện ở đây
+              }}
+            >
+              <i className="fas fa-comment"></i>
+              Nhắn tin
+            </button>
+          </div>
+          
+          <div className="secondary-actions">
+            <span className="friend-status">
+              <i className="fas fa-user-check"></i>
+              Đã là bạn bè
+            </span>
+            <button 
+              className="remove-friend-button" 
+              onClick={handleRemoveFriendClick}
+            >
+              <i className="fas fa-user-minus"></i>
+              Hủy kết bạn
+            </button>
+          </div>
         </div>
       );
     } else if (friendshipStatus === 'pending' && friendRequestSent) {
@@ -553,14 +558,20 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     
     if (friendshipStatus === 'accepted') {
       return (
-        <div className="locked-user-actions">
-          <button 
-            className="remove-friend-button full-width" 
-            onClick={handleRemoveFriendClick}
-          >
-            <i className="fas fa-user-minus"></i>
-            Hủy kết bạn
-          </button>
+        <div className="friendship-actions">
+          <div className="secondary-actions">
+            <span className="friend-status locked-status">
+              <i className="fas fa-user-lock"></i>
+              Tài khoản bị khóa
+            </span>
+            <button 
+              className="remove-friend-button" 
+              onClick={handleRemoveFriendClick}
+            >
+              <i className="fas fa-user-minus"></i>
+              Hủy kết bạn
+            </button>
+          </div>
         </div>
       );
     }
@@ -709,6 +720,93 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         .accept-friend-button:disabled, .reject-friend-button:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+        }
+        
+        .friendship-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 20px;
+        }
+        
+        .main-actions {
+          width: 100%;
+        }
+        
+        .secondary-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        
+        .friend-status {
+          font-size: 14px;
+          color: #666;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        
+        .friend-status i {
+          color: #4CAF50;
+          font-size: 12px;
+        }
+        
+        .locked-status {
+          color: #d32f2f;
+        }
+        
+        .locked-status i {
+          color: #d32f2f;
+        }
+        
+        .message-friend-button {
+          padding: 12px 15px;
+          border-radius: 5px;
+          background-color: #0066ff;
+          color: white;
+          border: none;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: background-color 0.2s ease;
+          width: 100%;
+        }
+        
+        .message-friend-button:hover {
+          background-color: #0052cc;
+        }
+        
+        .message-friend-button i {
+          font-size: 14px;
+        }
+        
+        .remove-friend-button {
+          padding: 6px 10px;
+          border-radius: 5px;
+          background-color: transparent;
+          color: #666;
+          border: 1px solid #ddd;
+          font-size: 13px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+        }
+        
+        .remove-friend-button:hover {
+          background-color: #f8f8f8;
+          color: #d32f2f;
+          border-color: #f0f0f0;
+        }
+        
+        .remove-friend-button i {
+          font-size: 11px;
         }
         
         .banned-avatar {
