@@ -479,6 +479,19 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             Đã là bạn bè
           </button>
           <button 
+            className="message-friend-button"
+            onClick={() => {
+              console.log("Mở cuộc trò chuyện với:", userData?.username);
+              // Đóng modal thông tin người dùng trước khi chuyển sang tab tin nhắn
+              onClose();
+              // Chức năng mở cuộc trò chuyện sẽ được triển khai sau
+              // Có thể xử lý việc chuyển tab và mở cuộc trò chuyện ở đây
+            }}
+          >
+            <i className="fas fa-comment"></i>
+            Nhắn tin
+          </button>
+          <button 
             className="remove-friend-button" 
             onClick={handleRemoveFriendClick}
           >
