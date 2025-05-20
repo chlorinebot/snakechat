@@ -114,6 +114,11 @@ const isUserOnline = (user: User) => {
   return user.status === 'online';
 };
 
+// Helper function để lấy token từ localStorage
+const getToken = (): string => {
+  return localStorage.getItem('token') || '';
+};
+
 export const api = {
   // Lấy danh sách users
   getUsers: async () => {
@@ -687,14 +692,41 @@ export const api = {
   // Đánh dấu tất cả tin nhắn trong cuộc trò chuyện đã đọc
   markAllMessagesAsRead: async (conversationId: number, userId: number) => {
     try {
-      const response = await axios.put<{ success: boolean }>(
-        `${API_URL}/messages/mark-all-read`,
-        { conversation_id: conversationId, user_id: userId }
-      );
-      return response.data;
+      const response = await fetch(`${API_URL}/messages/mark-all-read`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          user_id: userId
+        })
+      });
+      
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Lỗi khi đánh dấu tất cả tin nhắn đã đọc:', error);
-      throw error;
+      return { success: false, error: 'Không thể đánh dấu tin nhắn đã đọc' };
+    }
+  },
+
+  // Lấy thông tin trạng thái đã đọc của tin nhắn
+  getMessageReadStatus: async (conversationId: number, userId: number) => {
+    try {
+      const response = await fetch(`${API_URL}/messages/read-status?conversation_id=${conversationId}&user_id=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${getToken()}`
+        }
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Lỗi khi lấy thông tin trạng thái đã đọc:', error);
+      return { success: false, error: 'Không thể lấy thông tin trạng thái đã đọc' };
     }
   },
 

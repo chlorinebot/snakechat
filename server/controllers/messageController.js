@@ -143,38 +143,82 @@ exports.markAllMessagesAsRead = async (req, res) => {
   }
   
   try {
-    // Đánh dấu tất cả tin nhắn trong cuộc trò chuyện là đã đọc, trừ tin nhắn của chính mình
-    await db.query(`
-      UPDATE messages
-      SET is_read = 1
+    // Lấy tất cả tin nhắn chưa đọc từ người khác (không phải người dùng hiện tại)
+    const [unreadMessages] = await db.query(`
+      SELECT message_id, sender_id
+      FROM messages
       WHERE conversation_id = ? AND sender_id != ? AND is_read = 0
     `, [conversation_id, user_id]);
     
-    // Lấy thông tin người gửi cuộc trò chuyện để gửi thông báo cập nhật
-    const [senders] = await db.query(`
-      SELECT DISTINCT sender_id
-      FROM messages
-      WHERE conversation_id = ? AND sender_id != ?
-    `, [conversation_id, user_id]);
+    if (unreadMessages.length === 0) {
+      return res.status(200).json({ success: true, message: 'Không có tin nhắn nào cần đánh dấu đã đọc' });
+    }
     
-    // Gửi thông báo cập nhật số tin nhắn chưa đọc cho cả người đọc và người gửi
-    socketService.sendUnreadCountUpdate(parseInt(user_id));
+    // Đánh dấu tất cả tin nhắn trong cuộc trò chuyện là đã đọc, trừ tin nhắn của chính mình
+    await db.query(`
+      UPDATE messages
+      SET is_read = 1, read_at = ?
+      WHERE conversation_id = ? AND sender_id != ? AND is_read = 0
+    `, [new Date().toISOString(), conversation_id, user_id]);
     
-    // Gửi thông báo cho các người gửi biết tin nhắn của họ đã được đọc
-    senders.forEach(sender => {
-      if (sender.sender_id) {
-        socketService.sendNotificationToUser(sender.sender_id, 'message_read_receipt', {
-          conversation_id: conversation_id,
-          reader_id: user_id,
-          read_at: new Date().toISOString()
-        });
+    // Nhóm các tin nhắn đã đọc theo người gửi để thông báo
+    const senderToMessageIds = unreadMessages.reduce((acc, message) => {
+      if (!acc[message.sender_id]) {
+        acc[message.sender_id] = [];
       }
+      acc[message.sender_id].push(message.message_id);
+      return acc;
+    }, {});
+    
+    // Gửi thông báo cho từng người gửi biết tin nhắn của họ đã được đọc
+    Object.entries(senderToMessageIds).forEach(([senderId, messageIds]) => {
+      socketService.sendNotificationToUser(parseInt(senderId), 'message_read_receipt', {
+        conversation_id: conversation_id,
+        reader_id: user_id,
+        message_ids: messageIds,
+        read_at: new Date().toISOString()
+      });
     });
     
-    return res.status(200).json({ success: true });
+    // Gửi thông báo cập nhật số tin nhắn chưa đọc cho người đọc
+    socketService.sendUnreadCountUpdate(parseInt(user_id));
+    
+    return res.status(200).json({ 
+      success: true, 
+      read_count: unreadMessages.length,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error) {
     console.error('Lỗi khi đánh dấu tất cả tin nhắn đã đọc:', error);
     return res.status(500).json({ error: 'Lỗi server khi đánh dấu tất cả tin nhắn đã đọc' });
+  }
+};
+
+// Lấy thông tin trạng thái đã đọc của tin nhắn
+exports.getMessageReadStatus = async (req, res) => {
+  const { conversation_id, user_id } = req.query;
+  
+  if (!conversation_id || !user_id) {
+    return res.status(400).json({ error: 'Thiếu thông tin cần thiết' });
+  }
+  
+  try {
+    // Lấy thông tin trạng thái đã đọc của tất cả tin nhắn trong cuộc trò chuyện
+    const [messages] = await db.query(`
+      SELECT message_id, sender_id, is_read, read_at
+      FROM messages
+      WHERE conversation_id = ? AND sender_id = ?
+      ORDER BY created_at DESC
+    `, [conversation_id, user_id]);
+    
+    return res.status(200).json({
+      success: true,
+      read_statuses: messages
+    });
+    
+  } catch (error) {
+    console.error('Lỗi khi lấy thông tin trạng thái đã đọc của tin nhắn:', error);
+    return res.status(500).json({ error: 'Lỗi server khi lấy thông tin trạng thái đã đọc của tin nhắn' });
   }
 }; 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../services/api';
 import type { Conversation, Message } from '../../services/api';
 import socketService from '../../services/socketService';
@@ -72,19 +72,39 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     const handleMessageReadReceipt = (data: any) => {
       console.log('Nhận thông báo đã đọc tin nhắn:', data);
       
-      if (data.conversation_id === currentConversationIdRef.current && 
-          data.message_ids && 
-          Array.isArray(data.message_ids)) {
-        // Cập nhật trạng thái đã đọc cho các tin nhắn
-        setMessages(prevMessages => 
-          prevMessages.map(msg => {
-            // Nếu tin nhắn nằm trong danh sách message_ids và từ người dùng hiện tại
-            if (data.message_ids.includes(msg.message_id) && msg.sender_id === userId) {
-              return { ...msg, is_read: true };
-            }
-            return msg;
-          })
-        );
+      if (data.conversation_id === currentConversationIdRef.current) {
+        if (data.message_ids && Array.isArray(data.message_ids)) {
+          // Trường hợp nhận danh sách tin nhắn cụ thể đã đọc
+          setMessages(prevMessages => 
+            prevMessages.map(msg => {
+              // Nếu tin nhắn nằm trong danh sách message_ids và từ người dùng hiện tại
+              if (data.message_ids.includes(msg.message_id) && msg.sender_id === userId) {
+                return { ...msg, is_read: true };
+              }
+              return msg;
+            })
+          );
+        } else {
+          // Trường hợp nhận thông báo đã đọc tất cả tin nhắn đến thời điểm cụ thể (read_at)
+          const readTime = data.read_at ? new Date(data.read_at) : new Date();
+          
+          setMessages(prevMessages => 
+            prevMessages.map(msg => {
+              // Đánh dấu đã đọc cho tất cả tin nhắn từ người dùng hiện tại và gửi trước thời điểm đọc
+              if (msg.sender_id === userId && new Date(msg.created_at) <= readTime) {
+                return { ...msg, is_read: true };
+              }
+              return msg;
+            })
+          );
+        }
+        
+        // Thêm hiệu ứng chuyển động mềm mại khi có tin nhắn được đánh dấu đã đọc
+        const messageElements = document.querySelectorAll('.message-status-container');
+        messageElements.forEach(el => {
+          el.classList.add('status-updated');
+          setTimeout(() => el.classList.remove('status-updated'), 1000);
+        });
       }
     };
 
@@ -139,6 +159,74 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       }
     }
   }, [currentConversation?.conversation_id, messages, userId]);
+
+  // Load tin nhắn khi mở cuộc trò chuyện
+  useEffect(() => {
+    if (currentConversation) {
+      setLoading(true);
+      currentConversationIdRef.current = currentConversation.conversation_id;
+
+      const loadMessages = async () => {
+        try {
+          const messages = await api.getConversationMessages(currentConversation.conversation_id);
+          setMessages(messages);
+          
+          // Lấy thông tin trạng thái đã đọc của các tin nhắn
+          if (userId) {
+            loadReadStatus();
+          }
+        } catch (error) {
+          console.error('Lỗi khi tải tin nhắn từ cuộc trò chuyện:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadMessages();
+    }
+  }, [currentConversation, userId]);
+  
+  // Hàm để tải trạng thái đã đọc của tin nhắn
+  const loadReadStatus = async () => {
+    if (!currentConversation || !userId) return;
+    
+    try {
+      const response = await api.getMessageReadStatus(currentConversation.conversation_id, userId);
+      
+      if (response.success && response.read_statuses) {
+        // Cập nhật trạng thái đã đọc cho các tin nhắn
+        setMessages(prevMessages => 
+          prevMessages.map(msg => {
+            // Tìm trạng thái đã đọc cho tin nhắn hiện tại
+            const readStatus = response.read_statuses.find(
+              (status: { message_id: number; is_read: number }) => status.message_id === msg.message_id
+            );
+            
+            if (readStatus && msg.sender_id === userId) {
+              return { ...msg, is_read: readStatus.is_read === 1 };
+            }
+            return msg;
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải trạng thái đã đọc:', error);
+    }
+  };
+  
+  // Xử lý mất kết nối và kết nối lại
+  useEffect(() => {
+    const handleReconnect = () => {
+      console.log('Socket kết nối lại - cập nhật trạng thái tin nhắn');
+      loadReadStatus();
+    };
+    
+    socketService.on('connect', handleReconnect);
+    
+    return () => {
+      socketService.off('connect', handleReconnect);
+    };
+  }, [currentConversation?.conversation_id, userId]);
 
   // Gửi tin nhắn mới
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -328,20 +416,23 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     if (!isOwnMessage(message) || !message.is_read) return false;
     
     // Tìm tin nhắn đã đọc cuối cùng từ người dùng hiện tại
-    const userMessages = messages.filter(msg => msg.sender_id === userId);
+    const userMessages = messages.filter(msg => 
+      msg.sender_id === userId && 
+      !msg.message_id.toString().includes('temp') // Loại bỏ tin nhắn tạm
+    );
     const readMessages = userMessages.filter(msg => msg.is_read);
     
     if (readMessages.length === 0) return false;
     
-    // Lấy tin nhắn đã đọc có thời gian mới nhất
-    const lastReadMsg = readMessages.reduce((latest, current) => {
-      return new Date(latest.created_at) > new Date(current.created_at) ? latest : current;
-    });
+    // Sắp xếp theo thời gian gửi, lấy tin nhắn mới nhất
+    const sortedReadMessages = [...readMessages].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
     
-    return lastReadMsg.message_id === message.message_id;
+    return sortedReadMessages[0].message_id === message.message_id;
   };
 
-  // Style cho khung chat
+  // Styles cho khung chat
   const styles = {
     messagesContent: {
       display: 'flex',
@@ -567,14 +658,60 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       alignItems: 'center',
       justifyContent: 'flex-end',
       gap: '3px',
+      transition: 'all 0.3s ease-in-out',
+      opacity: 1,
     },
     statusIcon: {
-      width: '12px',
-      height: '12px',
+      width: '14px',
+      height: '14px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.3s ease',
     },
     statusText: {
       fontSize: '10px',
       color: '#888',
+      transition: 'color 0.3s ease',
+    },
+    statusActive: {
+      color: '#0066ff',
+    }
+  };
+
+  // Hàm render biểu tượng trạng thái
+  const renderStatusIcon = (status: 'sending' | 'sent' | 'read' | 'failed') => {
+    switch (status) {
+      case 'sending':
+        return (
+          <svg style={styles.statusIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="#888" strokeWidth="2" strokeDasharray="30" strokeDashoffset="0">
+              <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        );
+      case 'sent':
+        return (
+          <svg style={styles.statusIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12L10 17L19 8" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        );
+      case 'read':
+        return (
+          <svg style={{...styles.statusIcon, color: '#0066ff'}} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 12L7 17L15 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M10 12L15 17L22 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        );
+      case 'failed':
+        return (
+          <svg style={{...styles.statusIcon, color: '#e74c3c'}} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        );
+      default:
+        return null;
     }
   };
 
@@ -586,8 +723,9 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Nếu là tin nhắn tạm thời (đang gửi)
     if (typeof message.message_id === 'string' || message.message_id.toString().includes('temp')) {
       return (
-        <div style={styles.messageStatus}>
-          <span style={styles.statusText}>Đang gửi...</span>
+        <div className="message-status-container" style={styles.messageStatus}>
+          {renderStatusIcon('sending')}
+          <span style={styles.statusText}>Đang gửi</span>
         </div>
       );
     }
@@ -595,7 +733,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Nếu tin nhắn có lỗi, hiển thị trạng thái lỗi cho tất cả tin nhắn
     if (message.send_failed) {
       return (
-        <div style={styles.messageStatus}>
+        <div className="message-status-container" style={styles.messageStatus}>
+          {renderStatusIcon('failed')}
           <span style={{...styles.statusText, color: '#e74c3c'}}>Gửi không thành công</span>
         </div>
       );
@@ -604,8 +743,9 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Tin nhắn đã được xem - chỉ hiển thị trạng thái tại tin nhắn mới nhất đã được xem
     if (isLastReadMessage(message)) {
       return (
-        <div style={styles.messageStatus}>
-          <span style={styles.statusText}>Đã xem</span>
+        <div className="message-status-container" style={styles.messageStatus}>
+          {renderStatusIcon('read')}
+          <span style={{...styles.statusText, ...styles.statusActive}}>Đã xem</span>
         </div>
       );
     }
@@ -613,7 +753,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Chỉ hiển thị trạng thái "Đã gửi" cho tin nhắn cuối cùng chưa được xem
     if (isLastMessageFromUser(message) && !message.is_read) {
       return (
-        <div style={styles.messageStatus}>
+        <div className="message-status-container" style={styles.messageStatus}>
+          {renderStatusIcon('sent')}
           <span style={styles.statusText}>Đã gửi</span>
         </div>
       );
@@ -622,6 +763,31 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Các tin nhắn khác không hiển thị trạng thái
     return null;
   };
+
+  // Thêm CSS cho hiệu ứng animation
+  useEffect(() => {
+    // Tạo style element
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `
+      .message-status-container {
+        transition: all 0.3s ease-in-out;
+      }
+      .status-updated {
+        animation: pulse 1s ease-in-out;
+      }
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+      }
+    `;
+    document.head.appendChild(styleElement);
+
+    // Cleanup
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {

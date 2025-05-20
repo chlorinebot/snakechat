@@ -22,17 +22,58 @@ const setupSocket = (server) => {
       userSockets.set(parseInt(userId), socket);
       
       // Lắng nghe sự kiện tin nhắn đã đọc
-      socket.on('message_read', (data) => {
+      socket.on('message_read', async (data) => {
         console.log(`Nhận thông báo tin nhắn đã đọc:`, data);
         
-        if (data.conversation_id && data.reader_id && data.message_ids) {
-          // Tìm thành viên khác trong cuộc trò chuyện để gửi thông báo
-          // Thông báo này sẽ được xử lý bởi người gửi tin nhắn để cập nhật trạng thái "đã xem"
-          sendNotificationToUser(parseInt(data.reader_id), 'message_read_receipt', {
-            conversation_id: data.conversation_id,
-            reader_id: data.reader_id,
-            message_ids: data.message_ids
-          });
+        if (data.conversation_id && data.reader_id) {
+          try {
+            // Tìm người gửi tin nhắn trong cuộc trò chuyện để gửi thông báo
+            const [senders] = await db.query(`
+              SELECT DISTINCT m.sender_id 
+              FROM messages m
+              JOIN conversation_members cm ON m.conversation_id = cm.conversation_id
+              WHERE m.conversation_id = ? 
+              AND m.sender_id != ? 
+              AND cm.user_id = m.sender_id
+              AND cm.left_at IS NULL
+            `, [data.conversation_id, data.reader_id]);
+            
+            // Gửi thông báo đến từng người gửi riêng biệt
+            if (senders && senders.length > 0) {
+              console.log(`Gửi thông báo đã đọc đến ${senders.length} người gửi`);
+              
+              for (const sender of senders) {
+                // Nếu có danh sách message_ids, truyền trực tiếp
+                if (data.message_ids && Array.isArray(data.message_ids)) {
+                  // Lọc các tin nhắn thuộc về người gửi cụ thể này
+                  const [senderMessages] = await db.query(`
+                    SELECT message_id FROM messages 
+                    WHERE conversation_id = ? 
+                    AND sender_id = ? 
+                    AND message_id IN (?)
+                  `, [data.conversation_id, sender.sender_id, data.message_ids]);
+                  
+                  if (senderMessages && senderMessages.length > 0) {
+                    sendNotificationToUser(parseInt(sender.sender_id), 'message_read_receipt', {
+                      conversation_id: data.conversation_id,
+                      reader_id: data.reader_id,
+                      message_ids: senderMessages.map(msg => msg.message_id),
+                      read_at: new Date().toISOString()
+                    });
+                  }
+                } else {
+                  // Gửi thông báo với thời gian đọc để client có thể xử lý
+                  sendNotificationToUser(parseInt(sender.sender_id), 'message_read_receipt', {
+                    conversation_id: data.conversation_id,
+                    reader_id: data.reader_id,
+                    read_at: new Date().toISOString()
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Lỗi khi xử lý thông báo tin nhắn đã đọc:', error);
+          }
         }
       });
       

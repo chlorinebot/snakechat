@@ -11,7 +11,10 @@ router.post('/send', messageController.sendMessage);
 // Đánh dấu tin nhắn đã đọc
 router.put('/mark-read/:messageId', messageController.markMessageAsRead);
 
-// Đánh dấu tất cả tin nhắn trong cuộc trò chuyện đã đọc
-router.put('/mark-all-read', messageController.markAllMessagesAsRead);
+// Đánh dấu tất cả tin nhắn trong cuộc trò chuyện là đã đọc
+router.post('/mark-all-read', messageController.markAllMessagesAsRead);
+
+// Lấy thông tin trạng thái đã đọc của tin nhắn
+router.get('/read-status', messageController.getMessageReadStatus);
 
 module.exports = router; 
