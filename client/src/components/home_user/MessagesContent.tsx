@@ -67,10 +67,78 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
   }, [currentConversation?.conversation_id]); // Đăng ký lại khi đổi cuộc trò chuyện
 
+  // Lắng nghe sự kiện tin nhắn đã đọc
+  useEffect(() => {
+    const handleMessageReadReceipt = (data: any) => {
+      console.log('Nhận thông báo đã đọc tin nhắn:', data);
+      
+      if (data.conversation_id === currentConversationIdRef.current && 
+          data.message_ids && 
+          Array.isArray(data.message_ids)) {
+        // Cập nhật trạng thái đã đọc cho các tin nhắn
+        setMessages(prevMessages => 
+          prevMessages.map(msg => {
+            // Nếu tin nhắn nằm trong danh sách message_ids và từ người dùng hiện tại
+            if (data.message_ids.includes(msg.message_id) && msg.sender_id === userId) {
+              return { ...msg, is_read: true };
+            }
+            return msg;
+          })
+        );
+      }
+    };
+
+    socketService.on('message_read_receipt', handleMessageReadReceipt);
+    console.log('Đã đăng ký lắng nghe sự kiện message_read_receipt');
+
+    return () => {
+      console.log('Hủy đăng ký lắng nghe sự kiện message_read_receipt');
+      socketService.off('message_read_receipt', handleMessageReadReceipt);
+    };
+  }, [userId, currentConversation?.conversation_id]);
+
   // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Khi mở cuộc trò chuyện, đánh dấu tất cả tin nhắn chưa đọc là đã đọc
+  useEffect(() => {
+    // Chỉ xử lý khi có cuộc trò chuyện và có tin nhắn
+    if (currentConversation?.conversation_id && messages.length > 0 && userId) {
+      const unreadMessages = messages.filter(msg => 
+        msg.sender_id !== userId && // Tin nhắn từ người khác
+        !msg.is_read // Chưa được đọc
+      );
+
+      if (unreadMessages.length > 0) {
+        try {
+          // Sử dụng API để đánh dấu tất cả tin nhắn là đã đọc
+          api.markAllMessagesAsRead(
+            currentConversation.conversation_id, 
+            userId
+          );
+
+          // Cập nhật trạng thái tin nhắn hiện tại
+          setMessages(prevMessages => prevMessages.map(msg => {
+            if (msg.sender_id !== userId) {
+              return { ...msg, is_read: true };
+            }
+            return msg;
+          }));
+
+          // Thông báo cho người gửi biết tin nhắn đã được đọc
+          socketService.emit('message_read', {
+            conversation_id: currentConversation.conversation_id,
+            reader_id: userId,
+            message_ids: unreadMessages.map(msg => msg.message_id)
+          });
+        } catch (error) {
+          console.error('Lỗi khi đánh dấu tin nhắn là đã đọc:', error);
+        }
+      }
+    }
+  }, [currentConversation?.conversation_id, messages, userId]);
 
   // Gửi tin nhắn mới
   const handleSendMessage = async (e: React.FormEvent) => {
