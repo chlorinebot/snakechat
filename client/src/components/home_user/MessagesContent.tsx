@@ -583,12 +583,26 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               <path d="M12 11H14V13H12V11ZM12 7H14V9H12V7Z" fill="#222222"/>
             </svg>
           </div>
-          <h2 style={{
-            fontWeight: 700,
-            fontSize: '28px',
-            marginBottom: '20px',
-            color: '#000000',
-          }}>Chào mừng đến với SnakeChat</h2>
+          
+          <div style={{
+            backgroundColor: '#ffffff',
+            padding: '0 0 20px 0',
+            width: '100%',
+          }}>
+            <div style={{
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              fontWeight: 900,
+              fontSize: '28px',
+              textAlign: 'center',
+              padding: '10px 0',
+              lineHeight: 1.4,
+              fontFamily: 'Arial, sans-serif',
+            }}>
+              Chào mừng đến với SnakeChat
+            </div>
+          </div>
+
           <p style={{
             fontSize: '18px',
             color: '#000000',
@@ -630,7 +644,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                 justifyContent: 'center',
                 fontWeight: 'bold',
               }}>1</span>
-              <span>Chọn cuộc trò chuyện từ sidebar</span>
+              <span style={{ color: '#000000' }}>Chọn cuộc trò chuyện từ sidebar</span>
             </div>
             <div style={{
               display: 'flex',
@@ -656,7 +670,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                 justifyContent: 'center',
                 fontWeight: 'bold',
               }}>2</span>
-              <span>Bắt đầu nhắn tin</span>
+              <span style={{ color: '#000000' }}>Bắt đầu nhắn tin</span>
             </div>
           </div>
         </div>
