@@ -23,6 +23,16 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Hàm tiện ích để cuộn xuống dưới cùng
+  const scrollToBottom = useCallback((smooth = false) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end'
+      });
+    }
+  }, []);
+
   // Giữ focus vào input khi component mount và sau mỗi lần gửi tin nhắn
   useEffect(() => {
     inputRef.current?.focus();
@@ -63,10 +73,11 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       if (data.conversation_id === currentConversationIdRef.current) {
         console.log('Thêm tin nhắn mới vào cuộc trò chuyện hiện tại');
         setMessages(prevMessages => [...prevMessages, data]);
+        
         // Luôn cuộn xuống khi có tin nhắn mới
         setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+          scrollToBottom(false);
+        }, 10);
       } else {
         console.log('Tin nhắn mới cho cuộc trò chuyện khác:', data.conversation_id);
       }
@@ -79,7 +90,14 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       console.log('Hủy đăng ký lắng nghe sự kiện new_message');
       socketService.off('new_message', handleNewMessage);
     };
-  }, [currentConversation?.conversation_id, userId]); // Đăng ký lại khi đổi cuộc trò chuyện
+  }, [currentConversation?.conversation_id, userId, scrollToBottom]);
+
+  // Đảm bảo tin nhắn luôn cuộn xuống dưới cùng khi có tin nhắn mới
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom(false);
+    }
+  }, [messages.length, scrollToBottom]);
 
   // Lắng nghe sự kiện tin nhắn đã đọc
   useEffect(() => {
@@ -246,113 +264,70 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!currentConversation || !newMessage.trim() || !userId) {
-      return;
-    }
-
-    // Khai báo các biến ở phạm vi function
-    const tempId = Date.now();
-    const messageContent = newMessage.trim();
+    const trimmedMessage = newMessage.trim();
+    if (!trimmedMessage || !currentConversation || !userId) return;
     
     try {
       setSending(true);
-
-      // Đánh dấu tất cả tin nhắn chưa đọc trong cuộc trò chuyện là đã đọc
-      // vì người dùng đang trả lời, điều đó có nghĩa họ đã xem tin nhắn
-      const unreadMessages = messages.filter(msg => 
-        msg.sender_id !== userId && // Tin nhắn từ người khác
-        !msg.is_read // Chưa được đọc
-      );
-
-      if (unreadMessages.length > 0) {
-        try {
-          // Sử dụng API để đánh dấu tất cả tin nhắn là đã đọc
-          await api.markAllMessagesAsRead(
-            currentConversation.conversation_id, 
-            userId
-          );
-
-          // Cập nhật trạng thái tin nhắn hiện tại
-          setMessages(prevMessages => prevMessages.map(msg => {
-            if (msg.sender_id !== userId) {
-              return { ...msg, is_read: true };
-            }
-            return msg;
-          }));
-
-          // Thông báo cho người gửi biết tin nhắn đã được đọc
-          socketService.emit('message_read', {
-            conversation_id: currentConversation.conversation_id,
-            reader_id: userId,
-            message_ids: unreadMessages.map(msg => msg.message_id)
-          });
-        } catch (error) {
-          console.error('Lỗi khi đánh dấu tin nhắn là đã đọc:', error);
-        }
-      }
+      // Tạo ID tạm thời để theo dõi tin nhắn
+      const tempMessageId = `temp_${Date.now()}`;
       
       // Tạo đối tượng tin nhắn tạm thời để hiển thị ngay lập tức
       const tempMessage: Message = {
-        message_id: tempId as any, // Sử dụng as any để tránh lỗi TypeScript
+        message_id: tempMessageId as unknown as number, // Sửa lỗi kiểu dữ liệu
         conversation_id: currentConversation.conversation_id,
         sender_id: userId,
         sender_name: 'Bạn', // Hiển thị tạm thời
-        content: messageContent,
+        content: trimmedMessage,
         message_type: 'text',
         created_at: new Date().toISOString(),
-        is_read: false
+        is_read: false,
+        send_failed: false
       };
-      
-      // Thêm tin nhắn tạm vào danh sách hiển thị
+
+      // Thêm tin nhắn tạm thời vào danh sách
       setMessages(prevMessages => [...prevMessages, tempMessage]);
       
-      // Xóa nội dung nhập
+      // Đặt lại input
       setNewMessage('');
 
       // Cuộn xuống tin nhắn mới
       setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+        scrollToBottom(false);
+      }, 10);
       
-      // Thêm timeout để mô phỏng độ trễ mạng (có thể bỏ trong production)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const result = await api.sendMessage({
+      // Gửi tin nhắn đến server
+      const response = await api.sendMessage({
         conversation_id: currentConversation.conversation_id,
         sender_id: userId,
-        content: messageContent
+        content: trimmedMessage,
+        message_type: 'text'
       });
       
-      if (result.success && result.data) {
-        // Thay thế tin nhắn tạm bằng tin nhắn thật từ server
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            (msg.message_id === tempId) ? result.data : msg
-          )
-        );
-        console.log('Tin nhắn đã được gửi thành công:', result.data);
-      } else {
-        // Đánh dấu tin nhắn gửi thất bại
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.message_id === tempId ? { ...msg, send_failed: true } : msg
-          )
-        );
-        console.error('Lỗi gửi tin nhắn:', result);
-      }
+      setSending(false);
+      
+      // Cập nhật danh sách tin nhắn, thay thế tin nhắn tạm thời
+      setMessages(prevMessages => prevMessages.map(msg => {
+        // So sánh dựa trên chuỗi tempMessageId 
+        if (msg.message_id.toString() === tempMessageId) {
+          return response.data;
+        }
+        return msg;
+      }));
+
     } catch (error) {
       console.error('Lỗi khi gửi tin nhắn:', error);
-      // Đánh dấu tin nhắn tạm là gửi thất bại
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.message_id === tempId ? { ...msg, send_failed: true } : msg
-        )
-      );
-      // Không khôi phục tin nhắn vào ô nhập để người dùng có thể chọn gửi lại từ UI
-    } finally {
       setSending(false);
-      // Focus lại vào input sau khi gửi
-      inputRef.current?.focus();
+      
+      // Đánh dấu tin nhắn là thất bại
+      setMessages(prevMessages => prevMessages.map(msg => {
+        // Kiểm tra nếu message_id là chuỗi và bắt đầu bằng 'temp_'
+        const msgId = msg.message_id.toString();
+        if (typeof msgId === 'string' && msgId.startsWith('temp_')) {
+          return { ...msg, send_failed: true };
+        }
+        return msg;
+      }));
     }
   };
 
