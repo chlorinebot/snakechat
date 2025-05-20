@@ -67,7 +67,7 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
           {showMessageBadge && (
             <div className="message-badge" style={{
               position: 'absolute',
-              bottom: '0',
+              top: '0',
               right: '0',
               backgroundColor: '#ff3b30',
               color: 'white',
@@ -98,7 +98,7 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
           {showFriendBadge && (
             <div className="friend-request-badge" style={{
               position: 'absolute',
-              bottom: '0',
+              top: '0',
               right: '0',
               backgroundColor: '#ff3b30',
               color: 'white',

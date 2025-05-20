@@ -345,7 +345,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       textAlign: 'center' as const,
       margin: '4px 0',
       fontSize: '13px',
-      color: '#888',
+      color: '#000000',
+      fontWeight: 500,
     },
     datePill: {
       backgroundColor: '#f0f0f0',
@@ -353,6 +354,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       borderRadius: '16px',
       display: 'inline-block',
       boxShadow: '0 1px 2px rgba(0,0,0,0.05)', // Thêm bóng nhẹ
+      color: '#000000',
+      fontWeight: 500,
     },
     messageGroup: {
       display: 'flex',

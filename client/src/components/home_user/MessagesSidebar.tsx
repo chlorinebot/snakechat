@@ -262,20 +262,27 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       marginRight: '12px',
       position: 'relative' as const,
     },
+    conversationTime: {
+      fontSize: '12px',
+      color: '#888',
+      whiteSpace: 'nowrap' as const,
+      position: 'relative' as const,
+    },
     unreadBadge: {
       position: 'absolute' as const,
-      bottom: '-2px',
-      right: '-2px',
+      top: '100%',
+      right: '0',
       backgroundColor: '#ff3b30',
       color: 'white',
       fontSize: '10px',
-      minWidth: '18px',
-      height: '18px',
-      borderRadius: '9px',
+      minWidth: '16px',
+      height: '16px',
+      borderRadius: '8px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      border: '2px solid white',
+      border: '1px solid white',
+      marginTop: '2px',
     },
     conversationInfo: {
       flex: 1,
@@ -293,11 +300,6 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       overflow: 'hidden' as const,
       textOverflow: 'ellipsis' as const,
       color: '#000000',
-    },
-    conversationTime: {
-      fontSize: '12px',
-      color: '#888',
-      whiteSpace: 'nowrap' as const,
     },
     conversationLastMessage: {
       fontSize: '13px',
@@ -382,14 +384,16 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
               >
                 <div style={styles.conversationAvatar}>
                   {getConversationName(conversation).charAt(0).toUpperCase()}
-                  {conversation.unread_count && conversation.unread_count > 0 ? (
-                    <div style={styles.unreadBadge}>{conversation.unread_count > 99 ? '99+' : conversation.unread_count}</div>
-                  ) : null}
                 </div>
                 <div style={styles.conversationInfo}>
                   <div style={styles.conversationHeader}>
                     <div style={styles.conversationName}>{getConversationName(conversation)}</div>
-                    <div style={styles.conversationTime}>{conversation.last_message_time ? formatTime(conversation.last_message_time) : ''}</div>
+                    <div style={styles.conversationTime}>
+                      {conversation.last_message_time ? formatTime(conversation.last_message_time) : ''}
+                      {conversation.unread_count && conversation.unread_count > 0 ? (
+                        <div style={styles.unreadBadge}>{conversation.unread_count > 99 ? '99+' : conversation.unread_count}</div>
+                      ) : null}
+                    </div>
                   </div>
                   <div style={styles.conversationLastMessage}>
                     {conversation.last_message_content || 'Bắt đầu cuộc trò chuyện...'}
