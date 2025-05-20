@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import type { Conversation } from '../../services/api';
 import socketService from '../../services/socketService';
+import { playMessageSound } from '../../utils/sound';
 
 interface MessagesSidebarProps {
   userId: number;
@@ -112,6 +113,9 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       console.log('MessagesSidebar nhận tin nhắn mới:', data);
       
       if (data.sender_id !== userId) {
+        // Phát âm thanh thông báo khi nhận tin nhắn mới từ người khác
+        playMessageSound();
+        
         // Cập nhật thông tin tin nhắn mới nhất vào cuộc trò chuyện
         setConversations(prevConversations => {
           // Kiểm tra cuộc trò chuyện có tồn tại không

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../services/api';
 import type { Conversation, Message } from '../../services/api';
 import socketService from '../../services/socketService';
+import { playMessageSound } from '../../utils/sound';
 
 interface MessagesContentProps {
   userId: number;
@@ -46,6 +47,13 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   useEffect(() => {
     const handleNewMessage = (data: any) => {
       console.log('Nhận tin nhắn mới từ socket:', data);
+      
+      // Chỉ phát âm thanh khi tin nhắn từ người khác
+      if (data.sender_id !== userId) {
+        // Phát âm thanh ngay khi nhận được tin nhắn, không quan tâm đến cuộc trò chuyện hiện tại
+        playMessageSound();
+      }
+
       if (data.conversation_id === currentConversationIdRef.current) {
         console.log('Thêm tin nhắn mới vào cuộc trò chuyện hiện tại');
         setMessages(prevMessages => [...prevMessages, data]);
@@ -65,7 +73,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       console.log('Hủy đăng ký lắng nghe sự kiện new_message');
       socketService.off('new_message', handleNewMessage);
     };
-  }, [currentConversation?.conversation_id]); // Đăng ký lại khi đổi cuộc trò chuyện
+  }, [currentConversation?.conversation_id, userId]); // Đăng ký lại khi đổi cuộc trò chuyện
 
   // Lắng nghe sự kiện tin nhắn đã đọc
   useEffect(() => {
