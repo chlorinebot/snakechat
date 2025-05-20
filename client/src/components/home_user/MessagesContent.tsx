@@ -21,6 +21,12 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentConversationIdRef = useRef<number | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Giữ focus vào input khi component mount và sau mỗi lần gửi tin nhắn
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [currentConversation]);
 
   // Tải tin nhắn khi chọn cuộc trò chuyện
   useEffect(() => {
@@ -345,6 +351,16 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       // Không khôi phục tin nhắn vào ô nhập để người dùng có thể chọn gửi lại từ UI
     } finally {
       setSending(false);
+      // Focus lại vào input sau khi gửi
+      inputRef.current?.focus();
+    }
+  };
+
+  // Xử lý phím Enter
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Ngăn không cho xuống dòng
+      handleSendMessage(e);
     }
   };
 
@@ -929,21 +945,12 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         <div style={styles.loadingMessages}>Đang tải tin nhắn...</div>
       ) : (
         <>
-          <div className="chat-area" style={{
-            ...styles.chatArea,
-            padding: '10px', // Giảm padding của chat area
-          }}>
-            <div className="messages-list" style={{
-              ...styles.messagesList,
-              gap: '0', // Đảm bảo không có gap
-            }}>
+          <div className="chat-area" style={styles.chatArea}>
+            <div className="messages-list" style={styles.messagesList}>
               {messages.map((message, index) => (
                 <React.Fragment key={message.message_id}>
                   {shouldShowDate(message, index) && (
-                    <div className="message-date" style={{
-                      ...styles.messageDate,
-                      margin: '2px 0', // Giảm margin của ngày
-                    }}>
+                    <div className="message-date" style={styles.messageDate}>
                       <span className="date-pill" style={styles.datePill}>
                         {formatMessageDate(message.created_at)}
                       </span>
@@ -1005,12 +1012,15 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           <div className="input-area" style={styles.inputArea}>
             <form style={styles.inputForm} onSubmit={handleSendMessage}>
               <input
+                ref={inputRef}
                 type="text"
                 placeholder="Nhập tin nhắn..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
                 style={styles.messageInput}
                 disabled={sending}
+                autoFocus
               />
               <button 
                 type="submit" 

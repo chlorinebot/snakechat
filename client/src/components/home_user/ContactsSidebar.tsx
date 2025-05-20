@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 type ContactTab = 'friends' | 'requests' | 'explore';
 
@@ -9,22 +9,46 @@ interface ContactsSidebarProps {
 }
 
 const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChange, friendRequestCount = 0 }) => {
-  const [internalActiveTab, setInternalActiveTab] = useState<ContactTab>(activeTab || 'friends');
+  const [currentTab, setCurrentTab] = useState(activeTab);
+  const [showBadge, setShowBadge] = useState(false);
+  const [badgeText, setBadgeText] = useState('');
+  const [isAnimating, setIsAnimating] = useState(false);
+  const prevCountRef = useRef(friendRequestCount);
+  
+  useEffect(() => {
+    setCurrentTab(activeTab);
+  }, [activeTab]);
+  
+  useEffect(() => {
+    // Kiểm tra xem có lời mời mới không
+    const hasNewRequest = friendRequestCount > prevCountRef.current;
+    prevCountRef.current = friendRequestCount;
+    
+    if (friendRequestCount > 0) {
+      setShowBadge(true);
+      setBadgeText(friendRequestCount > 99 ? '99+' : friendRequestCount.toString());
+      
+      // Nếu có lời mời mới, kích hoạt hiệu ứng mạnh hơn
+      if (hasNewRequest) {
+        setIsAnimating(true);
+        const timer = setTimeout(() => {
+          setIsAnimating(false);
+        }, 3000); // Kéo dài thời gian hiệu ứng
+        
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setShowBadge(false);
+      setBadgeText('');
+    }
+  }, [friendRequestCount]);
 
   const handleTabChange = (tab: ContactTab) => {
-    setInternalActiveTab(tab);
+    setCurrentTab(tab);
     if (onTabChange) {
       onTabChange(tab);
     }
   };
-  
-  // Sử dụng activeTab từ prop nếu có, nếu không sử dụng state nội bộ
-  const currentTab = activeTab || internalActiveTab;
-
-  // Hiển thị badge chỉ khi có ít nhất 1 lời mời kết bạn
-  const showBadge = friendRequestCount > 0;
-  // Hiển thị số +9 nếu có hơn 9 lời mời kết bạn
-  const badgeText = friendRequestCount > 9 ? '+9' : friendRequestCount.toString();
 
   return (
     <div className="contacts-sidebar">
@@ -58,7 +82,7 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
           
           {/* Hiển thị badge khi có lời mời kết bạn */}
           {showBadge && (
-            <div className="friend-request-badge-sidebar">
+            <div className={`friend-request-badge-sidebar ${isAnimating ? 'animating' : ''}`}>
               {badgeText}
             </div>
           )}
@@ -75,6 +99,41 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
           <span style={{ color: currentTab === 'explore' ? '#0084ff' : '#000' }}>Khám phá</span>
         </div>
       </div>
+      
+      <style>
+        {`
+          .friend-request-badge-sidebar {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #ff3b30;
+            color: white;
+            border-radius: 10px;
+            padding: 1px 6px;
+            font-size: 10px;
+            min-width: 16px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.2s ease;
+          }
+          
+          .friend-request-badge-sidebar.animating {
+            animation: pulseStrong 0.6s ease infinite alternate;
+          }
+          
+          @keyframes pulseStrong {
+            0% {
+              transform: translateY(-50%) scale(1);
+              box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
+            }
+            100% {
+              transform: translateY(-50%) scale(1.3);
+              box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };

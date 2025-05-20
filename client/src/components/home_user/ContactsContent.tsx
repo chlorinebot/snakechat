@@ -4,6 +4,7 @@ import type { User, FriendRequest } from '../../services/api';
 import UserProfileModal from './UserProfileModal';
 import SortDropdown from '../common/SortDropdown';
 import type { SortOption } from '../common/SortDropdown';
+import socketService from '../../services/socketService';
 
 interface ContactsContentProps {
   activeTab?: 'friends' | 'requests' | 'explore';
@@ -156,6 +157,54 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
 
     fetchFriendsData();
   }, [activeTab, currentUser, onFriendRequestUpdate]);
+
+  // Lắng nghe sự kiện lời mời kết bạn mới và cập nhật theo thời gian thực
+  useEffect(() => {
+    // Hàm xử lý khi nhận được lời mời kết bạn mới
+    const handleNewFriendRequest = (data: any) => {
+      console.log('Nhận lời mời kết bạn mới trong ContactsContent:', data);
+      if (data && data.sender) {
+        // Kiểm tra xem lời mời này đã tồn tại trong danh sách chưa
+        const existingRequest = friendRequests.find(
+          req => req.friendship_id === data.friendship_id
+        );
+        
+        if (!existingRequest) {
+          // Thêm lời mời mới vào đầu danh sách hiện tại
+          setFriendRequests(prevRequests => [{
+            friendship_id: data.friendship_id,
+            user: data.sender,
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }, ...prevRequests]);
+          
+          // Gọi callback cập nhật nếu có
+          if (onFriendRequestUpdate) {
+            onFriendRequestUpdate();
+          }
+        }
+      }
+    };
+
+    // Hàm xử lý khi số lượng lời mời kết bạn được cập nhật
+    const handleFriendRequestCountUpdate = (data: any) => {
+      console.log('Cập nhật số lượng lời mời kết bạn trong ContactsContent:', data);
+      // Nếu số lượng lời mời khác với số lượng hiện tại, cập nhật lại danh sách
+      if (typeof data.count === 'number' && data.count !== friendRequests.length) {
+        fetchFriendRequests();
+      }
+    };
+
+    // Đăng ký các sự kiện socket
+    socketService.on('friend_request', handleNewFriendRequest);
+    socketService.on('friend_request_count_update', handleFriendRequestCountUpdate);
+
+    // Hủy đăng ký khi component unmount
+    return () => {
+      socketService.off('friend_request', handleNewFriendRequest);
+      socketService.off('friend_request_count_update', handleFriendRequestCountUpdate);
+    };
+  }, [userId, friendRequests, onFriendRequestUpdate]);
 
   // Xử lý tìm kiếm khi người dùng nhập
   const handleSearch = async (term: string) => {
@@ -610,6 +659,32 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       </div>
     );
   };
+
+  // Hàm lấy danh sách lời mời kết bạn
+  const fetchFriendRequests = async () => {
+    if (!userId) return;
+    
+    try {
+      setLoading(true);
+      const requests = await api.getReceivedFriendRequests(userId);
+      setFriendRequests(requests || []);
+      
+      // Gọi callback nếu có
+      if (onFriendRequestUpdate) {
+        onFriendRequestUpdate();
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách lời mời kết bạn:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (activeTab === 'requests' && userId) {
+      fetchFriendRequests();
+    }
+  }, [activeTab, userId]);
 
   return (
     <div className="contacts-content">

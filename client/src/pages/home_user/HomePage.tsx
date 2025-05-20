@@ -38,6 +38,10 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const avatarRef = useRef<HTMLDivElement | null>(null);
   const socketEventsRegistered = useRef(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [lastToastId, setLastToastId] = useState<number | null>(null);
+  const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
   
   const calculateTotalUnreadMessages = (conversations: Conversation[]) => {
     return conversations.reduce((total, conversation) => {
@@ -77,69 +81,8 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
           navigate('/login');
         } else {
           setUser(parsedUser);
-          
-          socketService.connect(parsedUser.user_id);
-          
-          if (!socketEventsRegistered.current) {
-            socketService.on('friend_request', (data) => {
-              console.log('Nhận lời mời kết bạn mới:', data);
-              setFriendRequestCount(data.count);
-            });
-            
-            socketService.on('friend_request_count_update', (data) => {
-              console.log('Cập nhật số lượng lời mời kết bạn:', data);
-              setFriendRequestCount(data.count);
-            });
-
-            socketService.on('new_message', (data) => {
-              console.log('Nhận tin nhắn mới:', data);
-              
-              if (data.sender_id !== parsedUser.user_id) {
-                if (!(currentConversation && currentConversation.conversation_id === data.conversation_id)) {
-                  setUnreadMessageCount(prev => prev + 1);
-                }
-                
-                setConversations(prevConversations => {
-                  return prevConversations.map(conv => {
-                    if (conv.conversation_id === data.conversation_id) {
-                      const newUnreadCount = !(currentConversation && 
-                        currentConversation.conversation_id === data.conversation_id) 
-                        ? (conv.unread_count || 0) + 1 
-                        : conv.unread_count;
-                      
-                      return {
-                        ...conv,
-                        last_message_id: data.message_id,
-                        last_message_content: data.content,
-                        last_message_time: data.created_at,
-                        unread_count: newUnreadCount
-                      };
-                    }
-                    return conv;
-                  });
-                });
-              }
-            });
-            
-            socketService.on('unread_count_update', (data) => {
-              console.log('Cập nhật số tin nhắn chưa đọc:', data);
-              
-              refreshConversations();
-            });
-            
-            socketService.on('message_read_receipt', (data) => {
-              console.log('Nhận xác nhận đã đọc:', data);
-              
-              if (data.conversation_id && data.reader_id && data.message_ids) {
-                // Cập nhật trạng thái "đã xem" cho tin nhắn nếu đang hiển thị
-                // Thực hiện trong MessagesContent
-              }
-            });
-            
-            socketEventsRegistered.current = true;
-          }
-          
-          refreshConversations();
+          // Đã di chuyển việc khởi tạo socket sang useEffect mới
+          refreshConversations(); // Vẫn gọi refreshConversations
         }
       } catch (error) {
         console.error('Lỗi khi parse thông tin người dùng:', error);
@@ -183,12 +126,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('openConversation', handleOpenConversation as EventListener);
-      socketService.disconnect();
-      socketService.off('friend_request');
-      socketService.off('friend_request_count_update');
-      socketService.off('new_message');
-      socketService.off('unread_count_update');
-      socketService.off('message_read_receipt');
     };
   }, [navigate, location]);
 
@@ -334,6 +271,123 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     }
   };
 
+  useEffect(() => {
+    // Sử dụng âm thanh dưới dạng Data URL thay vì file .mp3
+    const notificationSound = "data:audio/mp3;base64,SUQzAwAAAAAAI1RJVDIAAAAZAAAAaHR0cDovL3d3dy5mcmVlc2Z4LmNvLnVrVEFFTgAAABIAAABOb3RpZmljYXRpb24gc291bmRURFJDAAAAEAAAAENvcHlyaWdodCBGcmVlU0ZYSU5GAAAAC5AAAERpc2NsYWltZXI6ClRoaXMgc2FtcGxlIGlzIGZvciBlZHVjYXRpb25hbCBwdXJwb3NlcyBvbmx5LiBJdCBjYW5ub3QgYmUgdXNlZCBpbiBjb21tZXJjaWFsIGNvbnRlbnQsIGFuZCBpdCBtdXN0IG5vdCBiZSByZWRpc3RyaWJ1dGVkLWRlc2NyaXB0aW9uDAAAAFNvdW5kIGVmZmVjdA==";
+    notificationSoundRef.current = new Audio(notificationSound);
+    
+    return () => {
+      if (notificationSoundRef.current) {
+        notificationSoundRef.current.pause();
+        notificationSoundRef.current = null;
+      }
+    };
+  }, []);
+
+  // Khởi tạo socket và đăng ký các sự kiện
+  useEffect(() => {
+    if (!user || !user.user_id) return;
+    
+    console.log('Khởi tạo kết nối socket và đăng ký sự kiện...');
+    socketService.connect(user.user_id);
+    
+    const handleFriendRequest = (data: any) => {
+      console.log('Nhận lời mời kết bạn mới:', data);
+      
+      // Cập nhật số lượng lời mời kết bạn
+      setFriendRequestCount(prev => data.count || prev + 1);
+      
+      // Chuyển sang tab lời mời kết bạn nếu đang ở tab danh bạ
+      if (activeTab === 'contacts') {
+        setContactsTab('requests');
+      }
+      
+      // Hiển thị thông báo toast nếu có thông tin người gửi
+      if (data.sender && data.friendship_id !== lastToastId) {
+        setToastMessage(`${data.sender.username} đã gửi lời mời kết bạn`);
+        setShowToast(true);
+        setLastToastId(data.friendship_id);
+        
+        // Phát âm thanh thông báo
+        if (notificationSoundRef.current) {
+          notificationSoundRef.current.currentTime = 0;
+          notificationSoundRef.current.play().catch(e => console.log('Không thể phát âm thanh:', e));
+        }
+        
+        // Tự động ẩn toast sau 5 giây
+        setTimeout(() => {
+          setShowToast(false);
+        }, 5000);
+      }
+    };
+    
+    const handleFriendRequestCountUpdate = (data: any) => {
+      console.log('Cập nhật số lượng lời mời kết bạn:', data);
+      if (typeof data.count === 'number') {
+        setFriendRequestCount(data.count);
+      }
+    };
+    
+    const handleNewMessage = (data: any) => {
+      console.log('Nhận tin nhắn mới:', data);
+      
+      if (data.sender_id !== user.user_id) {
+        if (!(currentConversation && currentConversation.conversation_id === data.conversation_id)) {
+          setUnreadMessageCount(prev => prev + 1);
+        }
+        
+        setConversations(prevConversations => {
+          return prevConversations.map(conv => {
+            if (conv.conversation_id === data.conversation_id) {
+              const newUnreadCount = !(currentConversation && 
+                currentConversation.conversation_id === data.conversation_id) 
+                ? (conv.unread_count || 0) + 1 
+                : conv.unread_count;
+              
+              return {
+                ...conv,
+                last_message_id: data.message_id,
+                last_message_content: data.content,
+                last_message_time: data.created_at,
+                unread_count: newUnreadCount
+              };
+            }
+            return conv;
+          });
+        });
+      }
+    };
+    
+    const handleUnreadCountUpdate = () => {
+      console.log('Cập nhật số tin nhắn chưa đọc');
+      refreshConversations();
+    };
+    
+    // Đăng ký các sự kiện socket
+    socketService.on('friend_request', handleFriendRequest);
+    socketService.on('friend_request_count_update', handleFriendRequestCountUpdate);
+    socketService.on('new_message', handleNewMessage);
+    socketService.on('unread_count_update', handleUnreadCountUpdate);
+    
+    // Kiểm tra kết nối socket mỗi 10 giây và kết nối lại nếu cần
+    const socketCheckInterval = setInterval(() => {
+      if (user && user.user_id && !socketService.isConnected()) {
+        console.log('Phát hiện mất kết nối socket, đang kết nối lại...');
+        socketService.connect(user.user_id);
+      }
+    }, 10000);
+    
+    return () => {
+      console.log('Hủy đăng ký các sự kiện socket');
+      clearInterval(socketCheckInterval);
+      socketService.off('friend_request', handleFriendRequest);
+      socketService.off('friend_request_count_update', handleFriendRequestCountUpdate);
+      socketService.off('new_message', handleNewMessage);
+      socketService.off('unread_count_update', handleUnreadCountUpdate);
+      socketService.disconnect();
+    };
+  }, [user, activeTab, lastToastId, currentConversation]);
+
   if (!user) {
     return <div className="loading">Đang tải...</div>;
   }
@@ -434,6 +488,109 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
       />
+
+      {showToast && (
+        <div className="toast-container">
+          <div className="toast-notification">
+            <div className="toast-icon">
+              <i className="fas fa-user-plus"></i>
+            </div>
+            <div className="toast-content">
+              <div className="toast-title">Lời mời kết bạn mới</div>
+              <div className="toast-message">{toastMessage}</div>
+            </div>
+            <button 
+              className="toast-close-button" 
+              onClick={() => setShowToast(false)}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <style>
+        {`
+          .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+          }
+          
+          .toast-notification {
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            border-left: 4px solid #0084ff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            padding: 12px 15px;
+            min-width: 300px;
+            max-width: 350px;
+            animation: slideIn 0.3s ease forwards;
+          }
+          
+          .toast-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #e6f3ff;
+            margin-right: 12px;
+            flex-shrink: 0;
+          }
+          
+          .toast-icon i {
+            color: #0084ff;
+            font-size: 14px;
+          }
+          
+          .toast-content {
+            flex: 1;
+          }
+          
+          .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #333;
+          }
+          
+          .toast-message {
+            font-size: 13px;
+            color: #666;
+          }
+          
+          .toast-close-button {
+            background-color: transparent;
+            border: none;
+            font-size: 18px;
+            color: #aaa;
+            cursor: pointer;
+            margin-left: 10px;
+            padding: 0;
+            line-height: 1;
+          }
+          
+          .toast-close-button:hover {
+            color: #666;
+          }
+          
+          @keyframes slideIn {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };
