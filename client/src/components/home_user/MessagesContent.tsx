@@ -1012,7 +1012,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Thiết lập interval để làm mới trạng thái đọc định kỳ (mỗi 5 giây)
     const intervalId = setInterval(() => {
       refreshReadStatus();
-    }, 5000);
+    }, 500);
 
     // Làm mới trạng thái đọc ngay khi component mount
     refreshReadStatus();
@@ -1090,6 +1090,20 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       });
     }
   }, [messages, userId]);
+
+  // Tự động làm mới tin nhắn mới trong cuộc trò chuyện hiện tại
+  useEffect(() => {
+    if (!currentConversation?.conversation_id) return;
+    const intervalId = setInterval(() => {
+      api.getConversationMessages(currentConversation.conversation_id)
+        .then(msgs => setMessages(msgs))
+        .catch(error => console.error('Lỗi khi làm mới tin nhắn:', error));
+    }, 500); // Làm mới mỗi 0.5 giây
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [currentConversation?.conversation_id]);
 
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {
@@ -1223,27 +1237,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         <div style={styles.loadingMessages}>Đang tải tin nhắn...</div>
       ) : (
         <>
-          {!isSocketConnected && (
-            <div style={{
-              position: 'absolute',
-              top: '10px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              backgroundColor: '#ff4d4f',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '16px',
-              fontSize: '12px',
-              zIndex: 100,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'white', animation: 'pulse 1.5s infinite' }}></span>
-              Mất kết nối - Đang cố gắng kết nối lại...
-            </div>
-          )}
           <div className="chat-area" style={styles.chatArea}>
             <div className="messages-list" style={styles.messagesList}>
               {messages.map((message, index) => (

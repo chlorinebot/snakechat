@@ -111,53 +111,48 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     // Lắng nghe sự kiện tin nhắn mới để cập nhật danh sách cuộc trò chuyện
     const handleNewMessage = (data: any) => {
       console.log('MessagesSidebar nhận tin nhắn mới:', data);
-      
+
+      // Phát âm thanh khi nhận tin nhắn mới từ người khác
       if (data.sender_id !== userId) {
-        // Phát âm thanh thông báo khi nhận tin nhắn mới từ người khác
         playMessageSound();
-        
-        // Cập nhật thông tin tin nhắn mới nhất vào cuộc trò chuyện
-        setConversations(prevConversations => {
-          // Kiểm tra cuộc trò chuyện có tồn tại không
-          const conversationExists = prevConversations.some(
-            conv => conv.conversation_id === data.conversation_id
-          );
-          
-          // Nếu không tồn tại, gọi API để làm mới danh sách
-          if (!conversationExists) {
-            console.log('Cuộc trò chuyện mới, làm mới danh sách');
-            fetchConversations();
-            return prevConversations;
-          }
-          
-          // Nếu tồn tại, chỉ cập nhật cuộc trò chuyện hiện tại
-          const updatedConversations = prevConversations.map(conv => {
-            if (conv.conversation_id === data.conversation_id) {
-              // Tăng số tin nhắn chưa đọc nếu không phải là cuộc trò chuyện hiện tại
-              const newUnreadCount = !(currentConversation && 
-                currentConversation.conversation_id === data.conversation_id) 
-                ? (conv.unread_count || 0) + 1 
-                : conv.unread_count;
-                
-              return {
-                ...conv,
-                last_message_id: data.message_id,
-                last_message_content: data.content,
-                last_message_time: data.created_at,
-                unread_count: newUnreadCount
-              };
-            }
-            return conv;
-          });
-          
-          // Sắp xếp lại để cuộc trò chuyện có tin nhắn mới nhất lên đầu
-          return updatedConversations.sort((a, b) => {
-            const timeA = new Date(a.last_message_time || a.updated_at || 0).getTime();
-            const timeB = new Date(b.last_message_time || b.updated_at || 0).getTime();
-            return timeB - timeA;
-          });
-        });
       }
+
+      // Cập nhật thông tin tin nhắn mới nhất vào cuộc trò chuyện
+      setConversations(prevConversations => {
+        const conversationExists = prevConversations.some(
+          conv => conv.conversation_id === data.conversation_id
+        );
+
+        if (!conversationExists) {
+          console.log('Cuộc trò chuyện mới, làm mới danh sách');
+          fetchConversations();
+          return prevConversations;
+        }
+
+        const updatedConversations = prevConversations.map(conv => {
+          if (conv.conversation_id === data.conversation_id) {
+            const newUnreadCount = !(currentConversation && 
+              currentConversation.conversation_id === data.conversation_id) 
+              ? (conv.unread_count || 0) + 1 
+              : conv.unread_count;
+
+            return {
+              ...conv,
+              last_message_id: data.message_id,
+              last_message_content: data.content,
+              last_message_time: data.created_at,
+              unread_count: newUnreadCount
+            };
+          }
+          return conv;
+        });
+
+        return updatedConversations.sort((a, b) => {
+          const timeA = new Date(a.last_message_time || a.updated_at || 0).getTime();
+          const timeB = new Date(b.last_message_time || b.updated_at || 0).getTime();
+          return timeB - timeA;
+        });
+      });
     };
     
     socketService.on('new_message', handleNewMessage);
