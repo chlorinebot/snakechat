@@ -663,16 +663,46 @@ export const api = {
     sender_id: number;
     content: string;
     message_type?: string;
-  }) => {
-    try {
-      const response = await axios.post<{ success: boolean; data: Message }>(
-        `${API_URL}/messages/send`,
-        message
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Lỗi khi gửi tin nhắn:', error);
-      throw error;
+  }, retryCount: number = 3) => {
+    let attempts = 0;
+    
+    // Hàm thử gửi tin nhắn với retry
+    const attemptSend = async (): Promise<{ success: boolean; data: Message; error?: any }> => {
+      try {
+        attempts++;
+        console.log(`[API] Đang gửi tin nhắn, lần thử ${attempts}/${retryCount + 1}`);
+        
+        const response = await axios.post<{ success: boolean; data: Message }>(
+          `${API_URL}/messages/send`,
+          message
+        );
+        
+        console.log(`[API] Gửi tin nhắn thành công:`, response.data);
+        return { success: true, data: response.data.data };
+      } catch (error: any) {
+        console.error(`[API] Lỗi khi gửi tin nhắn (lần ${attempts}):`, error);
+        
+        // Nếu chưa vượt quá số lần thử và lỗi là lỗi mạng, thử lại
+        if (attempts <= retryCount && 
+            (error.message.includes('network') || 
+             error.message.includes('timeout') || 
+             !error.response)) {
+          console.log(`[API] Đợi 1 giây trước khi thử lại...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return attemptSend();
+        }
+        
+        return { success: false, data: null as any, error };
+      }
+    };
+    
+    // Thực hiện gửi tin nhắn với logic retry
+    const result = await attemptSend();
+    
+    if (result.success) {
+      return { success: true, data: result.data };
+    } else {
+      throw result.error;
     }
   },
 

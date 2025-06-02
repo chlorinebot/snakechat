@@ -37,7 +37,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const avatarRef = useRef<HTMLDivElement | null>(null);
-  const socketEventsRegistered = useRef(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastId, setLastToastId] = useState<number | null>(null);

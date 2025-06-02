@@ -79,20 +79,22 @@ exports.sendMessage = async (req, res) => {
       sender_name: senderName
     };
     
-    // Lấy danh sách thành viên trong cuộc trò chuyện để gửi thông báo
+    // Lấy danh sách TẤT CẢ thành viên trong cuộc trò chuyện để gửi thông báo (bao gồm cả người gửi)
     const [members] = await db.query(`
       SELECT user_id
       FROM conversation_members
-      WHERE conversation_id = ? AND left_at IS NULL AND user_id != ?
-    `, [conversation_id, sender_id]);
+      WHERE conversation_id = ? AND left_at IS NULL
+    `, [conversation_id]);
     
-    // Gửi thông báo tin nhắn mới qua socket
+    // Gửi thông báo tin nhắn mới qua socket đến TẤT CẢ thành viên
     members.forEach(member => {
-      // Gửi nội dung tin nhắn
+      // Gửi nội dung tin nhắn cho tất cả, kể cả người gửi
       socketService.sendNotificationToUser(member.user_id, 'new_message', message);
       
-      // Gửi thông báo cập nhật số tin nhắn chưa đọc
-      socketService.sendUnreadCountUpdate(member.user_id);
+      // Chỉ gửi thông báo cập nhật số lượng tin nhắn chưa đọc cho các thành viên khác
+      if (member.user_id !== sender_id) {
+        socketService.sendUnreadCountUpdate(member.user_id);
+      }
     });
     
     return res.status(201).json({

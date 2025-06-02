@@ -4,26 +4,37 @@ const db = require('./db');
 // Lưu trữ các kết nối socket theo user ID
 const userSockets = new Map();
 
+// Biến để theo dõi các tin nhắn đã gửi để tránh gửi lại
+const sentMessages = new Set();
+
 const setupSocket = (server) => {
   const io = socketIo(server, {
     cors: {
       origin: '*', // Trong môi trường production, hãy giới hạn nguồn gốc cụ thể
       methods: ['GET', 'POST']
-    }
+    },
+    pingTimeout: 60000, // Tăng thời gian timeout để giữ kết nối ổn định hơn
+    pingInterval: 25000 // Giảm khoảng thời gian ping để phát hiện mất kết nối sớm hơn
   });
 
   io.on('connection', (socket) => {
     const userId = socket.handshake.query.userId;
     
     if (userId) {
-      console.log(`Người dùng ${userId} đã kết nối`);
+      console.log(`[SOCKET-SERVER] Người dùng ${userId} đã kết nối`);
       
       // Lưu socket theo user ID
       userSockets.set(parseInt(userId), socket);
       
+      // Gửi sự kiện xác nhận kết nối thành công
+      socket.emit('connection_success', {
+        user_id: userId,
+        connected_at: new Date().toISOString()
+      });
+      
       // Lắng nghe sự kiện tin nhắn đã đọc
       socket.on('message_read', async (data) => {
-        console.log(`Nhận thông báo tin nhắn đã đọc:`, data);
+        console.log(`[SOCKET-SERVER] Nhận thông báo tin nhắn đã đọc:`, data);
         
         if (data.conversation_id && data.reader_id) {
           try {
@@ -40,7 +51,7 @@ const setupSocket = (server) => {
             
             // Gửi thông báo đến từng người gửi riêng biệt
             if (senders && senders.length > 0) {
-              console.log(`Gửi thông báo đã đọc đến ${senders.length} người gửi`);
+              console.log(`[SOCKET-SERVER] Gửi thông báo đã đọc đến ${senders.length} người gửi`);
               
               for (const sender of senders) {
                 // Nếu có danh sách message_ids, truyền trực tiếp
@@ -72,18 +83,38 @@ const setupSocket = (server) => {
               }
             }
           } catch (error) {
-            console.error('Lỗi khi xử lý thông báo tin nhắn đã đọc:', error);
+            console.error('[SOCKET-SERVER] Lỗi khi xử lý thông báo tin nhắn đã đọc:', error);
           }
         }
       });
       
+      // Kiểm tra kết nối định kỳ
+      socket.on('ping', (data) => {
+        socket.emit('pong', { timestamp: new Date().toISOString() });
+      });
+      
       // Xử lý ngắt kết nối
       socket.on('disconnect', () => {
-        console.log(`Người dùng ${userId} đã ngắt kết nối`);
+        console.log(`[SOCKET-SERVER] Người dùng ${userId} đã ngắt kết nối`);
         userSockets.delete(parseInt(userId));
       });
     }
   });
+
+  // Thiết lập kiểm tra kết nối định kỳ
+  setInterval(() => {
+    const now = new Date();
+    console.log(`[SOCKET-SERVER] Kiểm tra kết nối: ${userSockets.size} người dùng đang kết nối`);
+    
+    // Xóa các tin nhắn cũ trong sentMessages (giữ trong 5 phút)
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    for (const messageKey of sentMessages) {
+      const [, timestamp] = messageKey.split('-');
+      if (new Date(parseInt(timestamp)) < fiveMinutesAgo) {
+        sentMessages.delete(messageKey);
+      }
+    }
+  }, 60000); // Mỗi phút
 
   return io;
 };
@@ -92,13 +123,25 @@ const setupSocket = (server) => {
 const sendNotificationToUser = (userId, eventName, data) => {
   const userSocket = userSockets.get(userId);
   
+  // Tạo một khóa duy nhất cho tin nhắn để tránh gửi trùng lặp
+  const messageKey = `${eventName}-${Date.now()}-${userId}-${JSON.stringify(data).slice(0, 50)}`;
+  
+  // Kiểm tra xem tin nhắn đã được gửi chưa
+  if (sentMessages.has(messageKey)) {
+    console.log(`[SOCKET-SERVER] Tin nhắn đã được gửi trước đó, bỏ qua: ${messageKey}`);
+    return false;
+  }
+  
   if (userSocket) {
     userSocket.emit(eventName, data);
-    console.log(`Đã gửi thông báo ${eventName} đến người dùng ${userId}:`, data);
+    console.log(`[SOCKET-SERVER] Đã gửi thông báo ${eventName} đến người dùng ${userId}`);
+    
+    // Đánh dấu tin nhắn đã được gửi
+    sentMessages.add(messageKey);
     return true;
   }
   
-  console.log(`Không thể gửi thông báo đến người dùng ${userId}: Không tìm thấy kết nối socket`);
+  console.log(`[SOCKET-SERVER] Không thể gửi thông báo đến người dùng ${userId}: Không tìm thấy kết nối socket`);
   return false;
 };
 
@@ -148,7 +191,7 @@ const sendUnreadCountUpdate = async (userId) => {
     });
     return true;
   } catch (error) {
-    console.error(`Lỗi khi gửi thông báo cập nhật tin nhắn chưa đọc đến người dùng ${userId}:`, error);
+    console.error(`[SOCKET-SERVER] Lỗi khi gửi thông báo cập nhật tin nhắn chưa đọc đến người dùng ${userId}:`, error);
     return false;
   }
 };
