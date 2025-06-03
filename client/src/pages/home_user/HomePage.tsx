@@ -316,7 +316,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       }
     };
     
-    const handleUnreadCountUpdate = (data: any) => {
+    const handleUnreadCountUpdate = () => {
       console.log('Nhận cập nhật số tin nhắn chưa đọc từ socket, làm mới conversations');
       refreshConversations();
     };
