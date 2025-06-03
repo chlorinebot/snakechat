@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './HomePage.css';
 import api from '../../services/api';
 import socketService from '../../services/socketService';
-import type { Conversation } from '../../services/api';
+import type { Conversation, ConversationMember } from '../../services/api';
 
 // Import các components
 import MainSidebar from '../../components/home_user/MainSidebar';
@@ -374,6 +374,31 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     setCurrentConversation(updatedConversation);
   };
 
+  // Lấy tên cuộc trò chuyện cho header
+  const getConversationName = (conversation: Conversation) => {
+    if (conversation.conversation_type === 'personal' && conversation.members) {
+      const other = conversation.members.find(member => member.user_id !== user.user_id);
+      return other?.username || 'Người dùng';
+    }
+    return `Nhóm (${conversation.members?.length || 0} thành viên)`;
+  };
+
+  // Hàm tính thời gian chênh lệch và hiển thị trạng thái hoạt động
+  const getMemberStatusText = (member?: ConversationMember) => {
+    if (!member) return '';
+    if (member.status === 'online') return 'Đang hoạt động';
+    const last = (member as any).last_activity;
+    if (last) {
+      const diffMin = Math.floor((Date.now() - new Date(last).getTime()) / 60000);
+      if (diffMin < 60) return `Hoạt động lần cuối ${diffMin} phút trước`;
+      const diffH = Math.floor(diffMin / 60);
+      return `Hoạt động lần cuối ${diffH} giờ trước`;
+    }
+    return 'Ngoại tuyến';
+  };
+  const getMemberStatusColor = (member?: ConversationMember) =>
+    member?.status === 'online' ? '#4CAF50' : '#CCCCCC';
+
   return (
     <div className="user-home-container">
       <MainSidebar 
@@ -391,7 +416,51 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         {activeTab === 'messages' ? (
           <div className="messages-container">
             <div className="content-header">
-              <h2>Tin nhắn</h2>
+              {currentConversation ? (
+                <>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0066ff',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    marginRight: '10px'
+                  }}>
+                    {getConversationName(currentConversation).charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <h2 style={{ margin: 0 }}>{getConversationName(currentConversation)}</h2>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      marginTop: '4px',
+                      fontSize: '14px',
+                      color: '#888'
+                    }}>
+                      <span style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: getMemberStatusColor(
+                          currentConversation.members?.find(m => m.user_id !== user.user_id)
+                        ),
+                        display: 'inline-block',
+                        marginRight: '6px'
+                      }} />
+                      {getMemberStatusText(
+                        currentConversation.members?.find(m => m.user_id !== user.user_id)
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <h2>Tin nhắn</h2>
+              )}
             </div>
             <MessagesSidebar 
               userId={user.user_id} 

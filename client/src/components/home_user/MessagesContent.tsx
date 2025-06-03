@@ -18,12 +18,19 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const currentConversationIdRef = useRef<number | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const [_isSocketConnected, setIsSocketConnected] = useState(false);
 
   // Hàm tiện ích để cuộn xuống dưới cùng
   const scrollToBottom = useCallback((smooth = false) => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    } else if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
         behavior: smooth ? 'smooth' : 'auto',
         block: 'end'
       });
@@ -179,7 +186,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           }
         });
         
-        // Cuộn xuống dưới
+        // Cuộn xuống dưới khi nhận tin nhắn mới
         setTimeout(() => scrollToBottom(true), 100);
         
         // Đánh dấu đã đọc nếu là tin nhắn từ người khác
@@ -469,9 +476,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       setNewMessage('');
 
       // Cuộn xuống tin nhắn mới
-      setTimeout(() => {
-        scrollToBottom(false);
-      }, 10);
+      setTimeout(() => scrollToBottom(false), 10);
       
       console.log('[SEND] Gửi tin nhắn đến server...');
       
@@ -1093,6 +1098,13 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
   }, [currentConversation?.conversation_id]);
 
+  // Tự động cuộn xuống khi có tin nhắn mới và đang ở đáy
+  useEffect(() => {
+    if (isAtBottom) {
+      scrollToBottom(false);
+    }
+  }, [messages, scrollToBottom, isAtBottom]);
+
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {
     return (
@@ -1219,13 +1231,20 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     );
   }
 
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      setIsAtBottom(scrollHeight - scrollTop - clientHeight < 50);
+    }
+  };
+
   return (
     <div className="messages-content" style={styles.messagesContent}>
       {loading ? (
         <div style={styles.loadingMessages}>Đang tải tin nhắn...</div>
       ) : (
         <>
-          <div className="chat-area" style={styles.chatArea}>
+          <div className="chat-area" style={styles.chatArea} ref={messagesContainerRef} onScroll={handleScroll}>
             <div className="messages-list" style={styles.messagesList}>
               {messages.map((message, index) => (
                 <React.Fragment key={message.message_id}>
