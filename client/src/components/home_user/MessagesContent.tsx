@@ -21,6 +21,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [_isSocketConnected, setIsSocketConnected] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // Hàm tiện ích để cuộn xuống dưới cùng
   const scrollToBottom = useCallback((smooth = false) => {
@@ -443,6 +444,26 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       socketService.connect(userId);
     }
   }, [userId]);
+
+  // Kiểm tra trạng thái chặn khi chuyển cuộc trò chuyện
+  useEffect(() => {
+    if (currentConversation?.conversation_type === 'personal' && currentConversation.members) {
+      const otherMember = currentConversation.members.find(member => member.user_id !== userId);
+      const otherUserId = otherMember?.user_id;
+      if (otherUserId) {
+        Promise.all([
+          api.checkBlockStatus(userId, otherUserId),
+          api.checkBlockStatus(otherUserId, userId)
+        ])
+        .then(([res1, res2]) => {
+          setIsBlocked(!!(res1.isBlocking || res2.isBlocking));
+        })
+        .catch(error => console.error('[BLOCK] Lỗi kiểm tra trạng thái chặn:', error));
+      }
+    } else {
+      setIsBlocked(false);
+    }
+  }, [currentConversation, userId]);
 
   // Gửi tin nhắn mới
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -1308,31 +1329,37 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             </div>
           </div>
           
-          <div className="input-area" style={styles.inputArea}>
-            <form style={styles.inputForm} onSubmit={handleSendMessage}>
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Nhập tin nhắn..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                style={styles.messageInput}
-                disabled={sending}
-                autoFocus
-              />
-              <button 
-                type="submit" 
-                style={{
-                  ...styles.sendButton,
-                  opacity: !newMessage.trim() || sending ? 0.6 : 1,
-                }} 
-                disabled={!newMessage.trim() || sending}
-              >
-                <i className="fas fa-paper-plane"></i>
-              </button>
-            </form>
-          </div>
+          {isBlocked ? (
+            <div className="blocked-chat-message" style={{ ...styles.inputArea, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#e74c3c' }}>
+              Không thể gửi tin nhắn. Hai người đã chặn nhau.
+            </div>
+          ) : (
+            <div className="input-area" style={styles.inputArea}>
+              <form style={styles.inputForm} onSubmit={handleSendMessage}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Nhập tin nhắn..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  style={styles.messageInput}
+                  disabled={sending}
+                  autoFocus
+                />
+                <button 
+                  type="submit" 
+                  style={{
+                    ...styles.sendButton,
+                    opacity: !newMessage.trim() || sending ? 0.6 : 1,
+                  }} 
+                  disabled={!newMessage.trim() || sending}
+                >
+                  <i className="fas fa-paper-plane"></i>
+                </button>
+              </form>
+            </div>
+          )}
         </>
       )}
     </div>
