@@ -40,8 +40,28 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
 
   // Giữ focus vào input khi component mount và sau mỗi lần gửi tin nhắn
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [currentConversation]);
+    if (!isBlocked) {
+      inputRef.current?.focus();
+    }
+  }, [currentConversation, isBlocked]);
+
+  // Thêm useEffect để duy trì focus sau khi cuộn hoặc các thao tác khác
+  useEffect(() => {
+    const focusInterval = setInterval(() => {
+      if (document.activeElement !== inputRef.current && !isBlocked) {
+        inputRef.current?.focus();
+      }
+    }, 300);
+
+    return () => clearInterval(focusInterval);
+  }, [isBlocked]);
+
+  // Thêm xử lý click vào khung chat để giữ focus
+  const handleChatAreaClick = () => {
+    if (!isBlocked) {
+      inputRef.current?.focus();
+    }
+  };
 
   // Tải tin nhắn khi chọn cuộc trò chuyện
   useEffect(() => {
@@ -498,6 +518,11 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       
       // Đặt lại input
       setNewMessage('');
+
+      // Đảm bảo input vẫn giữ focus
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
 
       // Cuộn xuống tin nhắn mới - luôn cuộn khi người dùng gửi tin
       setTimeout(() => scrollToBottom(true), 10);
@@ -1287,6 +1312,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             }} 
             ref={messagesContainerRef} 
             onScroll={handleScroll}
+            onClick={handleChatAreaClick}
           >
             <div className="messages-list" style={{
               ...styles.messagesList,
@@ -1360,7 +1386,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               Không thể gửi tin nhắn. Hai người đã chặn nhau.
             </div>
           ) : (
-            <div className="input-area" style={styles.inputArea}>
+            <div className="input-area" style={styles.inputArea} onClick={() => inputRef.current?.focus()}>
               <form style={styles.inputForm} onSubmit={handleSendMessage}>
                 <input
                   ref={inputRef}
@@ -1372,6 +1398,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                   style={styles.messageInput}
                   disabled={sending}
                   autoFocus
+                  onBlur={() => setTimeout(() => inputRef.current?.focus(), 100)}
                 />
                 <button 
                   type="submit" 

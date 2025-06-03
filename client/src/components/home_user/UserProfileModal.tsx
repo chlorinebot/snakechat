@@ -194,9 +194,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     return false;
   };
 
-  // Kiểm tra xem có quyền xem trạng thái không
+  // Kiểm tra xem có quyền xem trạng thái online/offline hay không
   const canViewStatus = () => {
-    // Người dùng có thể xem trạng thái nếu:
     return isCurrentUser() || // Là chính bản thân
       (friendshipStatus === 'accepted' && !isBlockedByMe && !isBlockingMe); // Đã là bạn bè và không chặn nhau
   };

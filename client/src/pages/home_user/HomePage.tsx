@@ -14,13 +14,14 @@ import ContactsSidebar from '../../components/home_user/ContactsSidebar';
 import ContactsContent from '../../components/home_user/ContactsContent';
 import SettingsModal from '../../components/home_user/SettingsModal';
 import ProfileModal from '../../components/home_user/ProfileModal';
+import UserProfileModal from '../../components/home_user/UserProfileModal';
 
 interface UserProps {
   onLogout: () => void;
 }
 
 type ActiveTab = 'messages' | 'contacts';
-type ContactTab = 'friends' | 'requests' | 'explore';
+type ContactTab = 'friends' | 'requests' | 'explore' | 'blocked';
 
 const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('user') || '{}'));
@@ -33,6 +34,8 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [showUserProfileModal, setShowUserProfileModal] = useState<boolean>(false);
+  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -41,6 +44,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastId, setLastToastId] = useState<number | null>(null);
   const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
+  const [friendIds, setFriendIds] = useState<number[]>([]);
   
   // Tự động cập nhật tổng số tin nhắn chưa đọc khi danh sách conversations thay đổi
   useEffect(() => {
@@ -363,6 +367,25 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     };
   }, [user, activeTab, lastToastId, currentConversation]);
 
+  // Lấy danh sách bạn bè
+  useEffect(() => {
+    const loadFriends = async () => {
+      if (user?.user_id) {
+        try {
+          const friends = await api.getFriends(user.user_id);
+          // Lấy mảng các ID của bạn bè
+          const ids = friends.map(friend => friend.user_id);
+          setFriendIds(ids);
+          console.log('Danh sách ID bạn bè:', ids);
+        } catch (error) {
+          console.error('Lỗi khi tải danh sách bạn bè:', error);
+        }
+      }
+    };
+    
+    loadFriends();
+  }, [user?.user_id]);
+
   if (!user) {
     return <div className="loading">Đang tải...</div>;
   }
@@ -375,6 +398,8 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         return 'Lời mời kết bạn';
       case 'explore':
         return 'Khám phá người dùng';
+      case 'blocked':
+        return 'Người đã chặn';
       default:
         return 'Danh bạ';
     }
@@ -415,8 +440,55 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     }
     return 'Ngoại tuyến';
   };
-  const getMemberStatusColor = (member?: ConversationMember) =>
-    member?.status === 'online' ? '#4CAF50' : '#CCCCCC';
+  const getMemberStatusColor = (member?: ConversationMember) => {
+    // Kiểm tra xem người dùng có phải là bạn bè không
+    if (!member) return '#CCCCCC';
+    
+    // Kiểm tra xem member.user_id có nằm trong danh sách bạn bè không
+    const isFriend = friendIds.includes(member.user_id);
+    
+    // Nếu không phải bạn bè, luôn trả về màu offline
+    if (!isFriend) return '#CCCCCC';
+    
+    // Nếu là bạn bè, trả về màu dựa trên trạng thái
+    return member.status === 'online' ? '#4CAF50' : '#CCCCCC';
+  };
+
+  // Xử lý khi click vào avatar hoặc tên người dùng trong header tin nhắn
+  const handleUserHeaderClick = () => {
+    if (!currentConversation || currentConversation.conversation_type !== 'personal') return;
+    
+    // Tìm người dùng khác trong cuộc trò chuyện (không phải người dùng hiện tại)
+    const otherMember = currentConversation.members?.find(member => member.user_id !== user.user_id);
+    
+    if (otherMember && otherMember.user_id) {
+      // Đặt ID người dùng được chọn và hiển thị modal
+      setSelectedUserId(otherMember.user_id);
+      setShowUserProfileModal(true);
+    }
+  };
+  
+  // Đóng modal thông tin người dùng
+  const handleCloseUserProfileModal = () => {
+    setShowUserProfileModal(false);
+    setSelectedUserId(undefined);
+  };
+  
+  // Xử lý khi có cập nhật từ UserProfileModal (ví dụ: gửi lời mời kết bạn, chấp nhận lời mời...)
+  const handleUserProfileUpdate = () => {
+    // Làm mới danh sách bạn bè
+    if (user?.user_id) {
+      api.getFriends(user.user_id).then(friends => {
+        const ids = friends.map(friend => friend.user_id);
+        setFriendIds(ids);
+      }).catch(error => {
+        console.error('Lỗi khi làm mới danh sách bạn bè:', error);
+      });
+    }
+    
+    // Cập nhật số lượng lời mời kết bạn
+    handleFriendRequestUpdate();
+  };
 
   return (
     <div className="user-home-container">
@@ -437,22 +509,34 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
             <div className="content-header">
               {currentConversation ? (
                 <>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: '#0066ff',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '16px',
-                    marginRight: '10px'
-                  }}>
+                  <div 
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: '#0066ff',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                      fontSize: '16px',
+                      marginRight: '10px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={handleUserHeaderClick}
+                  >
                     {getConversationName(currentConversation).charAt(0).toUpperCase()}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div 
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                    onClick={handleUserHeaderClick}
+                  >
                     <h2 style={{ margin: 0 }}>{getConversationName(currentConversation)}</h2>
                     <div style={{
                       display: 'flex',
@@ -551,6 +635,15 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
             </button>
           </div>
         </div>
+      )}
+      
+      {showUserProfileModal && selectedUserId && (
+        <UserProfileModal
+          isOpen={showUserProfileModal}
+          onClose={handleCloseUserProfileModal}
+          userId={selectedUserId}
+          onFriendRequestSent={handleUserProfileUpdate}
+        />
       )}
       
       <style>

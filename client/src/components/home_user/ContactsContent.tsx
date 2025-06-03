@@ -502,48 +502,30 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     }
   };
 
-  // Kiểm tra trạng thái online
+  // Kiểm tra trạng thái online của người dùng
   const isOnline = (status?: string) => {
-    if (status === undefined || status === null) {
-      return false;
-    }
+    if (!status) return false;
     return status.toLowerCase() === 'online';
   };
 
-  // Kiểm tra quyền xem trạng thái người dùng
-  const canViewUserStatus = async (userId: number | undefined) => {
-    if (!userId || !currentUser || !currentUser.user_id) return false;
+  // Kiểm tra quyền xem trạng thái online/offline
+  const canViewStatus = (userId: number | undefined) => {
+    // Nếu không có userId thì không thể xem
+    if (!userId || !currentUser?.user_id) return false;
     
-    // Nếu là chính mình
+    // Luôn cho phép xem trạng thái của chính mình
     if (userId === currentUser.user_id) return true;
     
-    // Kiểm tra xem có phải bạn bè không
+    // Kiểm tra xem người dùng có phải là bạn bè không
     const isFriend = friendsList.some(friend => friend.user_id === userId);
-    
-    // Nếu là bạn bè thì được xem trạng thái
     return isFriend;
   };
 
-  // Hàm tạo lớp CSS cho trạng thái hoạt động
-  const getStatusIndicatorClass = (status?: string, userId?: number) => {
-    // Kiểm tra xem có bị khóa không
-    if (userId && lockedUsers[userId]) {
-      return 'status-banned';
-    }
-    
-    // Nếu là bản thân người dùng, luôn hiển thị trạng thái
-    if (userId && currentUser && userId === currentUser.user_id) {
-      return isOnline(status) ? 'status-online' : 'status-offline';
-    }
-    
-    // Lấy thông tin từ danh sách bạn bè đã có sẵn
-    const isFriend = userId && friendsList.some(friend => friend.user_id === userId);
-    
-    // Nếu không phải bạn bè, hiển thị trạng thái không xác định
-    if (!isFriend) {
+  // Lấy lớp CSS cho chỉ báo trạng thái
+  const getStatusIndicatorClass = (userId: number | undefined, status?: string) => {
+    if (!userId || !canViewStatus(userId)) {
       return 'status-unknown';
     }
-    
     return isOnline(status) ? 'status-online' : 'status-offline';
   };
 
@@ -571,7 +553,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       return (
         <div className="contact-avatar banned-avatar">
           BAN
-          <div className={`status-indicator ${getStatusIndicatorClass(user.status, user.user_id)}`}></div>
+          <div className={`status-indicator ${getStatusIndicatorClass(user.user_id, user.status)}`}></div>
         </div>
       );
     }
@@ -579,7 +561,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     return (
       <div className="contact-avatar">
         {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-        <div className={`status-indicator ${getStatusIndicatorClass(user.status, user.user_id)}`}></div>
+        <div className={`status-indicator ${getStatusIndicatorClass(user.user_id, user.status)}`}></div>
       </div>
     );
   };

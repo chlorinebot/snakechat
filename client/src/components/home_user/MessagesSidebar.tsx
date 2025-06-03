@@ -22,6 +22,7 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
   const [localConversations, setLocalConversations] = useState<Conversation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [friendIds, setFriendIds] = useState<number[]>([]);
 
   // Sử dụng conversations từ prop nếu có, ngược lại sử dụng state nội bộ
   const conversations = propConversations || localConversations;
@@ -113,6 +114,25 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       socketService.off('new_message', handleNewMessage);
     };
   }, [userId, currentConversation, setConversations, fetchConversations]);
+
+  // Tải danh sách bạn bè
+  useEffect(() => {
+    const loadFriends = async () => {
+      if (!userId) return;
+      
+      try {
+        const friends = await api.getFriends(userId);
+        // Lấy mảng các ID của bạn bè
+        const ids = friends.map(friend => friend.user_id);
+        setFriendIds(ids);
+        console.log('Danh sách ID bạn bè:', ids);
+      } catch (error) {
+        console.error('Lỗi khi tải danh sách bạn bè:', error);
+      }
+    };
+    
+    loadFriends();
+  }, [userId]);
 
   // Lọc cuộc trò chuyện theo từ khóa tìm kiếm
   const filteredConversations = conversations.filter(conversation => {
@@ -322,7 +342,11 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
               const otherMember = conversation.conversation_type === 'personal' && conversation.members
                 ? conversation.members.find(member => member.user_id !== userId)
                 : null;
-              const statusColor = otherMember?.status === 'online' ? '#4CAF50' : '#CCCCCC';
+              
+              // Kiểm tra xem người dùng có phải là bạn bè không dựa trên danh sách đã tải
+              const canViewStatus = otherMember ? friendIds.includes(otherMember.user_id) : false;
+              const statusColor = canViewStatus && otherMember?.status === 'online' ? '#4CAF50' : '#CCCCCC';
+              
               return (
                 <div
                   key={conversation.conversation_id}
@@ -336,7 +360,7 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
                 >
                   <div style={styles.conversationAvatar}>
                     {getConversationName(conversation).charAt(0).toUpperCase()}
-                    {otherMember && (
+                    {otherMember && canViewStatus && (
                       <span style={{
                         position: 'absolute',
                         bottom: '2px',
