@@ -258,13 +258,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
   }, [userId, scrollToBottom]);
 
-  // Đảm bảo tin nhắn luôn cuộn xuống dưới cùng khi có tin nhắn mới
-  useEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom(false);
-    }
-  }, [messages.length, scrollToBottom]);
-
   // Lắng nghe sự kiện tin nhắn đã đọc
   useEffect(() => {
     const handleMessageReadReceipt = (data: any) => {
@@ -316,11 +309,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       socketService.off('message_read_receipt', handleMessageReadReceipt);
     };
   }, [userId, currentConversation?.conversation_id]);
-
-  // Cuộn xuống tin nhắn mới nhất
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   // Khi mở cuộc trò chuyện, đánh dấu tất cả tin nhắn chưa đọc là đã đọc
   useEffect(() => {
