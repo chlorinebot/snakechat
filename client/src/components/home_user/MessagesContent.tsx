@@ -59,7 +59,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             setMessages(msgs);
             setLoading(false);
             
-            // Cuộn xuống tin nhắn mới nhất
+            // Luôn cuộn xuống dưới cùng khi tải tin nhắn xong
             setTimeout(() => scrollToBottom(false), 100);
             
             // Đảm bảo socket đã kết nối
@@ -490,14 +490,17 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         send_failed: false
       };
 
+      // Lấy số lượng tin nhắn hiện tại để xác định cách cuộn
+      const currentMessageCount = messages.length;
+
       // Thêm tin nhắn tạm thời vào danh sách
       setMessages(prevMessages => [...prevMessages, tempMessage]);
       
       // Đặt lại input
       setNewMessage('');
 
-      // Cuộn xuống tin nhắn mới
-      setTimeout(() => scrollToBottom(false), 10);
+      // Cuộn xuống tin nhắn mới - luôn cuộn khi người dùng gửi tin
+      setTimeout(() => scrollToBottom(true), 10);
       
       console.log('[SEND] Gửi tin nhắn đến server...');
       
@@ -643,8 +646,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       flexDirection: 'column' as const,
       height: '100%',
       position: 'relative' as const,
-      overflowX: 'hidden' as const, // Ẩn thanh cuộn ngang
-      overflowY: 'hidden' as const, // Ẩn thanh cuộn dọc ở container chính
+      overflowX: 'hidden' as const,
+      overflowY: 'visible' as const,
     },
     emptyState: {
       display: 'flex',
@@ -685,16 +688,21 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       flex: 1,
       overflowY: 'auto' as const,
       padding: '30px',
+      paddingTop: '0', // Thêm để đảm bảo không có padding trên cùng
+      paddingBottom: '0', // Thêm để đảm bảo không có padding dưới cùng
       scrollbarWidth: 'thin' as const,
       msOverflowStyle: 'none' as const,
-      '&::-webkit-scrollbar': { // CSS cho thanh cuộn webkit
-        width: '4px',
+      height: '100%',
+      display: 'flex', // Thêm display flex
+      flexDirection: 'column', // Thêm flex-direction column
+      '&::-webkit-scrollbar': {
+        width: '8px',
       },
       '&::-webkit-scrollbar-track': {
-        background: 'transparent',
+        background: '#f1f1f1',
       },
       '&::-webkit-scrollbar-thumb': {
-        background: '#ccc',
+        background: '#888',
         borderRadius: '4px',
       },
     },
@@ -703,6 +711,9 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       flexDirection: 'column' as const,
       gap: '0',
       paddingBottom: '10px',
+      paddingTop: '30px', // Thêm padding phía trên
+      marginTop: 'auto', // Đẩy nội dung xuống dưới cùng
+      width: '100%',
     },
     messageDate: {
       textAlign: 'center' as const,
@@ -1265,8 +1276,23 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         <div style={styles.loadingMessages}>Đang tải tin nhắn...</div>
       ) : (
         <>
-          <div className="chat-area" style={styles.chatArea} ref={messagesContainerRef} onScroll={handleScroll}>
-            <div className="messages-list" style={styles.messagesList}>
+          <div 
+            className="chat-area" 
+            style={{
+              ...styles.chatArea,
+              display: 'flex',
+              flexDirection: 'column',
+              overflowY: 'scroll',
+              height: 'calc(100% - 65px)',
+            }} 
+            ref={messagesContainerRef} 
+            onScroll={handleScroll}
+          >
+            <div className="messages-list" style={{
+              ...styles.messagesList,
+              marginTop: 'auto', // Đẩy nội dung xuống dưới cùng
+              width: '100%',
+            }}>
               {messages.map((message, index) => (
                 <React.Fragment key={message.message_id}>
                   {shouldShowDate(message, index) && (
