@@ -384,6 +384,25 @@ const userController = {
         message: 'Lỗi khi lấy dữ liệu từ server'
       });
     }
+  },
+
+  // Tự động mở khóa tài khoản đến hạn
+  autoUnlockExpiredAccounts: async (req, res) => {
+    try {
+      const result = await userService.autoUnlockExpiredAccounts();
+
+      res.json({
+        success: true,
+        message: `Đã kiểm tra và tự động mở khóa tài khoản. ${result.affected} tài khoản đã được mở khóa.`,
+        data: result
+      });
+    } catch (error) {
+      console.error('Lỗi khi tự động mở khóa tài khoản:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi khi tự động mở khóa tài khoản'
+      });
+    }
   }
 };
 

@@ -230,6 +230,21 @@ const LockedAccounts: React.FC<LockedAccountsProps> = ({ onLogout }) => {
               </Col>
               <Col md="auto">
                 <Button 
+                  variant="success" 
+                  onClick={async () => {
+                    try {
+                      const result = await api.autoUnlockExpiredAccounts();
+                      fetchLockedAccounts();
+                      setMessage(result.message || 'Đã tự động mở khóa các tài khoản đến hạn');
+                    } catch (error: any) {
+                      setMessage(error.message || 'Lỗi khi tự động mở khóa');
+                    }
+                  }}
+                  className="d-flex align-items-center me-2"
+                >
+                  <i className="fas fa-unlock-alt me-1"></i> Tự động mở khóa đến hạn
+                </Button>
+                <Button 
                   variant="primary" 
                   onClick={fetchLockedAccounts}
                   className="d-flex align-items-center"

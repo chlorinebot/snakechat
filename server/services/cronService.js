@@ -9,8 +9,12 @@ const setupInactiveUsersCron = () => {
     try {
       console.log('Kiểm tra người dùng không hoạt động lúc khởi động...');
       await checkAndUpdateInactiveUsers();
+      
+      // Kiểm tra và mở khóa tài khoản đến hạn
+      console.log('Kiểm tra tài khoản đến hạn mở khóa lúc khởi động...');
+      await checkAndUnlockExpiredAccounts();
     } catch (error) {
-      console.error('Lỗi khi kiểm tra người dùng không hoạt động lúc khởi động:', error);
+      console.error('Lỗi khi kiểm tra lúc khởi động:', error);
     }
   }, 2000); // Chờ 2 giây để đảm bảo server đã khởi động đầy đủ
   
@@ -23,6 +27,16 @@ const setupInactiveUsersCron = () => {
       console.error('Lỗi khi kiểm tra người dùng không hoạt động:', error);
     }
   }, 10 * 1000); // Kiểm tra mỗi 10 giây
+  
+  // Chạy mỗi phút để kiểm tra và mở khóa tài khoản đến hạn
+  setInterval(async () => {
+    try {
+      console.log('CRON: Bắt đầu kiểm tra tài khoản đến hạn mở khóa...');
+      await checkAndUnlockExpiredAccounts();
+    } catch (error) {
+      console.error('Lỗi khi kiểm tra tài khoản đến hạn mở khóa:', error);
+    }
+  }, 60 * 1000); // Kiểm tra mỗi 60 giây (1 phút)
 };
 
 // Hàm trợ giúp để kiểm tra và cập nhật người dùng không hoạt động
@@ -67,6 +81,50 @@ const checkAndUpdateInactiveUsers = async () => {
   
   // Thêm dấu thời gian cho những lần chạy tiếp theo
   console.log(`CRON: Hoàn tất kiểm tra người dùng không hoạt động vào lúc ${new Date().toISOString()}`);
+};
+
+// Hàm trợ giúp để kiểm tra và mở khóa tài khoản đến hạn
+const checkAndUnlockExpiredAccounts = async () => {
+  // Tạo object req và res giả lập cho controller
+  const req = {
+    ip: '127.0.0.1',
+    body: {},
+    headers: {}
+  };
+  
+  const res = {
+    json: (data) => {
+      // Hiển thị log nếu có tài khoản được mở khóa
+      if (data && data.data && data.data.affected > 0) {
+        console.log(`CRON: Đã tự động mở khóa ${data.data.affected} tài khoản`);
+        // Log thông tin chi tiết về tài khoản được mở khóa
+        if (data.data.accounts && data.data.accounts.length > 0) {
+          console.log('CRON: Danh sách tài khoản đã được mở khóa:');
+          data.data.accounts.forEach(account => {
+            console.log(`  - ID: ${account.user_id}, Username: ${account.username}, Lý do khóa: ${account.reason}`);
+          });
+        }
+      } else {
+        console.log('CRON: Không có tài khoản nào cần mở khóa');
+      }
+    },
+    status: (code) => {
+      return {
+        json: (data) => {
+          // Hiển thị lỗi nếu có
+          if (code !== 200) {
+            console.error(`CRON: Lỗi (${code}) khi mở khóa tài khoản đến hạn:`, data);
+          }
+        }
+      };
+    }
+  };
+  
+  // Gọi controller để kiểm tra và mở khóa
+  await userController.autoUnlockExpiredAccounts(req, res);
+  
+  // Thêm dấu thời gian cho những lần chạy tiếp theo
+  console.log(`CRON: Hoàn tất kiểm tra tài khoản đến hạn mở khóa vào lúc ${new Date().toISOString()}`);
 };
 
 module.exports = {

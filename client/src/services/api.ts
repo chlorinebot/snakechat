@@ -495,24 +495,40 @@ export const api = {
 
   // Lấy lịch sử khóa tài khoản
   getLockHistory: async () => {
-    const response = await axios.get<{ items: any[] }>(`${API_URL}/user/lock-history`);
-    return response.data.items;
+    try {
+      const response = await axios.get<{ items: any[] }>(`${API_URL}/user/lock-history`);
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch sử khóa tài khoản:', error);
+      return [];
+    }
   },
 
   // Lấy danh sách tài khoản bị khóa
   getLockedAccounts: async () => {
     try {
-      // Trước tiên lấy tất cả người dùng
+      // Lấy danh sách tất cả người dùng và lọc ra những người bị khóa
       const response = await axios.get<{ items: User[] }>(`${API_URL}/user/data`);
-      const users = response.data.items;
+      const users = response.data.items || [];
       
-      // Lọc những người dùng có trạng thái khóa
-      const lockedUsers = users.filter(user => user.lock_id && user.lock_status === 'locked');
+      // Lọc những người dùng có lock_status là 'locked'
+      const lockedUsers = users.filter(user => user.lock_status === 'locked');
       
       return lockedUsers;
     } catch (error) {
       console.error('Lỗi khi lấy danh sách tài khoản bị khóa:', error);
       return [];
+    }
+  },
+
+  // Tự động mở khóa tài khoản đến hạn
+  autoUnlockExpiredAccounts: async () => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: any }>(`${API_URL}/user/auto-unlock`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Lỗi khi tự động mở khóa tài khoản:', error.message);
+      throw error;
     }
   },
 

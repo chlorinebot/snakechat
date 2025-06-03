@@ -199,10 +199,21 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     socketService.on('friend_request', handleNewFriendRequest);
     socketService.on('friend_request_count_update', handleFriendRequestCountUpdate);
 
+    // Cập nhật trạng thái hoạt động người dùng theo thời gian thực
+    const handleUserStatusUpdate = (data: any) => {
+      const { user_id, status, last_activity } = data;
+      // Cập nhật trạng thái trong danh sách bạn bè
+      setFriendsList(prev => prev.map(u => u.user_id === user_id ? { ...u, status, last_activity } : u));
+      // Cập nhật trạng thái trong kết quả tìm kiếm nếu có
+      setSearchResults(prev => prev.map(u => u.user_id === user_id ? { ...u, status, last_activity } : u));
+    };
+    socketService.on('user_status_update', handleUserStatusUpdate);
+
     // Hủy đăng ký khi component unmount
     return () => {
       socketService.off('friend_request', handleNewFriendRequest);
       socketService.off('friend_request_count_update', handleFriendRequestCountUpdate);
+      socketService.off('user_status_update', handleUserStatusUpdate);
     };
   }, [userId, friendRequests, onFriendRequestUpdate]);
 

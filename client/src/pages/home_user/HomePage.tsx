@@ -321,6 +321,24 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       refreshConversations();
     };
     
+    // Cập nhật trạng thái hoạt động người dùng theo thời gian thực
+    const handleUserStatusUpdate = (data: any) => {
+      const { user_id, status, last_activity } = data;
+      // Cập nhật danh sách conversations
+      setConversations(prev => prev.map(conv => ({
+        ...conv,
+        members: conv.members?.map(m => m.user_id === user_id ? { ...m, status, last_activity } : m)
+      })));
+      // Cập nhật currentConversation nếu đang hiển thị
+      if (currentConversation?.members) {
+        setCurrentConversation({
+          ...currentConversation,
+          members: currentConversation.members.map(m => m.user_id === user_id ? { ...m, status, last_activity } : m)
+        });
+      }
+    };
+    socketService.on('user_status_update', handleUserStatusUpdate);
+    
     // Đăng ký các sự kiện socket
     socketService.on('friend_request', handleFriendRequest);
     socketService.on('friend_request_count_update', handleFriendRequestCountUpdate);
@@ -340,6 +358,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       socketService.off('friend_request', handleFriendRequest);
       socketService.off('friend_request_count_update', handleFriendRequestCountUpdate);
       socketService.off('unread_count_update', handleUnreadCountUpdate);
+      socketService.off('user_status_update', handleUserStatusUpdate);
       socketService.disconnect();
     };
   }, [user, activeTab, lastToastId, currentConversation]);

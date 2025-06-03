@@ -458,6 +458,52 @@ const userService = {
       throw error;
     }
   },
+
+  // Tự động mở khóa tài khoản đã đến hạn mở khóa
+  autoUnlockExpiredAccounts: async () => {
+    try {
+      // Tìm các tài khoản đã đến hạn mở khóa (unlock_time <= NOW()) và vẫn trong trạng thái locked
+      const [expiredLocks] = await pool.query(
+        `SELECT ul.*, u.username 
+         FROM user_lock ul 
+         JOIN users u ON ul.user_id = u.user_id 
+         WHERE ul.status = 'locked' AND ul.unlock_time <= NOW()`
+      );
+      
+      if (expiredLocks.length === 0) {
+        console.log('Không có tài khoản nào đến hạn mở khóa');
+        return {
+          affected: 0,
+          accounts: []
+        };
+      }
+      
+      console.log(`Tìm thấy ${expiredLocks.length} tài khoản đến hạn mở khóa:`);
+      
+      const userIds = expiredLocks.map(lock => lock.user_id);
+      
+      // Cập nhật trạng thái thành "unlocked" cho tất cả tài khoản đến hạn
+      const [result] = await pool.query(
+        'UPDATE user_lock SET status = ? WHERE user_id IN (?) AND status = "locked"',
+        ['unlocked', userIds]
+      );
+      
+      console.log(`Đã tự động mở khóa ${result.affectedRows} tài khoản`);
+      
+      // Ghi chi tiết các tài khoản đã mở khóa
+      expiredLocks.forEach(lock => {
+        console.log(`- Đã mở khóa tài khoản ${lock.username} (ID: ${lock.user_id}), lý do khóa: '${lock.reason}'`);
+      });
+      
+      return {
+        affected: result.affectedRows,
+        accounts: expiredLocks
+      };
+    } catch (error) {
+      console.error('Lỗi SQL khi tự động mở khóa tài khoản:', error.message);
+      throw error;
+    }
+  }
 };
 
 module.exports = userService; 

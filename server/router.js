@@ -21,6 +21,7 @@ router.post('/user/heartbeat', userController.heartbeat);
 router.post('/user/appeal', userController.sendAccountAppeal);
 router.get('/user/check-lock-status/:id', userController.checkAccountLockStatus);
 router.get('/user/lock-history', userController.getLockHistory);
+router.post('/user/auto-unlock', userController.autoUnlockExpiredAccounts);
 
 // Role routes
 router.get('/role/data', roleController.getRoles);
