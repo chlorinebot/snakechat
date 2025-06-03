@@ -30,6 +30,13 @@ export interface UserLock {
   unlock_time: string;
 }
 
+export interface UserBlock {
+  blocker_id: number;
+  blocked_id: number;
+  reason: string;
+  block_type: string; // 'temporary' hoặc 'permanent'
+}
+
 export interface Friendship {
   friendship_id?: number;
   user_id_1: number; // Người gửi lời mời kết bạn
@@ -787,6 +794,80 @@ export const api = {
     } catch (error) {
       console.error('Lỗi khi tạo/lấy cuộc trò chuyện 1-1:', error);
       throw error;
+    }
+  },
+
+  // Chặn người dùng
+  blockUser: async (blockData: UserBlock) => {
+    try {
+      // Đảm bảo block_type luôn có giá trị hợp lệ
+      const data = {
+        ...blockData,
+        block_type: blockData.block_type === 'temporary' ? 'temporary' : 'permanent'
+      };
+      
+      const response = await axios.post<{ success: boolean; message: string; data: any }>(
+        `${API_URL}/user/block`, 
+        data
+      );
+      
+      return {
+        success: true,
+        message: 'Đã chặn người dùng thành công',
+        data: response.data.data
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi chặn người dùng:', error.message);
+      return {
+        success: false, 
+        message: error.response?.data?.message || 'Lỗi khi chặn người dùng'
+      };
+    }
+  },
+
+  // Bỏ chặn người dùng
+  unblockUser: async (blockerId: number, blockedId: number) => {
+    try {
+      // Sử dụng URL với query params thay vì body trong DELETE request
+      const response = await axios.delete<{ success: boolean; message: string }>(
+        `${API_URL}/user/unblock?blocker_id=${blockerId}&blocked_id=${blockedId}`
+      );
+      
+      return {
+        success: true,
+        message: 'Đã bỏ chặn người dùng thành công'
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi bỏ chặn người dùng:', error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Lỗi khi bỏ chặn người dùng'
+      };
+    }
+  },
+
+  // Kiểm tra trạng thái chặn giữa hai người dùng
+  checkBlockStatus: async (userId1: number, userId2: number) => {
+    try {
+      const response = await axios.get<{ isBlocking: boolean; block_id?: number }>(`${API_URL}/user/block-status`, {
+        params: { blocker_id: userId1, blocked_id: userId2 }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi kiểm tra trạng thái chặn:', error);
+      return { isBlocking: false };
+    }
+  },
+
+  // Lấy danh sách người dùng đã bị chặn
+  getBlockedUsers: async (userId: number) => {
+    try {
+      const response = await axios.get<{ items: any[] }>(`${API_URL}/user/blocked-users/${userId}`);
+      return response.data.items;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách người dùng bị chặn:', error);
+      return [];
     }
   },
 };

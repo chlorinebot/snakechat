@@ -7,9 +7,19 @@ import type { SortOption } from '../common/SortDropdown';
 import socketService from '../../services/socketService';
 
 interface ContactsContentProps {
-  activeTab?: 'friends' | 'requests' | 'explore';
+  activeTab?: 'friends' | 'requests' | 'explore' | 'blocked';
   onFriendRequestUpdate?: () => void; // Callback khi có thay đổi về lời mời kết bạn
   userId?: number; // ID của người dùng hiện tại
+}
+
+interface BlockedUser {
+  block_id: number;
+  blocked_id: number;
+  blocker_id: number;
+  reason: string;
+  block_type: string;
+  blocked_at: string;
+  user: User;
 }
 
 const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends', onFriendRequestUpdate, userId }) => {
@@ -22,6 +32,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   const [showUserProfileModal, setShowUserProfileModal] = useState<boolean>(false);
   const [friendsList, setFriendsList] = useState<User[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [processingRequest, setProcessingRequest] = useState<{ [key: number]: boolean }>({});
   
   // Thêm state để lưu trữ trạng thái kết bạn của các người dùng trong kết quả tìm kiếm
@@ -38,6 +49,35 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     { id: 'oldest', label: 'Cũ nhất' }
   ]);
   const [selectedSortOption, setSelectedSortOption] = useState<SortOption>(sortOptions[0]);
+  
+  // Thêm state cho tìm kiếm bạn bè
+  const [friendSearchTerm, setFriendSearchTerm] = useState<string>('');
+  const [filteredFriends, setFilteredFriends] = useState<User[]>([]);
+  
+  // Các style chung cho các thành phần
+  const itemContainerStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '15px',
+    padding: '5px',
+    borderRadius: '10px',
+    border: '1px solid #e0e0e0'
+  };
+
+  const userInfoStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+    padding: '10px',
+    borderRadius: '8px',
+    transition: 'background-color 0.2s'
+  };
+
+  const actionsStyle = {
+    display: 'flex',
+    gap: '8px'
+  };
 
   useEffect(() => {
     // Lấy thông tin người dùng hiện tại từ localStorage
@@ -152,6 +192,9 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
         } catch (error) {
           console.error('Lỗi khi lấy danh sách lời mời kết bạn:', error);
         }
+      } else if (activeTab === 'blocked') {
+        // Lấy danh sách người dùng đã chặn
+        fetchBlockedUsers();
       }
     };
 
@@ -227,9 +270,12 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       return;
     }
     
+    console.log("Đang tìm kiếm với từ khóa:", term);
+    
     setLoading(true);
     try {
       const results = await api.searchUsers(term);
+      console.log("Kết quả tìm kiếm:", results);
       setSearchResults(results);
       setHasSearched(true);
       
@@ -273,6 +319,17 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     }
   };
   
+  // Thêm chức năng tìm kiếm tự động khi người dùng ngừng gõ
+  useEffect(() => {
+    if (activeTab === 'explore' && searchTerm.length >= 2) {
+      const delaySearch = setTimeout(() => {
+        handleSearch(searchTerm);
+      }, 500); // Đợi 500ms sau khi người dùng ngừng gõ
+      
+      return () => clearTimeout(delaySearch);
+    }
+  }, [searchTerm, activeTab]);
+
   // Xử lý khi thay đổi tùy chọn sắp xếp
   const handleSortChange = (option: SortOption) => {
     setSelectedSortOption(option);
@@ -527,8 +584,35 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     );
   };
 
+  // Thêm hàm lọc danh sách bạn bè
+  const filterFriends = (term: string) => {
+    if (!term.trim()) {
+      setFilteredFriends(friendsList);
+      return;
+    }
+    
+    const filtered = friendsList.filter(friend => 
+      friend.username.toLowerCase().includes(term.toLowerCase())
+    );
+    setFilteredFriends(filtered);
+  };
+
+  // Cập nhật useEffect để khởi tạo filteredFriends
+  useEffect(() => {
+    setFilteredFriends(friendsList);
+  }, [friendsList]);
+
+  // Xử lý tìm kiếm bạn bè
+  const handleFriendSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setFriendSearchTerm(term);
+    filterFriends(term);
+  };
+
   // Render danh sách bạn bè
   const renderFriendsList = () => {
+    const friendsToRender = filteredFriends;
+    
     if (friendsList.length === 0) {
       return (
         <div className="contacts-empty">
@@ -538,19 +622,56 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
         </div>
       );
     }
+    
+    // Thêm header với thanh tìm kiếm và dropdown phân loại
+    const renderFriendsHeader = () => (
+      <div className="contacts-header">
+        <div className="friends-count">
+          <span style={{ color: '#000', fontWeight: 600 }}>{friendsToRender.length} bạn bè</span>
+        </div>
+        <div className="search-container" style={{ flex: 1, margin: '0 15px' }}>
+          <div className="search-input-wrapper">
+            <input
+              type="text"
+              placeholder="Tìm kiếm bạn bè..."
+              value={friendSearchTerm}
+              onChange={handleFriendSearch}
+              className="search-input"
+            />
+            <button 
+              className="search-button" 
+              onClick={() => filterFriends(friendSearchTerm)}
+              aria-label="Tìm kiếm"
+            >
+              <i className="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+        <div className="sort-dropdown-container">
+          <SortDropdown 
+            options={sortOptions}
+            selectedOption={selectedSortOption}
+            onSelect={handleSortChange}
+          />
+        </div>
+      </div>
+    );
 
     // Sắp xếp theo mới nhất/cũ nhất (không hiển thị nhóm A-Z)
     if (selectedSortOption.id === 'newest' || selectedSortOption.id === 'oldest') {
       return (
-        <div className="friends-container">
-          {friendsList.map((friend) => (
-            <div key={friend.user_id} className="contact-item" onClick={() => handleUserClick(friend)}>
-              {renderAvatar(friend)}
-              <div className="contact-info">
-                <div className="contact-name">{friend.username}</div>
+        <div className="friends-list-container">
+          {renderFriendsHeader()}
+          <div className="friends-container">
+            {friendsToRender.map((friend) => (
+              <div key={friend.user_id} className="contact-item" onClick={() => handleUserClick(friend)}>
+                {renderAvatar(friend)}
+                <div className="contact-info">
+                  <div className="contact-name">{friend.username}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       );
     }
@@ -559,7 +680,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     const groupedFriends: { [key: string]: User[] } = {};
     
     // Nhóm bạn bè theo chữ cái đầu tiên của tên
-    friendsList.forEach((friend) => {
+    friendsToRender.forEach((friend) => {
       if (!friend.username) return;
       
       const firstChar = friend.username.charAt(0).toUpperCase();
@@ -573,22 +694,25 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     const sortedLetters = Object.keys(groupedFriends).sort();
     
     return (
-      <div className="friends-container-with-groups">
-        {sortedLetters.map((letter) => (
-          <div key={letter} className="friends-group">
-            <div className="friends-group-header">
-              <span className="friends-group-letter">{letter}</span>
-            </div>
-            {groupedFriends[letter].map((friend) => (
-              <div key={friend.user_id} className="contact-item" onClick={() => handleUserClick(friend)}>
-                {renderAvatar(friend)}
-                <div className="contact-info">
-                  <div className="contact-name">{friend.username}</div>
-                </div>
+      <div className="friends-list-container">
+        {renderFriendsHeader()}
+        <div className="friends-container-with-groups">
+          {sortedLetters.map((letter) => (
+            <div key={letter} className="friends-group">
+              <div className="friends-group-header">
+                <span className="friends-group-letter">{letter}</span>
               </div>
-            ))}
-          </div>
-        ))}
+              {groupedFriends[letter].map((friend) => (
+                <div key={friend.user_id} className="contact-item" onClick={() => handleUserClick(friend)}>
+                  {renderAvatar(friend)}
+                  <div className="contact-info">
+                    <div className="contact-name">{friend.username}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -697,187 +821,961 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     }
   }, [activeTab, userId]);
 
-  return (
-    <div className="contacts-content">
-      {activeTab === 'friends' && (
-        <div className="contacts-header">
-          <div className="friends-count">
-            <span style={{ color: '#000', fontWeight: 600 }}>{friendsList.length} bạn bè</span>
-          </div>
-          <div className="contacts-search-bar">
-            <div className="search-icon"></div>
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm bạn bè..."
-              className="contacts-search-input" 
-            />
-          </div>
-          <div className="sort-dropdown-container">
-            <SortDropdown 
-              options={sortOptions}
-              selectedOption={selectedSortOption}
-              onSelect={handleSortChange}
-            />
-          </div>
-        </div>
-      )}
-      {activeTab === 'explore' && (
-        <div className="contacts-search-bar">
-          <div className="search-icon"></div>
-          <input 
-            type="text" 
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Tìm kiếm người dùng theo tên hoặc email..."
-            className="contacts-search-input" 
-          />
-        </div>
-      )}
+  // Hàm lấy danh sách người dùng đã chặn
+  const fetchBlockedUsers = async () => {
+    try {
+      if (!currentUser?.user_id) return;
       
-      <div className="contacts-list">
-        {activeTab === 'friends' ? (
-          renderFriendsList()
-        ) : activeTab === 'requests' ? (
-          renderFriendRequests()
-        ) : activeTab === 'explore' && loading ? (
+      setLoading(true);
+      const blockedList = await api.getBlockedUsers(currentUser.user_id);
+      console.log('Danh sách người dùng bị chặn:', blockedList);
+      setBlockedUsers(blockedList);
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách người bị chặn:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Xử lý bỏ chặn người dùng
+  const handleUnblockUser = async (blockId: number) => {
+    if (!currentUser?.user_id) return;
+    
+    try {
+      // Tìm thông tin block để lấy blocker_id và blocked_id
+      const blockInfo = blockedUsers.find(b => b.block_id === blockId);
+      if (!blockInfo) {
+        console.error('Không tìm thấy thông tin chặn với ID:', blockId);
+        return;
+      }
+      
+      const result = await api.unblockUser(blockInfo.blocker_id, blockInfo.blocked_id);
+      if (result.success) {
+        console.log('Đã bỏ chặn người dùng thành công');
+        // Cập nhật lại danh sách người bị chặn
+        fetchBlockedUsers();
+      } else {
+        console.error('Lỗi khi bỏ chặn người dùng:', result.message);
+      }
+    } catch (error) {
+      console.error('Lỗi khi bỏ chặn người dùng:', error);
+    }
+  };
+
+  // Thêm hàm render danh sách người dùng đã chặn
+  const renderBlockedUsers = () => {
+    if (loading) {
+      return (
+        <div className="contacts-loading">
+          <div className="spinner"></div>
+          <p>Đang tải danh sách người dùng bị chặn...</p>
+        </div>
+      );
+    }
+    
+    if (blockedUsers.length === 0) {
+      return (
+        <div className="contacts-empty">
+          <div className="contacts-empty-icon blocked-icon"></div>
+          <h3 style={{ color: '#e53935', fontSize: '20px', fontWeight: '600', marginTop: '20px' }}>Danh sách chặn trống</h3>
+          <p style={{ color: '#757575', fontSize: '15px', maxWidth: '270px', lineHeight: '1.5' }}>Bạn chưa chặn người dùng nào.</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="friend-requests-container blocked-users-container">
+        <h3 className="section-header">Danh sách người dùng bị chặn ({blockedUsers.length})</h3>
+        
+        {blockedUsers.map((blockedItem) => {
+          const user = blockedItem.user;
+          return (
+            <div key={blockedItem.block_id} className="friend-request-item" style={itemContainerStyle}>
+              <div 
+                className="user-info-container"
+                style={userInfoStyle}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <div className="friend-request-avatar blocked-avatar">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+                <div className="friend-request-info">
+                  <div className="friend-request-name">{user.username}</div>
+                  <div className="block-details">
+                    <div className="block-reason">
+                      <span className="label">Lý do:</span> <span style={{ color: '#000', fontWeight: 500 }}>{blockedItem.reason || 'Không có lý do'}</span>
+                    </div>
+                    <div className="block-time">
+                      <span className="label">Chặn từ:</span> <span style={{ color: '#000', fontWeight: 500 }}>{formatTime(blockedItem.blocked_at)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="friend-request-actions" style={actionsStyle}>
+                <button 
+                  className="primary-action-btn unblock-btn"
+                  onClick={() => handleUnblockUser(blockedItem.block_id)}
+                >
+                  <i className="fas fa-unlock"></i>
+                  Bỏ chặn
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        
+        <style>
+          {`
+            .blocked-users-container {
+              padding: 10px;
+            }
+            
+            .section-header {
+              margin-bottom: 15px;
+              color: #333;
+              font-size: 16px;
+              font-weight: 600;
+            }
+            
+            .blocked-avatar {
+              background-color: #f44336;
+              color: white;
+              width: 40px;
+              height: 40px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 50%;
+              margin-right: 12px;
+              font-weight: bold;
+            }
+            
+            .block-details {
+              font-size: 12px;
+              color: #666;
+              margin-top: 4px;
+            }
+            
+            .block-reason, .block-time {
+              margin-bottom: 2px;
+            }
+            
+            .label {
+              font-weight: 500;
+              margin-right: 5px;
+              color: #555;
+            }
+            
+            .unblock-btn {
+              background-color: #2196F3;
+              color: white;
+              border: none;
+              border-radius: 5px;
+              padding: 8px 15px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-size: 14px;
+              transition: background-color 0.2s;
+            }
+            
+            .unblock-btn:hover {
+              background-color: #0b7dda;
+            }
+            
+            .unblock-btn i {
+              font-size: 12px;
+            }
+          `}
+        </style>
+      </div>
+    );
+  };
+
+  // Cập nhật phần explore content để có giao diện giống lời mời kết bạn
+  const renderExploreContent = () => {
+    return (
+      <div className="explore-content">
+        <div className="search-container">
+          <div className="search-input-wrapper">
+            <input
+              type="text"
+              placeholder="Tìm kiếm người dùng theo tên..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="search-input"
+            />
+            <button 
+              className="search-button" 
+              onClick={() => handleSearch(searchTerm)}
+              aria-label="Tìm kiếm"
+            >
+              <i className="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+        
+        {loading ? (
           <div className="contacts-loading">
+            <div className="spinner"></div>
             <p>Đang tìm kiếm...</p>
           </div>
-        ) : activeTab === 'explore' && hasSearched && searchResults.length > 0 ? (
-          (() => {
-            console.log("Đang hiển thị kết quả tìm kiếm:", searchResults);
-            return (
-              <div className="search-results">
-                <h3 className="search-results-title">Kết quả tìm kiếm ({searchResults.length})</h3>
-                {searchResults.map((user) => {
-                  console.log("Hiển thị người dùng:", user);
-                  return (
-                    <div key={user.user_id} className="contact-item" onClick={() => handleUserClick(user)}>
-                      {renderAvatar(user)}
-                      <div className="contact-info">
-                        <div className="contact-name">{user.username}</div>
-                      </div>
-                      {isCurrentUser(user) ? (
-                        <div className="current-user-label">
-                          <i className="fas fa-user"></i>
-                          Đây là bạn
-                        </div>
-                      ) : isUserLocked(user.user_id) ? (
-                        <div className="locked-user-label">
-                          <i className="fas fa-ban"></i>
-                          Tài khoản bị khóa
-                        </div>
-                      ) : checkFriendshipStatus(user.user_id) === 'accepted' ? (
-                        <div className="friend-status-label">
-                          <i className="fas fa-user-check"></i>
-                          Đã là bạn bè
-                        </div>
-                      ) : checkFriendshipStatus(user.user_id) === 'pending' ? (
-                        <div className="pending-request-label">
-                          <i className="fas fa-clock"></i>
-                          Đã gửi lời mời
-                        </div>
-                      ) : (
-                        <button 
-                          className="add-friend-btn"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Ngăn việc mở modal khi click vào nút kết bạn
-                            handleUserClick(user); // Mở modal để gửi lời mời kết bạn
-                          }}
-                        >
-                          <i className="fas fa-user-plus"></i>
-                          Kết bạn
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()
-        ) : activeTab === 'explore' && hasSearched && searchResults.length === 0 ? (
-          <div className="contacts-empty">
-            <div className="contacts-empty-icon"></div>
-            <h3>Không tìm thấy người dùng</h3>
-            <p>Không có người dùng nào phù hợp với tìm kiếm của bạn</p>
-          </div>
         ) : (
-          <div className="contacts-empty">
-            <div className="contacts-empty-icon explore-icon"></div>
-            <h3>Khám phá người dùng</h3>
-            <p>Nhập tên hoặc email để tìm kiếm và kết bạn với người dùng mới</p>
-          </div>
+          (() => {
+            if (hasSearched && searchResults.length === 0) {
+              return (
+                <div className="contacts-empty">
+                  <div className="contacts-empty-icon"></div>
+                  <h3>Không tìm thấy người dùng</h3>
+                  <p>Không có người dùng nào phù hợp với tìm kiếm của bạn</p>
+                </div>
+              );
+            } else if (hasSearched) {
+              return (
+                <div className="search-results-container">
+                  <h3 className="section-header">Kết quả tìm kiếm ({searchResults.length})</h3>
+                  
+                  {searchResults.map((user) => (
+                    <div key={user.user_id} className="friend-request-item" style={itemContainerStyle}>
+                      <div 
+                        className="user-info-container"
+                        onClick={() => handleUserClick(user)}
+                        style={userInfoStyle}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        {isUserLocked(user.user_id) ? (
+                          <div className="friend-request-avatar banned-avatar">BAN</div>
+                        ) : (
+                          <div className="friend-request-avatar">
+                            {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                        )}
+                        <div className="friend-request-info">
+                          <div className="friend-request-name">{user.username}</div>
+                        </div>
+                      </div>
+                      <div className="friend-request-actions" style={actionsStyle}>
+                        {isCurrentUser(user) ? (
+                          <div className="status-label current-user-label">
+                            <i className="fas fa-user"></i>
+                            Đây là bạn
+                          </div>
+                        ) : isUserLocked(user.user_id) ? (
+                          <div className="status-label locked-user-label">
+                            <i className="fas fa-ban"></i>
+                            Tài khoản bị khóa
+                          </div>
+                        ) : checkFriendshipStatus(user.user_id) === 'accepted' ? (
+                          <div className="status-label friend-status-label">
+                            <i className="fas fa-user-check"></i>
+                            Đã là bạn bè
+                          </div>
+                        ) : checkFriendshipStatus(user.user_id) === 'pending' ? (
+                          <div className="status-label pending-request-label">
+                            <i className="fas fa-clock"></i>
+                            Đã gửi lời mời
+                          </div>
+                        ) : (
+                          <button 
+                            className="primary-action-btn add-friend-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUserClick(user);
+                            }}
+                          >
+                            <i className="fas fa-user-plus"></i>
+                            Kết bạn
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            } else {
+              return (
+                <div className="contacts-empty">
+                  <div className="contacts-empty-icon explore-icon"></div>
+                  <h3>Khám phá người dùng</h3>
+                  <p>Nhập tên để tìm kiếm và kết bạn với người dùng mới</p>
+                </div>
+              );
+            }
+          })()
         )}
+        
+        <style>
+          {`
+            .search-container {
+              margin-bottom: 20px;
+              padding: 0 10px;
+            }
+            
+            .search-input-wrapper {
+              position: relative;
+              display: flex;
+              align-items: center;
+              background-color: #f5f5f5;
+              border-radius: 24px;
+              overflow: hidden;
+              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+              transition: all 0.3s ease;
+            }
+            
+            .search-input-wrapper:hover, 
+            .search-input-wrapper:focus-within {
+              box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+              background-color: #fff;
+            }
+            
+            .search-input {
+              flex: 1;
+              padding: 12px 20px;
+              border: none;
+              font-size: 14px;
+              background-color: transparent;
+              outline: none;
+              width: 100%;
+              color: #000;
+              font-weight: 500;
+            }
+            
+            .search-input::placeholder {
+              color: #999;
+              font-weight: normal;
+            }
+            
+            .search-button {
+              background: none;
+              border: none;
+              width: 48px;
+              height: 48px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              color: #777;
+              transition: color 0.2s;
+            }
+            
+            .search-button:hover {
+              color: #0084ff;
+            }
+            
+            .search-results-container {
+              padding: 10px;
+            }
+            
+            .section-header {
+              margin-bottom: 15px;
+              color: #333;
+              font-size: 16px;
+              font-weight: 600;
+              padding: 0 10px;
+            }
+            
+            .status-label {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              padding: 6px 12px;
+              border-radius: 4px;
+              font-size: 13px;
+              font-weight: 500;
+            }
+            
+            .friend-status-label {
+              background-color: #e3f2fd;
+              color: #2196f3;
+            }
+            
+            .pending-request-label {
+              background-color: #fff8e1;
+              color: #ffa000;
+            }
+            
+            .current-user-label {
+              background-color: #f5f5f5;
+              color: #607d8b;
+            }
+            
+            .locked-user-label {
+              background-color: #ffebee;
+              color: #f44336;
+            }
+            
+            .add-friend-btn {
+              background-color: #4CAF50;
+              color: white;
+              border: none;
+              border-radius: 5px;
+              padding: 8px 15px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-size: 14px;
+              transition: background-color 0.2s;
+            }
+            
+            .add-friend-btn:hover {
+              background-color: #388E3C;
+            }
+            
+            .primary-action-btn {
+              font-weight: 500;
+            }
+            
+            .primary-action-btn i {
+              font-size: 12px;
+            }
+            
+            .friend-request-avatar {
+              width: 42px;
+              height: 42px;
+              border-radius: 50%;
+              background-color: #0084ff;
+              color: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: bold;
+              font-size: 16px;
+              margin-right: 12px;
+            }
+            
+            .banned-avatar {
+              background-color: #f44336;
+            }
+            
+            .friend-request-info {
+              display: flex;
+              flex-direction: column;
+            }
+            
+            .friend-request-name {
+              font-weight: 500;
+              font-size: 15px;
+              color: #333;
+            }
+            
+            .explore-content {
+              padding: 10px 0;
+            }
+            
+            .spinner {
+              width: 30px;
+              height: 30px;
+              border: 3px solid rgba(0, 132, 255, 0.2);
+              border-top: 3px solid #0084ff;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 15px auto;
+            }
+            
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            
+            .contacts-loading {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              padding: 30px 0;
+              color: #666;
+            }
+            
+            .contacts-empty {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              padding: 40px 0;
+              text-align: center;
+            }
+            
+            .contacts-empty h3 {
+              font-size: 18px;
+              color: #333;
+              margin: 15px 0 5px 0;
+            }
+            
+            .contacts-empty p {
+              color: #666;
+              font-size: 14px;
+            }
+            
+            .contacts-empty-icon {
+              width: 80px;
+              height: 80px;
+              background-color: #f5f5f5;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin-bottom: 10px;
+            }
+            
+            .explore-icon {
+              position: relative;
+            }
+            
+            .explore-icon:before {
+              content: "\\f002";
+              font-family: "Font Awesome 5 Free";
+              font-weight: 900;
+              font-size: 24px;
+              color: #aaa;
+            }
+            
+            .blocked-icon {
+              position: relative;
+              background-color: #fff0f0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+              box-shadow: 0 4px 15px rgba(244, 67, 54, 0.15);
+              transition: all 0.3s ease;
+              animation: pulse-blocked 2s infinite ease-in-out;
+            }
+            
+            .blocked-icon:before {
+              content: "\\f235";
+              font-family: "Font Awesome 5 Free";
+              font-weight: 900;
+              font-size: 32px;
+              color: #ff5252;
+              filter: drop-shadow(0 2px 3px rgba(244, 67, 54, 0.3));
+              transition: all 0.3s ease;
+              animation: float-icon 3s infinite ease-in-out;
+            }
+            
+            .blocked-icon:after {
+              content: "";
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              background: radial-gradient(circle, rgba(255,255,255,0) 60%, rgba(255,82,82,0.2) 100%);
+              z-index: 1;
+            }
+            
+            @keyframes pulse-blocked {
+              0% { box-shadow: 0 4px 15px rgba(244, 67, 54, 0.15); }
+              50% { box-shadow: 0 4px 25px rgba(244, 67, 54, 0.25); }
+              100% { box-shadow: 0 4px 15px rgba(244, 67, 54, 0.15); }
+            }
+            
+            @keyframes float-icon {
+              0% { transform: translateY(0px); }
+              50% { transform: translateY(-5px); }
+              100% { transform: translateY(0px); }
+            }
+          `}
+        </style>
       </div>
+    );
+  };
 
-      {/* User Profile Modal */}
-      <UserProfileModal 
-        isOpen={showUserProfileModal}
-        onClose={handleCloseUserProfileModal}
-        userId={selectedUserId}
-        onFriendRequestSent={handleProfileModalUpdate}
-        fromFriendRequest={JSON.parse(localStorage.getItem('currentFriendRequest') || '{"fromFriendRequest": false}').fromFriendRequest} 
-        friendshipId={JSON.parse(localStorage.getItem('currentFriendRequest') || '{"friendshipId": null}').friendshipId}
-      />
+  // Render nội dung của tab hiện tại
+  const renderTabContent = () => {
+    if (!currentUser) {
+      return (
+        <div className="contacts-loading">
+          <div className="spinner"></div>
+          <p>Đang tải thông tin người dùng...</p>
+        </div>
+      );
+    }
 
-      <style>
-        {`
-          .friend-status-label, .pending-request-label, .current-user-label, .locked-user-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            font-weight: 500;
-          }
-          
-          .friend-status-label {
-            background-color: #e3f2fd;
-            color: #2196f3;
-          }
-          
-          .pending-request-label {
-            background-color: #fff8e1;
-            color: #ffa000;
-          }
-          
-          .current-user-label {
-            background-color: #f5f5f5;
-            color: #607d8b;
-          }
-          
-          .locked-user-label {
-            background-color: #ffebee;
-            color: #f44336;
-          }
-          
-          .banned-avatar {
-            background-color: #f44336 !important;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          
-          .status-banned {
-            background-color: #f44336 !important;
-          }
-          
-          .friend-request-avatar.banned-avatar {
-            background-color: #f44336;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-        `}
-      </style>
+    let content;
+    switch (activeTab) {
+      case 'friends':
+        content = renderFriendsList();
+        break;
+      case 'requests':
+        content = renderFriendRequests();
+        break;
+      case 'blocked':
+        content = renderBlockedUsers();
+        break;
+      case 'explore':
+        content = renderExploreContent();
+        break;
+      default:
+        content = renderFriendsList();
+    }
+
+    return (
+      <div>
+        {content}
+        <style>
+          {`
+            .contacts-header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 20px;
+              padding: 0 10px;
+            }
+            
+            .contacts-search-bar {
+              position: relative;
+              display: flex;
+              align-items: center;
+              background-color: #f5f5f5;
+              border-radius: 24px;
+              overflow: hidden;
+              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+              transition: all 0.3s ease;
+              flex: 1;
+              margin: 0 15px;
+            }
+            
+            .contacts-search-bar:hover, 
+            .contacts-search-bar:focus-within {
+              box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+              background-color: #fff;
+            }
+            
+            .contacts-search-input {
+              flex: 1;
+              padding: 10px 12px 10px 40px;
+              border: none;
+              font-size: 14px;
+              background-color: transparent;
+              outline: none;
+              width: 100%;
+              color: #000;
+              font-weight: 500;
+            }
+            
+            .contacts-search-input::placeholder {
+              color: #999;
+              font-weight: normal;
+            }
+            
+            .search-icon {
+              position: absolute;
+              left: 12px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 28px;
+              height: 28px;
+              top: 50%;
+              transform: translateY(-50%);
+              z-index: 1;
+              border-radius: 50%;
+              transition: all 0.2s ease;
+              background-color: rgba(0, 132, 255, 0.1);
+            }
+            
+            .search-icon:hover {
+              background-color: rgba(0, 132, 255, 0.2);
+              transform: translateY(-50%) scale(1.05);
+            }
+            
+            .friends-list-container {
+              display: flex;
+              flex-direction: column;
+              height: 100%;
+            }
+            
+            .friends-container, .friends-container-with-groups {
+              flex: 1;
+              overflow-y: auto;
+            }
+            
+            .search-container {
+              margin-bottom: 20px;
+              padding: 0 10px;
+            }
+            
+            .search-input-wrapper {
+              position: relative;
+              display: flex;
+              align-items: center;
+              background-color: #f5f5f5;
+              border-radius: 24px;
+              overflow: hidden;
+              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+              transition: all 0.3s ease;
+            }
+            
+            .search-input-wrapper:hover, 
+            .search-input-wrapper:focus-within {
+              box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+              background-color: #fff;
+            }
+            
+            .search-input {
+              flex: 1;
+              padding: 12px 20px;
+              border: none;
+              font-size: 14px;
+              background-color: transparent;
+              outline: none;
+              width: 100%;
+              color: #000;
+              font-weight: 500;
+            }
+            
+            .search-input::placeholder {
+              color: #999;
+              font-weight: normal;
+            }
+            
+            .search-button {
+              background: none;
+              border: none;
+              width: 48px;
+              height: 48px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              color: #777;
+              transition: color 0.2s;
+            }
+            
+            .search-button:hover {
+              color: #0084ff;
+            }
+            
+            .section-header {
+              font-size: 16px;
+              color: #333;
+              margin-top: 5px;
+              margin-bottom: 15px;
+              padding: 0 10px;
+            }
+            
+            .status-label {
+              display: flex;
+              align-items: center;
+              font-size: 13px;
+              padding: 5px 10px;
+              border-radius: 15px;
+              gap: 5px;
+            }
+            
+            .friend-status-label {
+              background-color: #e8f5e9;
+              color: #43a047;
+            }
+            
+            .pending-request-label {
+              background-color: #fff8e1;
+              color: #ffa000;
+            }
+            
+            .current-user-label {
+              background-color: #f5f5f5;
+              color: #607d8b;
+            }
+            
+            .locked-user-label {
+              background-color: #ffebee;
+              color: #f44336;
+            }
+            
+            .add-friend-btn {
+              background-color: #4CAF50;
+              color: white;
+              border: none;
+              border-radius: 5px;
+              padding: 8px 15px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-size: 14px;
+              transition: background-color 0.2s;
+            }
+            
+            .add-friend-btn:hover {
+              background-color: #388E3C;
+            }
+            
+            .primary-action-btn {
+              font-weight: 500;
+            }
+            
+            .primary-action-btn i {
+              font-size: 12px;
+            }
+            
+            .friend-request-avatar {
+              width: 42px;
+              height: 42px;
+              border-radius: 50%;
+              background-color: #0084ff;
+              color: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: bold;
+              font-size: 16px;
+              margin-right: 12px;
+            }
+            
+            .banned-avatar {
+              background-color: #f44336;
+            }
+            
+            .friend-request-info {
+              display: flex;
+              flex-direction: column;
+            }
+            
+            .friend-request-name {
+              font-weight: 500;
+              font-size: 15px;
+              color: #333;
+            }
+            
+            .explore-content {
+              padding: 10px 0;
+            }
+            
+            .spinner {
+              width: 30px;
+              height: 30px;
+              border: 3px solid rgba(0, 132, 255, 0.2);
+              border-top: 3px solid #0084ff;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 15px auto;
+            }
+            
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            
+            .contacts-loading {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              padding: 30px 0;
+              color: #666;
+            }
+            
+            .contacts-empty {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              padding: 40px 0;
+              text-align: center;
+            }
+            
+            .contacts-empty h3 {
+              font-size: 18px;
+              color: #333;
+              margin: 15px 0 5px 0;
+            }
+            
+            .contacts-empty p {
+              color: #666;
+              font-size: 14px;
+            }
+            
+            .contacts-empty-icon {
+              width: 80px;
+              height: 80px;
+              background-color: #f5f5f5;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin-bottom: 10px;
+            }
+            
+            .explore-icon {
+              position: relative;
+            }
+            
+            .explore-icon:before {
+              content: "\\f002";
+              font-family: "Font Awesome 5 Free";
+              font-weight: 900;
+              font-size: 24px;
+              color: #aaa;
+            }
+            
+            .blocked-icon {
+              position: relative;
+              background-color: #fff0f0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+              box-shadow: 0 4px 15px rgba(244, 67, 54, 0.15);
+              transition: all 0.3s ease;
+              animation: pulse-blocked 2s infinite ease-in-out;
+            }
+            
+            .blocked-icon:before {
+              content: "\\f235";
+              font-family: "Font Awesome 5 Free";
+              font-weight: 900;
+              font-size: 32px;
+              color: #ff5252;
+              filter: drop-shadow(0 2px 3px rgba(244, 67, 54, 0.3));
+              transition: all 0.3s ease;
+              animation: float-icon 3s infinite ease-in-out;
+            }
+            
+            .blocked-icon:after {
+              content: "";
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              background: radial-gradient(circle, rgba(255,255,255,0) 60%, rgba(255,82,82,0.2) 100%);
+              z-index: 1;
+            }
+            
+            @keyframes pulse-blocked {
+              0% { box-shadow: 0 4px 15px rgba(244, 67, 54, 0.15); }
+              50% { box-shadow: 0 4px 25px rgba(244, 67, 54, 0.25); }
+              100% { box-shadow: 0 4px 15px rgba(244, 67, 54, 0.15); }
+            }
+            
+            @keyframes float-icon {
+              0% { transform: translateY(0px); }
+              50% { transform: translateY(-5px); }
+              100% { transform: translateY(0px); }
+            }
+          `}
+        </style>
+      </div>
+    );
+  };
+
+  return (
+    <div className="contacts-content">
+      {renderTabContent()}
+      
+      {/* Hiển thị modal thông tin người dùng khi click vào một người dùng */}
+      {showUserProfileModal && selectedUserId && (
+        <UserProfileModal
+          isOpen={showUserProfileModal}
+          onClose={handleCloseUserProfileModal}
+          userId={selectedUserId}
+          onFriendRequestSent={handleProfileModalUpdate}
+          fromFriendRequest={activeTab === 'requests'}
+          friendshipId={friendRequests.find(req => req.user.user_id === selectedUserId)?.friendship_id}
+        />
+      )}
     </div>
   );
 };

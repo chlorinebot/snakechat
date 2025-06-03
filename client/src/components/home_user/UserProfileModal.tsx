@@ -36,6 +36,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [processingRequest, setProcessingRequest] = useState<boolean>(false);
   const [isUserLocked, setIsUserLocked] = useState<boolean>(false);
   const [lockInfo, setLockInfo] = useState<{reason: string, lock_time: string, unlock_time: string} | null>(null);
+  const [isBlockedByMe, setIsBlockedByMe] = useState<boolean>(false);
+  const [isBlockingMe, setIsBlockingMe] = useState<boolean>(false);
+  const [blockReason, setBlockReason] = useState<string>('');
+  const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
+  const [blockingUser, setBlockingUser] = useState<boolean>(false);
 
   useEffect(() => {
     // Lấy thông tin người dùng hiện tại từ localStorage
@@ -123,9 +128,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           setLockInfo(null);
         }
 
-        // Kiểm tra trạng thái kết bạn
         if (storedUser) {
           const currentUserData = JSON.parse(storedUser);
+          
+          // Kiểm tra trạng thái kết bạn
           const status = await api.checkFriendshipStatus(currentUserData.user_id, userId);
           console.log("Trạng thái kết bạn:", status);
           setFriendshipStatus(status.status);
@@ -134,6 +140,24 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           if (status.status === 'pending') {
             // Nếu đã gửi lời mời kết bạn trước đó
             setFriendRequestSent(true);
+          }
+
+          // Kiểm tra trạng thái chặn
+          try {
+            // Kiểm tra xem người dùng hiện tại có đang chặn người dùng này không
+            const blockStatus = await api.checkBlockStatus(currentUserData.user_id, userId);
+            setIsBlockedByMe(blockStatus.isBlocking);
+
+            // Kiểm tra xem người dùng này có đang chặn người dùng hiện tại không
+            const reverseBlockStatus = await api.checkBlockStatus(userId, currentUserData.user_id);
+            setIsBlockingMe(reverseBlockStatus.isBlocking);
+            
+            console.log("Trạng thái chặn:", { 
+              isBlockedByMe: blockStatus.isBlocking, 
+              isBlockingMe: reverseBlockStatus.isBlocking 
+            });
+          } catch (error) {
+            console.error("Lỗi khi kiểm tra trạng thái chặn:", error);
           }
         }
       } catch (error) {
@@ -174,13 +198,21 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const canViewStatus = () => {
     // Người dùng có thể xem trạng thái nếu:
     return isCurrentUser() || // Là chính bản thân
-      friendshipStatus === 'accepted'; // Đã là bạn bè
+      (friendshipStatus === 'accepted' && !isBlockedByMe && !isBlockingMe); // Đã là bạn bè và không chặn nhau
   };
 
   // Hiển thị trạng thái hoạt động phù hợp
   const getStatusDisplay = () => {
     if (isUserLocked) {
       return 'Tài khoản bị khóa';
+    }
+    
+    if (isBlockedByMe) {
+      return 'Đã chặn người dùng này';
+    }
+    
+    if (isBlockingMe) {
+      return 'Bạn đã bị người dùng này chặn';
     }
     
     if (!canViewStatus()) {
@@ -196,6 +228,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
       return 'status-banned';
     }
     
+    if (isBlockedByMe || isBlockingMe) {
+      return 'status-blocked';
+    }
+    
     if (!canViewStatus()) {
       return 'status-unknown'; // CSS đặc biệt cho trường hợp không có quyền xem
     }
@@ -205,7 +241,86 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   // Trả về lớp CSS cho avatar
   const getAvatarClass = () => {
-    return isUserLocked ? 'profile-avatar banned-avatar' : 'profile-avatar';
+    if (isUserLocked) return 'profile-avatar banned-avatar';
+    if (isBlockedByMe || isBlockingMe) return 'profile-avatar blocked-avatar';
+    return 'profile-avatar';
+  };
+
+  // Xử lý chặn người dùng
+  const handleBlockUser = async () => {
+    if (!userData || !currentUser || !userData.user_id || !currentUser.user_id) {
+      setError('Không thể chặn người dùng: Thiếu thông tin người dùng');
+      return;
+    }
+    
+    setBlockingUser(true);
+    
+    try {
+      const result = await api.blockUser({
+        blocker_id: currentUser.user_id,
+        blocked_id: userData.user_id,
+        reason: blockReason || 'Không có lý do được cung cấp',
+        block_type: 'permanent' // Mặc định là chặn vĩnh viễn
+      });
+      
+      if (result.success) {
+        setIsBlockedByMe(true);
+        setSuccessMessage('Đã chặn người dùng thành công');
+        setShowBlockModal(false);
+        
+        // Nếu đang là bạn bè, tự động hủy kết bạn
+        if (friendshipStatus === 'accepted' && friendshipId) {
+          try {
+            await api.removeFriend(friendshipId);
+            setFriendshipStatus(null);
+            setFriendshipId(undefined);
+          } catch (removeFriendError) {
+            console.error('Lỗi khi hủy kết bạn sau khi chặn:', removeFriendError);
+          }
+        }
+        
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        setError(result.message || 'Không thể chặn người dùng');
+      }
+    } catch (error) {
+      console.error('Lỗi khi chặn người dùng:', error);
+      setError('Không thể chặn người dùng. Vui lòng thử lại sau.');
+    } finally {
+      setBlockingUser(false);
+    }
+  };
+  
+  // Xử lý bỏ chặn người dùng
+  const handleUnblockUser = async () => {
+    if (!userData || !currentUser || !userData.user_id || !currentUser.user_id) {
+      setError('Không thể bỏ chặn người dùng: Thiếu thông tin người dùng');
+      return;
+    }
+    
+    setBlockingUser(true);
+    
+    try {
+      const result = await api.unblockUser(currentUser.user_id, userData.user_id);
+      
+      if (result.success) {
+        setIsBlockedByMe(false);
+        setSuccessMessage('Đã bỏ chặn người dùng thành công');
+        
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        setError(result.message || 'Không thể bỏ chặn người dùng');
+      }
+    } catch (error) {
+      console.error('Lỗi khi bỏ chặn người dùng:', error);
+      setError('Không thể bỏ chặn người dùng. Vui lòng thử lại sau.');
+    } finally {
+      setBlockingUser(false);
+    }
   };
 
   const handleAddFriend = async () => {
@@ -466,8 +581,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
       return null; // Không hiển thị nút nếu là chính mình
     }
 
-    // Không hiển thị nút kết bạn thông thường cho người dùng bị khóa
-    if (isUserLocked) {
+    // Không hiển thị nút kết bạn thông thường cho người dùng bị khóa hoặc đã chặn/bị chặn
+    if (isUserLocked || isBlockedByMe || isBlockingMe) {
       return null; 
     }
 
@@ -590,6 +705,35 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   };
 
+  // Render nút chặn/bỏ chặn người dùng
+  const renderBlockButton = () => {
+    if (isCurrentUser() || isBlockingMe) return null;
+    
+    if (isBlockedByMe) {
+      return (
+        <button 
+          className="unblock-user-button" 
+          onClick={handleUnblockUser}
+          disabled={blockingUser}
+        >
+          <i className="fas fa-unlock"></i>
+          {blockingUser ? 'Đang xử lý...' : 'Bỏ chặn'}
+        </button>
+      );
+    } else {
+      return (
+        <button 
+          className="block-user-button" 
+          onClick={() => setShowBlockModal(true)}
+          disabled={blockingUser}
+        >
+          <i className="fas fa-ban"></i>
+          Chặn
+        </button>
+      );
+    }
+  };
+
   // Render nút hủy kết bạn cho người dùng bị khóa (nếu đã là bạn bè)
   const renderLockedUserActions = () => {
     if (!isUserLocked || isCurrentUser()) return null;
@@ -635,14 +779,19 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 status: userData.status,
                 join_date: userData.join_date,
                 friendshipStatus,
-                isUserLocked
+                isUserLocked,
+                isBlockedByMe,
+                isBlockingMe
               });
               
               return (
                 <div className="profile-content">
                   <div className="profile-avatar-section">
                     <div className={getAvatarClass()}>
-                      {isUserLocked ? 'BAN' : userData.username ? userData.username.charAt(0).toUpperCase() : '?'}
+                      {isUserLocked ? 'BAN' : 
+                       isBlockedByMe ? 'BLK' :
+                       isBlockingMe ? 'BLK' :
+                       userData.username ? userData.username.charAt(0).toUpperCase() : '?'}
                       <div className={`profile-status-indicator ${getStatusIndicatorClass()}`}></div>
                     </div>
                     <div className="profile-user-info">
@@ -675,7 +824,25 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       </div>
                     )}
                     
-                    {canViewStatus() && !isOnline(userData.status) && userData.last_activity && !isUserLocked && (
+                    {isBlockedByMe && (
+                      <div className="blocked-account-info">
+                        <div className="info-group">
+                          <div className="info-label">Trạng thái:</div>
+                          <div className="info-value">Đã chặn người dùng này</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {isBlockingMe && (
+                      <div className="blocked-account-info">
+                        <div className="info-group">
+                          <div className="info-label">Trạng thái:</div>
+                          <div className="info-value">Bạn đã bị chặn</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {canViewStatus() && !isOnline(userData.status) && userData.last_activity && !isUserLocked && !isBlockedByMe && !isBlockingMe && (
                       <div className="info-group">
                         <div className="info-label">Hoạt động cuối:</div>
                         <div className="info-value">{getLastActivityTime(userData.last_activity)}</div>
@@ -689,6 +856,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     
                     {renderFriendshipButton()}
                     {renderLockedUserActions()}
+                    {renderBlockButton()}
                   </div>
                 </div>
               );
@@ -697,6 +865,43 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="profile-error">Không thể tải thông tin người dùng</div>
           )}
         </div>
+        
+        {/* Modal xác nhận chặn người dùng */}
+        {showBlockModal && (
+          <div className="block-modal">
+            <div className="block-modal-content">
+              <h3>Chặn người dùng</h3>
+              <p>Bạn sẽ không nhận được tin nhắn và thông báo từ người dùng này. Người dùng này cũng sẽ không thể nhìn thấy thông tin của bạn.</p>
+              
+              <div className="form-group">
+                <label>Lý do chặn (không bắt buộc):</label>
+                <textarea 
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="Nhập lý do chặn người dùng này..."
+                  maxLength={200}
+                />
+              </div>
+              
+              <div className="modal-actions">
+                <button 
+                  className="cancel-button" 
+                  onClick={() => setShowBlockModal(false)}
+                  disabled={blockingUser}
+                >
+                  Hủy
+                </button>
+                <button 
+                  className="block-button"
+                  onClick={handleBlockUser}
+                  disabled={blockingUser}
+                >
+                  {blockingUser ? 'Đang xử lý...' : 'Chặn người dùng'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Sử dụng component modal xác nhận hủy kết bạn */}
         <ConfirmRemoveFriendModal 
@@ -755,54 +960,25 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           background-color: #d32f2f;
         }
         
-        .accept-friend-button:disabled, .reject-friend-button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        
-        .friendship-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-top: 20px;
-        }
-        
-        .main-actions {
-          width: 100%;
-        }
-        
-        .secondary-actions {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
-        .friend-status {
-          font-size: 14px;
-          color: #666;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        
-        .friend-status i {
-          color: #4CAF50;
-          font-size: 12px;
-        }
-        
         .locked-status {
-          color: #d32f2f;
+          color: #f44336;
         }
         
-        .locked-status i {
-          color: #d32f2f;
+        .status-blocked {
+          background-color: #f44336;
         }
         
-        .message-friend-button {
-          padding: 12px 15px;
-          border-radius: 5px;
-          background-color: #0066ff;
+        .blocked-avatar {
+          background-color: #f44336;
           color: white;
+          position: relative;
+        }
+        
+        .block-user-button, .unblock-user-button {
+          width: 100%;
+          padding: 10px;
+          margin-top: 15px;
+          border-radius: 6px;
           border: none;
           font-size: 14px;
           font-weight: 500;
@@ -811,79 +987,106 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           align-items: center;
           justify-content: center;
           gap: 8px;
-          transition: background-color 0.2s ease;
-          width: 100%;
+          transition: background-color 0.2s;
         }
         
-        .message-friend-button:hover {
-          background-color: #0052cc;
-        }
-        
-        .message-friend-button i {
-          font-size: 14px;
-        }
-        
-        .remove-friend-button {
-          padding: 6px 10px;
-          border-radius: 5px;
-          background-color: transparent;
-          color: #666;
-          border: 1px solid #ddd;
-          font-size: 13px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: all 0.2s ease;
-        }
-        
-        .remove-friend-button:hover {
-          background-color: #f8f8f8;
-          color: #d32f2f;
-          border-color: #f0f0f0;
-        }
-        
-        .remove-friend-button i {
-          font-size: 11px;
-        }
-        
-        .banned-avatar {
-          background-color: #f44336 !important;
+        .block-user-button {
+          background-color: #f44336;
           color: white;
-          font-weight: bold;
-          font-size: 14px;
+        }
+        
+        .block-user-button:hover {
+          background-color: #d32f2f;
+        }
+        
+        .unblock-user-button {
+          background-color: #2196F3;
+          color: white;
+        }
+        
+        .unblock-user-button:hover {
+          background-color: #0b7dda;
+        }
+        
+        .block-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
           display: flex;
           align-items: center;
           justify-content: center;
+          z-index: 1000;
         }
         
-        .status-banned {
-          background-color: #f44336 !important;
+        .block-modal-content {
+          background-color: white;
+          border-radius: 8px;
+          padding: 20px;
+          width: 90%;
+          max-width: 500px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
-        .locked-account-info {
-          margin-top: 10px;
-          padding: 10px;
-          border-radius: 6px;
-          background-color: rgba(244, 67, 54, 0.1);
-          border: 1px solid rgba(244, 67, 54, 0.3);
+        .block-modal-content h3 {
+          margin-top: 0;
+          color: #f44336;
         }
         
-        .lock-reason {
-          color: #d32f2f;
+        .form-group {
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
           font-weight: 500;
         }
         
-        .locked-user-actions {
-          margin-top: 20px;
-          border-top: 1px solid #e0e0e0;
-          padding-top: 20px;
-        }
-        
-        .full-width {
+        .form-group textarea {
           width: 100%;
           padding: 10px;
-          justify-content: center;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          min-height: 80px;
+          resize: vertical;
+        }
+        
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 20px;
+        }
+        
+        .cancel-button, .block-button {
+          padding: 8px 16px;
+          border-radius: 6px;
+          border: none;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+        
+        .cancel-button {
+          background-color: #e0e0e0;
+          color: #333;
+        }
+        
+        .cancel-button:hover {
+          background-color: #d0d0d0;
+        }
+        
+        .block-button {
+          background-color: #f44336;
+          color: white;
+        }
+        
+        .block-button:hover {
+          background-color: #d32f2f;
         }
         `}
       </style>

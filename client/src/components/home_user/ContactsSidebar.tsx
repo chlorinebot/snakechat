@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-type ContactTab = 'friends' | 'requests' | 'explore';
+type ContactTab = 'friends' | 'requests' | 'explore' | 'blocked';
 
 interface ContactsSidebarProps {
   activeTab?: ContactTab; // Tab hiện tại đang được chọn
@@ -97,6 +97,17 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
             </svg>
           </div>
           <span style={{ color: currentTab === 'explore' ? '#0084ff' : '#000' }}>Khám phá</span>
+        </div>
+        <div 
+          className={`contact-sidebar-item ${currentTab === 'blocked' ? 'active' : ''}`}
+          onClick={() => handleTabChange('blocked')}
+        >
+          <div className="contact-sidebar-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={currentTab === 'blocked' ? "#0084ff" : "#777"}>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
+            </svg>
+          </div>
+          <span style={{ color: currentTab === 'blocked' ? '#0084ff' : '#000' }}>Danh sách chặn</span>
         </div>
       </div>
       
