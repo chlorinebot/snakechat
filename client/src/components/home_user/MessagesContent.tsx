@@ -510,9 +510,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         send_failed: false
       };
 
-      // Lấy số lượng tin nhắn hiện tại để xác định cách cuộn
-      const currentMessageCount = messages.length;
-
       // Thêm tin nhắn tạm thời vào danh sách
       setMessages(prevMessages => [...prevMessages, tempMessage]);
       
