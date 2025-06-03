@@ -132,7 +132,26 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     };
     
     loadFriends();
-  }, [userId]);
+    
+    // Thêm interval để làm mới trạng thái bạn bè mỗi 10 giây
+    const statusRefreshInterval = setInterval(async () => {
+      await loadFriends();
+      
+      // Làm mới danh sách cuộc trò chuyện để cập nhật trạng thái
+      if (!propConversations) {
+        try {
+          const userConversations = await api.getUserConversations(userId);
+          setLocalConversations(userConversations);
+        } catch (error) {
+          console.error('Lỗi khi làm mới danh sách cuộc trò chuyện:', error);
+        }
+      }
+    }, 10000);
+    
+    return () => {
+      clearInterval(statusRefreshInterval);
+    };
+  }, [userId, propConversations]);
 
   // Lọc cuộc trò chuyện theo từ khóa tìm kiếm
   const filteredConversations = conversations.filter(conversation => {

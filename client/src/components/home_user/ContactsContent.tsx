@@ -1365,6 +1365,61 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     );
   };
 
+  // Thêm useEffect để tự động làm mới trạng thái hoạt động của bạn bè
+  useEffect(() => {
+    // Chỉ áp dụng cho tab bạn bè
+    if (activeTab !== 'friends' || !userId) return;
+    
+    console.log('Thiết lập interval làm mới trạng thái bạn bè');
+    
+    // Hàm làm mới trạng thái bạn bè
+    const refreshFriendsStatus = async () => {
+      try {
+        const friends = await api.getFriends(userId);
+        
+        // Cập nhật danh sách bạn bè với trạng thái mới
+        setFriendsList(prevFriends => {
+          // Tạo bản sao của danh sách bạn bè hiện tại
+          const updatedFriends = [...prevFriends];
+          let hasChanges = false;
+          
+          // Cập nhật thông tin cho mỗi người bạn
+          for (const friend of friends) {
+            const index = updatedFriends.findIndex(f => f.user_id === friend.user_id);
+            if (index !== -1) {
+              const oldStatus = updatedFriends[index].status;
+              const oldActivity = updatedFriends[index].last_activity;
+              
+              if (oldStatus !== friend.status || oldActivity !== friend.last_activity) {
+                updatedFriends[index] = {
+                  ...updatedFriends[index],
+                  status: friend.status,
+                  last_activity: friend.last_activity
+                };
+                hasChanges = true;
+              }
+            }
+          }
+          
+          // Chỉ trả về danh sách mới nếu có thay đổi
+          return hasChanges ? updatedFriends : prevFriends;
+        });
+      } catch (error) {
+        console.error('Lỗi khi làm mới trạng thái bạn bè:', error);
+      }
+    };
+    
+    // Gọi hàm làm mới ngay lập tức khi mount component
+    refreshFriendsStatus();
+    
+    // Thiết lập interval làm mới mỗi 10 giây
+    const intervalId = setInterval(refreshFriendsStatus, 10000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [activeTab, userId]);
+
   // Render nội dung của tab hiện tại
   const renderTabContent = () => {
     if (!currentUser) {

@@ -368,7 +368,74 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     };
     
     loadFriends();
-  }, [user?.user_id]);
+    
+    // Thêm interval để làm mới trạng thái hoạt động của tất cả người dùng mỗi 10 giây
+    const statusRefreshInterval = setInterval(async () => {
+      if (user?.user_id) {
+        try {
+          // Lấy lại danh sách bạn bè với trạng thái mới nhất
+          const friends = await api.getFriends(user.user_id);
+          setFriendIds(friends.map(friend => friend.user_id));
+          
+          // Cập nhật trạng thái người dùng trong danh sách cuộc trò chuyện
+          if (conversations.length > 0) {
+            const updatedConversations = [...conversations];
+            let hasChanges = false;
+            
+            // Cập nhật trạng thái cho từng người dùng trong danh sách cuộc trò chuyện
+            for (const conversation of updatedConversations) {
+              if (conversation.members) {
+                for (const friend of friends) {
+                  // Tìm và cập nhật trạng thái thành viên là bạn bè
+                  const memberIndex = conversation.members.findIndex(m => m.user_id === friend.user_id);
+                  if (memberIndex !== -1) {
+                    const oldStatus = conversation.members[memberIndex].status;
+                    const oldActivity = (conversation.members[memberIndex] as any).last_activity;
+                    
+                    if (oldStatus !== friend.status || oldActivity !== friend.last_activity) {
+                      // Sử dụng kiểu dữ liệu any để tránh lỗi TypeScript
+                      const updatedMember = {
+                        ...conversation.members[memberIndex],
+                        status: friend.status
+                      } as any;
+                      
+                      // Thêm thuộc tính last_activity vào đối tượng any
+                      updatedMember.last_activity = friend.last_activity;
+                      
+                      // Gán lại vào mảng members
+                      conversation.members[memberIndex] = updatedMember;
+                      hasChanges = true;
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Chỉ cập nhật state nếu có thay đổi để tránh re-render không cần thiết
+            if (hasChanges) {
+              setConversations(updatedConversations);
+              
+              // Cập nhật currentConversation nếu đang hiển thị
+              if (currentConversation?.conversation_id) {
+                const updatedCurrent = updatedConversations.find(
+                  conv => conv.conversation_id === currentConversation.conversation_id
+                );
+                if (updatedCurrent) {
+                  setCurrentConversation(updatedCurrent);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Lỗi khi làm mới trạng thái hoạt động:', error);
+        }
+      }
+    }, 10000);
+    
+    return () => {
+      clearInterval(statusRefreshInterval);
+    };
+  }, [user?.user_id, conversations, currentConversation]);
 
   if (!user) {
     return <div className="loading">Đang tải...</div>;
@@ -413,10 +480,18 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
 
   // Hàm tính thời gian chênh lệch và hiển thị trạng thái hoạt động
   const getMemberStatusText = (member?: ConversationMember) => {
-    if (!member) return '';
+    if (!member) return 'Ngoại tuyến';
+
+    // Kiểm tra xem người dùng có phải là bạn bè không
+    const isFriend = friendIds.includes(member.user_id);
+    
+    // Nếu không phải bạn bè, luôn hiển thị là ngoại tuyến
+    if (!isFriend) return 'Ngoại tuyến';
+    
+    // Nếu là bạn bè, hiển thị trạng thái thực tế
     if (member.status === 'online') return 'Đang hoạt động';
-    const last = (member as any).last_activity;
-    if (last) {
+    if ((member as any).last_activity) {
+      const last = (member as any).last_activity;
       const diffMin = Math.floor((Date.now() - new Date(last).getTime()) / 60000);
       if (diffMin < 60) return `Hoạt động lần cuối ${diffMin} phút trước`;
       const diffH = Math.floor(diffMin / 60);
