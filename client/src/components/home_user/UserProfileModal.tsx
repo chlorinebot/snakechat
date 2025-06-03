@@ -871,7 +871,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="block-modal">
             <div className="block-modal-content">
               <h3>Chặn người dùng</h3>
-              <p>Bạn sẽ không nhận được tin nhắn và thông báo từ người dùng này. Người dùng này cũng sẽ không thể nhìn thấy thông tin của bạn.</p>
+              <p style={{ color: '#000000' }}>Bạn sẽ không nhận được tin nhắn và thông báo từ người dùng này. Người dùng này cũng sẽ không thể nhìn thấy thông tin của bạn.</p>
               
               <div className="form-group">
                 <label>Lý do chặn (không bắt buộc):</label>
