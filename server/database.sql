@@ -88,3 +88,35 @@ CREATE TABLE IF NOT EXISTS message_attachments (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (message_id) REFERENCES messages(message_id)
 ); 
+
+-- Tạo bảng user_blocks để quản lý chức năng chặn người dùng
+CREATE TABLE user_blocks (
+    block_id BIGINT(20) NOT NULL AUTO_INCREMENT,
+    blocker_id INT(11) NOT NULL COMMENT 'ID người dùng thực hiện chặn',
+    blocked_id INT(11) NOT NULL COMMENT 'ID người dùng bị chặn',
+    reason VARCHAR(255) DEFAULT NULL COMMENT 'Lý do chặn (tùy chọn)',
+    block_type ENUM('temporary', 'permanent') DEFAULT 'permanent' COMMENT 'Loại chặn: tạm thời hoặc vĩnh viễn',
+    blocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian chặn',
+    unblock_at TIMESTAMP NULL DEFAULT NULL COMMENT 'Thời gian bỏ chặn (cho chặn tạm thời)',
+    status ENUM('active', 'removed') DEFAULT 'active' COMMENT 'Trạng thái chặn',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    PRIMARY KEY (block_id),
+    UNIQUE KEY unique_block (blocker_id, blocked_id),
+    FOREIGN KEY (blocker_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (blocked_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    
+    -- Indexes để tối ưu performance
+    INDEX idx_blocker_id (blocker_id),
+    INDEX idx_blocked_id (blocked_id),
+    INDEX idx_status (status),
+    INDEX idx_blocked_at (blocked_at),
+    INDEX idx_block_type (block_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
+COMMENT='Bảng quản lý chặn người dùng';
+
+-- Thêm constraint để ngăn người dùng tự chặn mình
+ALTER TABLE user_blocks 
+ADD CONSTRAINT chk_no_self_block 
+CHECK (blocker_id != blocked_id);

@@ -4,6 +4,7 @@ import './HomePage.css';
 import api from '../../services/api';
 import socketService from '../../services/socketService';
 import type { Conversation, ConversationMember } from '../../services/api';
+import { playNotificationSound } from '../../utils/sound';
 
 // Import các components
 import MainSidebar from '../../components/home_user/MainSidebar';
@@ -43,7 +44,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastId, setLastToastId] = useState<number | null>(null);
-  const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
   const [friendIds, setFriendIds] = useState<number[]>([]);
   
   // Tự động cập nhật tổng số tin nhắn chưa đọc khi danh sách conversations thay đổi
@@ -263,19 +263,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     }
   };
 
-  useEffect(() => {
-    // Sử dụng âm thanh dưới dạng Data URL thay vì file .mp3
-    const notificationSound = "data:audio/mp3;base64,SUQzAwAAAAAAI1RJVDIAAAAZAAAAaHR0cDovL3d3dy5mcmVlc2Z4LmNvLnVrVEFFTgAAABIAAABOb3RpZmljYXRpb24gc291bmRURFJDAAAAEAAAAENvcHlyaWdodCBGcmVlU0ZYSU5GAAAAC5AAAERpc2NsYWltZXI6ClRoaXMgc2FtcGxlIGlzIGZvciBlZHVjYXRpb25hbCBwdXJwb3NlcyBvbmx5LiBJdCBjYW5ub3QgYmUgdXNlZCBpbiBjb21tZXJjaWFsIGNvbnRlbnQsIGFuZCBpdCBtdXN0IG5vdCBiZSByZWRpc3RyaWJ1dGVkLWRlc2NyaXB0aW9uDAAAAFNvdW5kIGVmZmVjdA==";
-    notificationSoundRef.current = new Audio(notificationSound);
-    
-    return () => {
-      if (notificationSoundRef.current) {
-        notificationSoundRef.current.pause();
-        notificationSoundRef.current = null;
-      }
-    };
-  }, []);
-
   // Khởi tạo socket và đăng ký các sự kiện
   useEffect(() => {
     if (!user || !user.user_id) return;
@@ -301,10 +288,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         setLastToastId(data.friendship_id);
         
         // Phát âm thanh thông báo
-        if (notificationSoundRef.current) {
-          notificationSoundRef.current.currentTime = 0;
-          notificationSoundRef.current.play().catch(e => console.log('Không thể phát âm thanh:', e));
-        }
+        playNotificationSound();
         
         // Tự động ẩn toast sau 5 giây
         setTimeout(() => {
