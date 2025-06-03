@@ -64,51 +64,8 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     }
   }, [userId, propConversations, fetchConversations]);
 
-  // Lắng nghe sự kiện cập nhật tin nhắn chưa đọc và danh sách cuộc trò chuyện
+  // Lắng nghe sự kiện tin nhắn mới để cập nhật danh sách cuộc trò chuyện
   useEffect(() => {
-    const handleUnreadCountUpdate = (data: any) => {
-      console.log('Nhận cập nhật số tin nhắn chưa đọc từ socket:', data);
-      
-      // Kiểm tra xem dữ liệu có chứa danh sách cuộc trò chuyện không
-      if (data.conversations && Array.isArray(data.conversations)) {
-        console.log('Cập nhật danh sách cuộc trò chuyện từ socket');
-        
-        // Cập nhật danh sách cuộc trò chuyện từ socket
-        if (data.conversations.length > 0) {
-          setConversations(prevConversations => {
-            // Tạo bản sao của danh sách cuộc trò chuyện hiện tại
-            const updatedConversations = [...prevConversations];
-            
-            // Cập nhật thông tin cho từng cuộc trò chuyện
-            data.conversations.forEach((conversationUpdate: any) => {
-              const index = updatedConversations.findIndex(
-                c => c.conversation_id === conversationUpdate.conversation_id
-              );
-              
-              if (index !== -1) {
-                // Cập nhật số tin nhắn chưa đọc
-                updatedConversations[index] = {
-                  ...updatedConversations[index],
-                  unread_count: conversationUpdate.unread_count
-                };
-              }
-            });
-            
-            // Sắp xếp danh sách theo thời gian cập nhật mới nhất
-            return updatedConversations.sort((a, b) => {
-              const timeA = new Date(a.last_message_time || a.updated_at || 0).getTime();
-              const timeB = new Date(b.last_message_time || b.updated_at || 0).getTime();
-              return timeB - timeA;
-            });
-          });
-        }
-      }
-    };
-
-    // Lắng nghe sự kiện cập nhật tin nhắn chưa đọc
-    socketService.on('unread_count_update', handleUnreadCountUpdate);
-    
-    // Lắng nghe sự kiện tin nhắn mới để cập nhật danh sách cuộc trò chuyện
     const handleNewMessage = (data: any) => {
       console.log('MessagesSidebar nhận tin nhắn mới:', data);
 
@@ -131,17 +88,12 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
 
         const updatedConversations = prevConversations.map(conv => {
           if (conv.conversation_id === data.conversation_id) {
-            const newUnreadCount = !(currentConversation && 
-              currentConversation.conversation_id === data.conversation_id) 
-              ? (conv.unread_count || 0) + 1 
-              : conv.unread_count;
-
+            // Chỉ cập nhật nội dung và thời gian tin nhắn mới, giữ nguyên unread_count
             return {
               ...conv,
               last_message_id: data.message_id,
               last_message_content: data.content,
-              last_message_time: data.created_at,
-              unread_count: newUnreadCount
+              last_message_time: data.created_at
             };
           }
           return conv;
@@ -158,7 +110,6 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     socketService.on('new_message', handleNewMessage);
     
     return () => {
-      socketService.off('unread_count_update', handleUnreadCountUpdate);
       socketService.off('new_message', handleNewMessage);
     };
   }, [userId, currentConversation, setConversations, fetchConversations]);

@@ -42,6 +42,12 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [lastToastId, setLastToastId] = useState<number | null>(null);
   const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
   
+  // Tự động cập nhật tổng số tin nhắn chưa đọc khi danh sách conversations thay đổi
+  useEffect(() => {
+    const total = calculateTotalUnreadMessages(conversations);
+    setUnreadMessageCount(total);
+  }, [conversations]);
+
   const calculateTotalUnreadMessages = (conversations: Conversation[]) => {
     return conversations.reduce((total, conversation) => {
       return total + (conversation.unread_count || 0);
@@ -53,9 +59,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       try {
         const userConversations = await api.getUserConversations(user.user_id);
         setConversations(userConversations);
-        const totalUnread = calculateTotalUnreadMessages(userConversations);
-        setUnreadMessageCount(totalUnread);
-        console.log(`Tổng số tin nhắn chưa đọc: ${totalUnread}`);
       } catch (error) {
         console.error('Lỗi khi lấy danh sách cuộc trò chuyện:', error);
       }
@@ -130,21 +133,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
 
   useEffect(() => {
     if (currentConversation && user?.user_id) {
-      api.markAllMessagesAsRead(currentConversation.conversation_id, user.user_id)
-        .then(() => {
-          setConversations(prevConversations => {
-            const updatedConversations = prevConversations.map(conv => {
-              if (conv.conversation_id === currentConversation.conversation_id) {
-                setUnreadMessageCount(prev => Math.max(0, prev - (conv.unread_count || 0)));
-                
-                return { ...conv, unread_count: 0 };
-              }
-              return conv;
-            });
-            return updatedConversations;
-          });
-        })
-        .catch(error => console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error));
+      // Effect markAllMessagesAsRead đã chuyển logic sang MessagesContent
     }
   }, [currentConversation, user]);
 
@@ -327,45 +316,14 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       }
     };
     
-    const handleNewMessage = (data: any) => {
-      console.log('Nhận tin nhắn mới:', data);
-      
-      if (data.sender_id !== user.user_id) {
-        if (!(currentConversation && currentConversation.conversation_id === data.conversation_id)) {
-          setUnreadMessageCount(prev => prev + 1);
-        }
-        
-        setConversations(prevConversations => {
-          return prevConversations.map(conv => {
-            if (conv.conversation_id === data.conversation_id) {
-              const newUnreadCount = !(currentConversation && 
-                currentConversation.conversation_id === data.conversation_id) 
-                ? (conv.unread_count || 0) + 1 
-                : conv.unread_count;
-              
-              return {
-                ...conv,
-                last_message_id: data.message_id,
-                last_message_content: data.content,
-                last_message_time: data.created_at,
-                unread_count: newUnreadCount
-              };
-            }
-            return conv;
-          });
-        });
-      }
-    };
-    
-    const handleUnreadCountUpdate = () => {
-      console.log('Cập nhật số tin nhắn chưa đọc');
+    const handleUnreadCountUpdate = (data: any) => {
+      console.log('Nhận cập nhật số tin nhắn chưa đọc từ socket, làm mới conversations');
       refreshConversations();
     };
     
     // Đăng ký các sự kiện socket
     socketService.on('friend_request', handleFriendRequest);
     socketService.on('friend_request_count_update', handleFriendRequestCountUpdate);
-    socketService.on('new_message', handleNewMessage);
     socketService.on('unread_count_update', handleUnreadCountUpdate);
     
     // Kiểm tra kết nối socket mỗi 10 giây và kết nối lại nếu cần
@@ -381,7 +339,6 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       clearInterval(socketCheckInterval);
       socketService.off('friend_request', handleFriendRequest);
       socketService.off('friend_request_count_update', handleFriendRequestCountUpdate);
-      socketService.off('new_message', handleNewMessage);
       socketService.off('unread_count_update', handleUnreadCountUpdate);
       socketService.disconnect();
     };

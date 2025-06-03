@@ -160,8 +160,8 @@ const sendUnreadCountUpdate = async (userId) => {
 
     // Lấy thông tin các cuộc trò chuyện có tin nhắn mới
     const [conversations] = await db.query(`
-      SELECT c.conversation_id, c.conversation_name, c.conversation_type,
-             c.created_at, c.updated_at, 
+      SELECT c.conversation_id, c.conversation_type,
+             c.created_at, c.updated_at,
              (SELECT COUNT(*) FROM messages m 
               WHERE m.conversation_id = c.conversation_id 
               AND m.sender_id != ? AND m.is_read = 0) as unread_count,
