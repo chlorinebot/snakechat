@@ -18,7 +18,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const currentConversationIdRef = useRef<number | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [_isSocketConnected, setIsSocketConnected] = useState(false);
 
   // Hàm tiện ích để cuộn xuống dưới cùng
   const scrollToBottom = useCallback((smooth = false) => {

@@ -317,40 +317,57 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
           <div style={styles.loadingConversations}>Đang tải...</div>
         ) : filteredConversations.length > 0 ? (
           <div style={styles.conversationList}>
-            {filteredConversations.map((conversation) => (
-              <div 
-                key={conversation.conversation_id}
-                style={{
-                  ...styles.conversationItem,
-                  ...(currentConversation?.conversation_id === conversation.conversation_id ? styles.conversationItemActive : {})
-                }}
-                onClick={() => handleSelectConversation(conversation)}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f5f5f5';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = currentConversation?.conversation_id === conversation.conversation_id ? '#e9f5ff' : '';
-                }}
-              >
-                <div style={styles.conversationAvatar}>
-                  {getConversationName(conversation).charAt(0).toUpperCase()}
-                </div>
-                <div style={styles.conversationInfo}>
-                  <div style={styles.conversationHeader}>
-                    <div style={styles.conversationName}>{getConversationName(conversation)}</div>
-                    <div style={styles.conversationTime}>
-                      {conversation.last_message_time ? formatTime(conversation.last_message_time) : ''}
-                      {conversation.unread_count && conversation.unread_count > 0 ? (
-                        <div style={styles.unreadBadge}>{conversation.unread_count > 99 ? '99+' : conversation.unread_count}</div>
-                      ) : null}
+            {filteredConversations.map((conversation) => {
+              // Xác định thành viên khác và màu trạng thái
+              const otherMember = conversation.conversation_type === 'personal' && conversation.members
+                ? conversation.members.find(member => member.user_id !== userId)
+                : null;
+              const statusColor = otherMember?.status === 'online' ? '#4CAF50' : '#CCCCCC';
+              return (
+                <div
+                  key={conversation.conversation_id}
+                  style={{
+                    ...styles.conversationItem,
+                    ...(currentConversation?.conversation_id === conversation.conversation_id ? styles.conversationItemActive : {})
+                  }}
+                  onClick={() => handleSelectConversation(conversation)}
+                  onMouseOver={e => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                  onMouseOut={e => e.currentTarget.style.backgroundColor = currentConversation?.conversation_id === conversation.conversation_id ? '#e9f5ff' : ''}
+                >
+                  <div style={styles.conversationAvatar}>
+                    {getConversationName(conversation).charAt(0).toUpperCase()}
+                    {otherMember && (
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '2px',
+                        right: '2px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: statusColor,
+                        border: '2px solid white'
+                      }} />
+                    )}
+                  </div>
+                  <div style={styles.conversationInfo}>
+                    <div style={styles.conversationHeader}>
+                      <div style={styles.conversationName}>{getConversationName(conversation)}</div>
+                      <div style={styles.conversationTime}>
+                        {conversation.last_message_time ? formatTime(conversation.last_message_time) : ''}
+                        {(conversation.unread_count ?? 0) > 0 && (
+                          <div style={styles.unreadBadge}>
+                            {(conversation.unread_count ?? 0) > 99 ? '99+' : (conversation.unread_count ?? 0)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={styles.conversationLastMessage}>
+                      {conversation.last_message_content || 'Bắt đầu cuộc trò chuyện...'}
                     </div>
                   </div>
-                  <div style={styles.conversationLastMessage}>
-                    {conversation.last_message_content || 'Bắt đầu cuộc trò chuyện...'}
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div style={styles.emptyConversations}>
