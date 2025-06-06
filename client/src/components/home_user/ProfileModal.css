@@ -378,4 +378,146 @@
 /* Đảm bảo tiêu đề modal luôn màu đen */
 .profile-modal-header h2 {
   color: #000 !important;
+}
+
+/* Style cho khu vực nút hành động */
+.user-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  position: relative;
+}
+
+/* Style chung cho tất cả các nút trong user profile */
+.user-profile-actions button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-profile-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user-profile-actions button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Style cho nút block-user-button */
+.user-profile-actions .block-user-button {
+  background-color: #fd7e14;
+  color: white;
+  margin-top: 16px;
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  border: none;
+}
+
+.user-profile-actions .block-user-button:hover {
+  background-color: #e36c0a;
+}
+
+/* Style cho các nút khác */
+.user-profile-actions .message-friend-button {
+  background-color: #007bff;
+  color: white;
+  flex: 1;
+}
+
+.user-profile-actions .message-friend-button:hover {
+  background-color: #0069d9;
+}
+
+.user-profile-actions .add-friend-button {
+  background-color: #28a745;
+  color: white;
+  flex: 1;
+}
+
+.user-profile-actions .add-friend-button:hover {
+  background-color: #218838;
+}
+
+.user-profile-actions .remove-friend-button,
+.user-profile-actions .reject-friend-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.user-profile-actions .remove-friend-button:hover,
+.user-profile-actions .reject-friend-button:hover {
+  background-color: #c82333;
+}
+
+.user-profile-actions .cancel-friend-button {
+  background-color: #6c757d;
+  color: white;
+  flex: 1;
+}
+
+.user-profile-actions .cancel-friend-button:hover {
+  background-color: #5a6268;
+}
+
+.user-profile-actions .accept-friend-button {
+  background-color: #28a745;
+  color: white;
+  flex: 1;
+}
+
+.user-profile-actions .accept-friend-button:hover {
+  background-color: #218838;
+}
+
+.user-profile-actions .unblock-user-button {
+  background-color: #17a2b8;
+  color: white;
+  width: 100%;
+  justify-content: center;
+  margin-top: 16px;
+  padding: 12px;
+}
+
+.user-profile-actions .unblock-user-button:hover {
+  background-color: #138496;
+}
+
+.user-profile-actions .friend-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background-color: #e9ecef;
+  border-radius: 8px;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.user-profile-actions .locked-status {
+  background-color: #ffecec;
+  color: #dc3545;
+}
+
+.locked-user-action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
 } 

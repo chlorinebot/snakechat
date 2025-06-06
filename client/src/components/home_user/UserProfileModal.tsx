@@ -41,6 +41,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [blockReason, setBlockReason] = useState<string>('');
   const [showBlockModal, setShowBlockModal] = useState<boolean>(false);
   const [blockingUser, setBlockingUser] = useState<boolean>(false);
+  const [showUnblockModal, setShowUnblockModal] = useState<boolean>(false);
 
   useEffect(() => {
     // Lấy thông tin người dùng hiện tại từ localStorage
@@ -299,6 +300,17 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
       return;
     }
     
+    // Hiển thị modal xác nhận bỏ chặn
+    setShowUnblockModal(true);
+  };
+  
+  // Xử lý xác nhận bỏ chặn
+  const handleConfirmUnblock = async () => {
+    if (!userData || !currentUser || !userData.user_id || !currentUser.user_id) {
+      setError('Không thể bỏ chặn người dùng: Thiếu thông tin người dùng');
+      return;
+    }
+    
     setBlockingUser(true);
     
     try {
@@ -307,6 +319,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
       if (result.success) {
         setIsBlockedByMe(false);
         setSuccessMessage('Đã bỏ chặn người dùng thành công');
+        setShowUnblockModal(false);
         
         setTimeout(() => {
           setSuccessMessage('');
@@ -320,6 +333,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     } finally {
       setBlockingUser(false);
     }
+  };
+  
+  // Xử lý hủy bỏ chặn
+  const handleCancelUnblock = () => {
+    setShowUnblockModal(false);
   };
 
   const handleAddFriend = async () => {
@@ -574,136 +592,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   };
 
-  // Render button dựa trên trạng thái kết bạn
-  const renderFriendshipButton = () => {
-    if (isCurrentUser()) {
-      return null; // Không hiển thị nút nếu là chính mình
-    }
-
-    // Không hiển thị nút kết bạn thông thường cho người dùng bị khóa hoặc đã chặn/bị chặn
-    if (isUserLocked || isBlockedByMe || isBlockingMe) {
-      return null; 
-    }
-
-    if (friendshipStatus === 'accepted') {
-      return (
-        <div className="friendship-actions">
-          <div className="main-actions">
-            <button 
-              className="message-friend-button"
-              onClick={async () => {
-                try {
-                  if (!userData?.user_id || !currentUser?.user_id) {
-                    console.error("Không tìm thấy ID người dùng");
-                    return;
-                  }
-
-                  console.log(`Đang tạo/mở cuộc trò chuyện giữa ${currentUser.user_id} và ${userData.user_id}`);
-                  
-                  // Tạo hoặc lấy cuộc trò chuyện 1-1 với người dùng này
-                  const result = await api.getOrCreateOneToOneConversation(
-                    currentUser.user_id, 
-                    userData.user_id
-                  );
-                  
-                  if (result.success && result.data) {
-                    console.log("Đã tạo/mở cuộc trò chuyện:", result.data);
-                    
-                    // Lưu thông tin cuộc trò chuyện hiện tại vào localStorage
-                    localStorage.setItem('currentConversation', JSON.stringify({
-                      conversation_id: result.data.conversation_id,
-                      with_user_id: userData.user_id,
-                      with_username: userData.username
-                    }));
-
-                    // Hiển thị thông báo đang chuyển hướng
-                    setSuccessMessage("Đang chuyển đến khung chat...");
-                    
-                    // Đóng modal thông tin người dùng
-                    onClose();
-                    
-                    // Chuyển đến tab messages sau 1 giây để đảm bảo thông báo được hiển thị
-                    setTimeout(() => {
-                      // Force reload trang với tham số tab=messages
-                      window.location.href = '/?tab=messages';
-                    }, 1000);
-                  } else {
-                    console.error("Không thể tạo cuộc trò chuyện");
-                    setError("Không thể tạo cuộc trò chuyện. Vui lòng thử lại sau.");
-                  }
-                } catch (error) {
-                  console.error("Lỗi khi tạo cuộc trò chuyện:", error);
-                  setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
-                }
-              }}
-            >
-              <i className="fas fa-comment"></i>
-              Nhắn tin
-            </button>
-          </div>
-          
-          <div className="secondary-actions">
-            <span className="friend-status">
-              <i className="fas fa-user-check"></i>
-              Đã là bạn bè
-            </span>
-            <button 
-              className="remove-friend-button" 
-              onClick={handleRemoveFriendClick}
-            >
-              <i className="fas fa-user-minus"></i>
-              Hủy kết bạn
-            </button>
-          </div>
-        </div>
-      );
-    } else if (friendshipStatus === 'pending' && friendRequestSent) {
-      return (
-        <button 
-          className="cancel-friend-button" 
-          onClick={handleCancelFriendRequest}
-          disabled={addingFriend}
-        >
-          <i className="fas fa-user-times"></i>
-          {addingFriend ? 'Đang hủy...' : 'Hủy lời mời kết bạn'}
-        </button>
-      );
-    } else if (friendshipStatus === 'pending' && fromFriendRequest) {
-      // Thêm UI cho trường hợp nhận được lời mời kết bạn
-      return (
-        <div className="friendship-request-buttons">
-          <button 
-            className="accept-friend-button" 
-            onClick={handleAcceptFriendRequest}
-            disabled={processingRequest}
-          >
-            <i className="fas fa-user-check"></i>
-            {processingRequest ? 'Đang xử lý...' : 'Chấp nhận'}
-          </button>
-          <button 
-            className="reject-friend-button" 
-            onClick={handleRejectFriendRequest}
-            disabled={processingRequest}
-          >
-            <i className="fas fa-user-times"></i>
-            {processingRequest ? 'Đang xử lý...' : 'Từ chối'}
-          </button>
-        </div>
-      );
-    } else {
-      return (
-        <button 
-          className="add-friend-button" 
-          onClick={handleAddFriend}
-          disabled={addingFriend || friendRequestSent}
-        >
-          <i className="fas fa-user-plus"></i>
-          {addingFriend ? 'Đang gửi...' : friendRequestSent ? 'Đã gửi lời mời' : 'Kết bạn'}
-        </button>
-      );
-    }
-  };
-
   // Render nút chặn/bỏ chặn người dùng
   const renderBlockButton = () => {
     if (isCurrentUser() || isBlockingMe) return null;
@@ -739,25 +627,150 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     
     if (friendshipStatus === 'accepted') {
       return (
-        <div className="friendship-actions">
-          <div className="secondary-actions">
-            <span className="friend-status locked-status">
-              <i className="fas fa-user-lock"></i>
-              Tài khoản bị khóa
-            </span>
-            <button 
-              className="remove-friend-button" 
-              onClick={handleRemoveFriendClick}
-            >
-              <i className="fas fa-user-minus"></i>
-              Hủy kết bạn
-            </button>
-          </div>
+        <div className="locked-user-action">
+          <span className="friend-status locked-status">
+            <i className="fas fa-user-lock"></i>
+            Tài khoản bị khóa
+          </span>
+          <button 
+            className="remove-friend-button" 
+            onClick={handleRemoveFriendClick}
+          >
+            <i className="fas fa-user-minus"></i>
+            Hủy kết bạn
+          </button>
         </div>
       );
     }
     
     return null;
+  };
+
+  // Render nút kết bạn/hủy kết bạn
+  const renderFriendshipButton = () => {
+    if (isCurrentUser()) {
+      return null; // Không hiển thị nút nếu là chính mình
+    }
+
+    // Không hiển thị nút kết bạn thông thường cho người dùng bị khóa hoặc đã chặn/bị chặn
+    if (isUserLocked || isBlockedByMe || isBlockingMe) {
+      return null; 
+    }
+
+    if (friendshipStatus === 'accepted') {
+      return (
+        <>
+          <button 
+            className="message-friend-button"
+            onClick={async () => {
+              try {
+                if (!userData?.user_id || !currentUser?.user_id) {
+                  console.error("Không tìm thấy ID người dùng");
+                  return;
+                }
+
+                console.log(`Đang tạo/mở cuộc trò chuyện giữa ${currentUser.user_id} và ${userData.user_id}`);
+                
+                // Tạo hoặc lấy cuộc trò chuyện 1-1 với người dùng này
+                const result = await api.getOrCreateOneToOneConversation(
+                  currentUser.user_id, 
+                  userData.user_id
+                );
+                
+                if (result.success && result.data) {
+                  console.log("Đã tạo/mở cuộc trò chuyện:", result.data);
+                  
+                  // Lưu thông tin cuộc trò chuyện hiện tại vào localStorage
+                  localStorage.setItem('currentConversation', JSON.stringify({
+                    conversation_id: result.data.conversation_id,
+                    with_user_id: userData.user_id,
+                    with_username: userData.username
+                  }));
+
+                  // Hiển thị thông báo đang chuyển hướng
+                  setSuccessMessage("Đang chuyển đến khung chat...");
+                  
+                  // Đóng modal thông tin người dùng
+                  onClose();
+                  
+                  // Chuyển đến tab messages sau 1 giây để đảm bảo thông báo được hiển thị
+                  setTimeout(() => {
+                    // Force reload trang với tham số tab=messages
+                    window.location.href = '/?tab=messages';
+                  }, 1000);
+                } else {
+                  console.error("Không thể tạo cuộc trò chuyện");
+                  setError("Không thể tạo cuộc trò chuyện. Vui lòng thử lại sau.");
+                }
+              } catch (error) {
+                console.error("Lỗi khi tạo cuộc trò chuyện:", error);
+                setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
+              }
+            }}
+          >
+            <i className="fas fa-comment"></i>
+            Nhắn tin
+          </button>
+          
+          <span className="friend-status">
+            <i className="fas fa-user-check"></i>
+            Đã là bạn bè
+          </span>
+          
+          <button 
+            className="remove-friend-button" 
+            onClick={handleRemoveFriendClick}
+          >
+            <i className="fas fa-user-minus"></i>
+            Hủy kết bạn
+          </button>
+        </>
+      );
+    } else if (friendshipStatus === 'pending' && friendRequestSent) {
+      return (
+        <button 
+          className="cancel-friend-button" 
+          onClick={handleCancelFriendRequest}
+          disabled={addingFriend}
+        >
+          <i className="fas fa-user-times"></i>
+          {addingFriend ? 'Đang hủy...' : 'Hủy lời mời kết bạn'}
+        </button>
+      );
+    } else if (friendshipStatus === 'pending' && fromFriendRequest) {
+      // Thêm UI cho trường hợp nhận được lời mời kết bạn
+      return (
+        <>
+          <button 
+            className="accept-friend-button" 
+            onClick={handleAcceptFriendRequest}
+            disabled={processingRequest}
+          >
+            <i className="fas fa-user-check"></i>
+            {processingRequest ? 'Đang xử lý...' : 'Chấp nhận'}
+          </button>
+          <button 
+            className="reject-friend-button" 
+            onClick={handleRejectFriendRequest}
+            disabled={processingRequest}
+          >
+            <i className="fas fa-user-times"></i>
+            {processingRequest ? 'Đang xử lý...' : 'Từ chối'}
+          </button>
+        </>
+      );
+    } else {
+      return (
+        <button 
+          className="add-friend-button" 
+          onClick={handleAddFriend}
+          disabled={addingFriend || friendRequestSent}
+        >
+          <i className="fas fa-user-plus"></i>
+          {addingFriend ? 'Đang gửi...' : friendRequestSent ? 'Đã gửi lời mời' : 'Kết bạn'}
+        </button>
+      );
+    }
   };
 
   return (
@@ -852,16 +865,19 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <div className="info-label">Ngày tham gia:</div>
                       <div className="info-value">{formatDate(userData.join_date)}</div>
                     </div>
-                    
-                    {renderFriendshipButton()}
-                    {renderLockedUserActions()}
-                    {renderBlockButton()}
+
+                    {/* Thêm khu vực chứa các nút hành động tập trung */}
+                    <div className="user-profile-actions">
+                      {renderFriendshipButton()}
+                      {renderLockedUserActions()}
+                      {renderBlockButton()}
+                    </div>
                   </div>
                 </div>
               );
             })()
           ) : (
-            <div className="profile-error">Không thể tải thông tin người dùng</div>
+            <div className="profile-error">Không thể tải thông tin người dùng.</div>
           )}
         </div>
         
@@ -901,6 +917,38 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           </div>
         )}
+        
+        {/* Modal xác nhận bỏ chặn người dùng */}
+        <div className="confirm-modal-overlay" style={{ display: showUnblockModal ? 'flex' : 'none' }}>
+          <div className="confirm-modal">
+            <div className="confirm-modal-header">
+              <h3>Xác nhận bỏ chặn</h3>
+            </div>
+            <div className="confirm-modal-content">
+              <p>
+                Bạn có chắc chắn muốn bỏ chặn <strong>{userData?.username}</strong>? 
+                Người này sẽ có thể nhìn thấy thông tin của bạn và gửi tin nhắn cho bạn.
+              </p>
+              <div className="confirm-modal-buttons">
+                <button 
+                  className="confirm-button"
+                  style={{ backgroundColor: '#2196F3' }}
+                  onClick={handleConfirmUnblock}
+                  disabled={blockingUser}
+                >
+                  {blockingUser ? 'Đang xử lý...' : 'Xác nhận bỏ chặn'}
+                </button>
+                <button 
+                  className="cancel-button"
+                  onClick={handleCancelUnblock}
+                  disabled={blockingUser}
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* Sử dụng component modal xác nhận hủy kết bạn */}
         <ConfirmRemoveFriendModal 

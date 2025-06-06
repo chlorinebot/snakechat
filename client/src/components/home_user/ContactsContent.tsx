@@ -5,6 +5,7 @@ import UserProfileModal from './UserProfileModal';
 import SortDropdown from '../common/SortDropdown';
 import type { SortOption } from '../common/SortDropdown';
 import socketService from '../../services/socketService';
+import SuccessToast from '../common/SuccessToast';
 
 interface ContactsContentProps {
   activeTab?: 'friends' | 'requests' | 'explore' | 'blocked';
@@ -53,6 +54,12 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   // Thêm state cho tìm kiếm bạn bè
   const [friendSearchTerm, setFriendSearchTerm] = useState<string>('');
   const [filteredFriends, setFilteredFriends] = useState<User[]>([]);
+  
+  // Thêm state cho modal xác nhận bỏ chặn và xử lý bỏ chặn
+  const [showUnblockModal, setShowUnblockModal] = useState<boolean>(false);
+  const [selectedBlockInfo, setSelectedBlockInfo] = useState<BlockedUser | null>(null);
+  const [unblockingUser, setUnblockingUser] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
   
   // Các style chung cho các thành phần
   const itemContainerStyle = {
@@ -819,29 +826,46 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     }
   };
   
+  // Xử lý khi nhấp vào nút bỏ chặn
+  const handleUnblockClick = (blockInfo: BlockedUser) => {
+    setSelectedBlockInfo(blockInfo);
+    setShowUnblockModal(true);
+  };
+  
   // Xử lý bỏ chặn người dùng
-  const handleUnblockUser = async (blockId: number) => {
-    if (!currentUser?.user_id) return;
+  const handleUnblockUser = async () => {
+    if (!currentUser?.user_id || !selectedBlockInfo) return;
+    
+    setUnblockingUser(true);
     
     try {
-      // Tìm thông tin block để lấy blocker_id và blocked_id
-      const blockInfo = blockedUsers.find(b => b.block_id === blockId);
-      if (!blockInfo) {
-        console.error('Không tìm thấy thông tin chặn với ID:', blockId);
-        return;
-      }
-      
-      const result = await api.unblockUser(blockInfo.blocker_id, blockInfo.blocked_id);
+      const result = await api.unblockUser(selectedBlockInfo.blocker_id, selectedBlockInfo.blocked_id);
       if (result.success) {
         console.log('Đã bỏ chặn người dùng thành công');
-        // Cập nhật lại danh sách người bị chặn
+        
+        // Hiển thị thông báo thành công
+        setSuccessMessage(`Đã bỏ chặn ${selectedBlockInfo.user.username} thành công`);
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 3000);
+        
+        // Đóng modal và cập nhật lại danh sách người bị chặn
+        setShowUnblockModal(false);
         fetchBlockedUsers();
       } else {
         console.error('Lỗi khi bỏ chặn người dùng:', result.message);
       }
     } catch (error) {
       console.error('Lỗi khi bỏ chặn người dùng:', error);
+    } finally {
+      setUnblockingUser(false);
     }
+  };
+  
+  // Xử lý hủy bỏ chặn
+  const handleCancelUnblock = () => {
+    setShowUnblockModal(false);
+    setSelectedBlockInfo(null);
   };
 
   // Thêm hàm render danh sách người dùng đã chặn
@@ -897,20 +921,54 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
               <div className="friend-request-actions" style={actionsStyle}>
                 <button 
                   className="primary-action-btn unblock-btn"
-                  onClick={() => handleUnblockUser(blockedItem.block_id)}
+                  onClick={() => handleUnblockClick(blockedItem)}
+                  disabled={unblockingUser}
                 >
                   <i className="fas fa-unlock"></i>
-                  Bỏ chặn
+                  {blockedItem.block_id === selectedBlockInfo?.block_id && unblockingUser ? 'Đang xử lý...' : 'Bỏ chặn'}
                 </button>
               </div>
             </div>
           );
         })}
         
+        {/* Modal xác nhận bỏ chặn */}
+        <div className="confirm-modal-overlay" style={{ display: showUnblockModal ? 'flex' : 'none' }}>
+          <div className="confirm-modal">
+            <div className="confirm-modal-header">
+              <h3>Xác nhận bỏ chặn</h3>
+            </div>
+            <div className="confirm-modal-content">
+              <p>
+                Bạn có chắc chắn muốn bỏ chặn <strong>{selectedBlockInfo?.user.username}</strong>? 
+                Người này sẽ có thể nhìn thấy thông tin của bạn và gửi tin nhắn cho bạn.
+              </p>
+              <div className="confirm-modal-buttons">
+                <button 
+                  className="confirm-button"
+                  style={{ backgroundColor: '#2196F3' }}
+                  onClick={handleUnblockUser}
+                  disabled={unblockingUser}
+                >
+                  {unblockingUser ? 'Đang xử lý...' : 'Xác nhận bỏ chặn'}
+                </button>
+                <button 
+                  className="cancel-button"
+                  onClick={handleCancelUnblock}
+                  disabled={unblockingUser}
+                >
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <style>
           {`
             .blocked-users-container {
               padding: 10px;
+              position: relative;
             }
             
             .section-header {
@@ -967,8 +1025,115 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
               background-color: #0b7dda;
             }
             
+            .unblock-btn:disabled {
+              background-color: #90caf9;
+              cursor: not-allowed;
+            }
+            
             .unblock-btn i {
               font-size: 12px;
+            }
+            
+            .confirm-modal-overlay {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background-color: rgba(0, 0, 0, 0.5);
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              z-index: 2000;
+            }
+            
+            .confirm-modal {
+              background-color: white;
+              border-radius: 8px;
+              width: 400px;
+              max-width: 90%;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+              animation: modal-appear 0.3s ease-out;
+            }
+            
+            .confirm-modal-header {
+              padding: 15px 20px;
+              border-bottom: 1px solid #eaeaea;
+            }
+            
+            .confirm-modal-header h3 {
+              margin: 0;
+              font-size: 18px;
+              color: #333;
+            }
+            
+            .confirm-modal-content {
+              padding: 20px;
+            }
+            
+            .confirm-modal-content p {
+              margin-top: 0;
+              margin-bottom: 20px;
+              font-size: 15px;
+              color: #444;
+              line-height: 1.5;
+            }
+            
+            .confirm-modal-buttons {
+              display: flex;
+              justify-content: flex-end;
+              gap: 10px;
+            }
+            
+            .confirm-button {
+              background-color: #2196F3;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              padding: 8px 16px;
+              font-size: 14px;
+              cursor: pointer;
+              transition: background-color 0.2s;
+            }
+            
+            .confirm-button:hover {
+              background-color: #0b7dda;
+            }
+            
+            .confirm-button:disabled {
+              background-color: #90caf9;
+              cursor: not-allowed;
+            }
+            
+            .cancel-button {
+              background-color: #f0f0f0;
+              color: #333;
+              border: none;
+              border-radius: 4px;
+              padding: 8px 16px;
+              font-size: 14px;
+              cursor: pointer;
+              transition: background-color 0.2s;
+            }
+            
+            .cancel-button:hover {
+              background-color: #e0e0e0;
+            }
+            
+            .cancel-button:disabled {
+              opacity: 0.7;
+              cursor: not-allowed;
+            }
+            
+            @keyframes modal-appear {
+              from {
+                opacity: 0;
+                transform: translateY(-20px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
             }
           `}
         </style>
@@ -1163,16 +1328,15 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
             .status-label {
               display: flex;
               align-items: center;
-              gap: 6px;
-              padding: 6px 12px;
-              border-radius: 4px;
               font-size: 13px;
-              font-weight: 500;
+              padding: 5px 10px;
+              border-radius: 15px;
+              gap: 5px;
             }
             
             .friend-status-label {
-              background-color: #e3f2fd;
-              color: #2196f3;
+              background-color: #e8f5e9;
+              color: #43a047;
             }
             
             .pending-request-label {
@@ -1809,8 +1973,15 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
           onClose={handleCloseUserProfileModal}
           userId={selectedUserId}
           onFriendRequestSent={handleProfileModalUpdate}
-          fromFriendRequest={activeTab === 'requests'}
-          friendshipId={friendRequests.find(req => req.user.user_id === selectedUserId)?.friendship_id}
+          fromFriendRequest={false}
+        />
+      )}
+      
+      {/* Thêm toast thông báo thành công */}
+      {successMessage && (
+        <SuccessToast 
+          message={successMessage} 
+          duration={3000}
         />
       )}
     </div>
