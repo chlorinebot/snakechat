@@ -62,7 +62,7 @@ export interface Message {
 // Interface cho cuộc trò chuyện
 export interface Conversation {
   conversation_id: number;
-  conversation_type: string;
+  conversation_type: 'personal' | 'group' | 'system';
   created_at: string;
   updated_at: string;
   last_message_id?: number;
@@ -906,6 +906,14 @@ export const api = {
         status: 'unresolved'
       });
       
+      // Gửi tin nhắn hệ thống
+      if (response.data.success) {
+        await api.sendSystemMessage(
+          reportData.id_user,
+          `Cảm ơn bạn đã gửi báo cáo lỗi cho chúng tôi. Mã báo cáo của bạn là #${response.data.data.id_reports}. Chúng tôi sẽ xem xét và xử lý vấn đề này trong thời gian sớm nhất. Xin cảm ơn đóng góp của bạn để SnakeChat ngày càng hoàn thiện hơn!`
+        );
+      }
+      
       return { 
         success: true, 
         message: 'Đã gửi báo cáo sự cố thành công', 
@@ -926,6 +934,14 @@ export const api = {
         status: 'unresolved'
       });
       
+      // Gửi tin nhắn hệ thống
+      if (response.data.success) {
+        await api.sendSystemMessage(
+          feedbackData.id_user,
+          `Cảm ơn bạn đã gửi góp ý cho chúng tôi. Mã góp ý của bạn là #${response.data.data.id_reports}. Chúng tôi rất trân trọng những đóng góp của bạn và sẽ xem xét cẩn thận để cải thiện dịch vụ. Xin cảm ơn vì đã đồng hành cùng SnakeChat!`
+        );
+      }
+      
       return { 
         success: true, 
         message: 'Đã gửi góp ý thành công', 
@@ -945,6 +961,14 @@ export const api = {
         report_type: 'complaint',
         status: 'unresolved'
       });
+      
+      // Gửi tin nhắn hệ thống
+      if (response.data.success) {
+        await api.sendSystemMessage(
+          complaintData.id_user,
+          `Cảm ơn bạn đã gửi khiếu nại cho chúng tôi. Mã khiếu nại của bạn là #${response.data.data.id_reports}. Chúng tôi sẽ xem xét vấn đề của bạn một cách nghiêm túc và phản hồi trong thời gian sớm nhất. Xin lỗi vì sự bất tiện này và cảm ơn bạn đã giúp chúng tôi cải thiện dịch vụ.`
+        );
+      }
       
       return { 
         success: true, 
@@ -995,6 +1019,21 @@ export const api = {
     } catch (error: any) {
       console.error('Lỗi khi cập nhật trạng thái báo cáo:', error.message);
       return { success: false, message: 'Lỗi khi cập nhật trạng thái báo cáo' };
+    }
+  },
+
+  // Gửi tin nhắn hệ thống
+  sendSystemMessage: async (userId: number, content: string) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: Message }>(`${API_URL}/messages/system`, {
+        user_id: userId,
+        content
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Lỗi khi gửi tin nhắn hệ thống:', error.message);
+      return { success: false, message: 'Lỗi khi gửi tin nhắn hệ thống' };
     }
   },
 };

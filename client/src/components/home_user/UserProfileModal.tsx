@@ -540,6 +540,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   };
 
+  // Thêm kiểm tra xem tài khoản có phải là tài khoản hệ thống hay không
+  const isSystemAccount = () => {
+    return userData?.user_id === 1 || userData?.username === 'Hệ thống';
+  };
+
   if (!isOpen) return null;
 
   // Format ngày thành dd/mm/yyyy
@@ -594,7 +599,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   // Render nút chặn/bỏ chặn người dùng
   const renderBlockButton = () => {
-    if (isCurrentUser() || isBlockingMe) return null;
+    // Không hiển thị nút chặn nếu là tài khoản hệ thống
+    if (isCurrentUser() || isBlockingMe || isSystemAccount()) return null;
     
     if (isBlockedByMe) {
       return (
@@ -648,8 +654,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   // Render nút kết bạn/hủy kết bạn
   const renderFriendshipButton = () => {
-    if (isCurrentUser()) {
-      return null; // Không hiển thị nút nếu là chính mình
+    // Không hiển thị nút kết bạn nếu là chính mình hoặc tài khoản hệ thống
+    if (isCurrentUser() || isSystemAccount()) {
+      return null;
     }
 
     // Không hiển thị nút kết bạn thông thường cho người dùng bị khóa hoặc đã chặn/bị chặn
@@ -849,7 +856,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <div className="blocked-account-info">
                         <div className="info-group">
                           <div className="info-label">Trạng thái:</div>
-                          <div className="info-value">Bạn đã bị chặn</div>
+                          <div className="info-value">Bạn đã bị người dùng này chặn</div>
                         </div>
                       </div>
                     )}
@@ -861,10 +868,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       </div>
                     )}
                     
-                    <div className="info-group">
-                      <div className="info-label">Ngày tham gia:</div>
-                      <div className="info-value">{formatDate(userData.join_date)}</div>
-                    </div>
+                    {/* Hiển thị ngày tham gia chỉ khi không phải tài khoản hệ thống */}
+                    {!isSystemAccount() && (
+                      <div className="info-group">
+                        <div className="info-label">Ngày tham gia:</div>
+                        <div className="info-value">{formatDate(userData.join_date)}</div>
+                      </div>
+                    )}
 
                     {/* Thêm khu vực chứa các nút hành động tập trung */}
                     <div className="user-profile-actions">

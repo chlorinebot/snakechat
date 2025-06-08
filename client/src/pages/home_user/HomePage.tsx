@@ -543,12 +543,26 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     setCurrentConversation(updatedConversation);
   };
 
-  // Lấy tên cuộc trò chuyện cho header
+  // Lấy tên hiển thị cho cuộc trò chuyện
   const getConversationName = (conversation: Conversation) => {
-    if (conversation.conversation_type === 'personal' && conversation.members) {
-      const other = conversation.members.find(member => member.user_id !== user.user_id);
-      return other?.username || 'Người dùng';
+    // Nếu là cuộc trò chuyện hệ thống
+    if (conversation.conversation_type === 'system') {
+      return 'Thông báo Hệ thống';
     }
+    
+    // Nếu là cuộc trò chuyện 1-1
+    if (conversation.conversation_type === 'personal' && conversation.members) {
+      const otherMember = conversation.members.find(member => member.user_id !== user.user_id);
+      
+      // Nếu người dùng kia là tài khoản hệ thống (ID: 1)
+      if (otherMember && otherMember.user_id === 1) {
+        return 'Thông báo Hệ thống';
+      }
+      
+      return otherMember?.username || 'Người dùng';
+    }
+    
+    // Nếu là cuộc trò chuyện nhóm
     return `Nhóm (${conversation.members?.length || 0} thành viên)`;
   };
 

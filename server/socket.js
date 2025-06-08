@@ -196,8 +196,22 @@ const sendUnreadCountUpdate = async (userId) => {
   }
 };
 
+// Gửi tin nhắn đến một người dùng cụ thể
+const emitToUser = (userId, event, data) => {
+  const userSocket = userSockets.get(parseInt(userId));
+  if (userSocket) {
+    userSocket.emit(event, data);
+    console.log(`[SOCKET-SERVER] Đã gửi sự kiện ${event} đến người dùng ${userId}`);
+    return true;
+  } else {
+    console.log(`[SOCKET-SERVER] Không thể gửi sự kiện ${event} đến người dùng ${userId} (không trực tuyến)`);
+    return false;
+  }
+};
+
 module.exports = {
   setupSocket,
   sendNotificationToUser,
-  sendUnreadCountUpdate
+  sendUnreadCountUpdate,
+  emitToUser
 }; 

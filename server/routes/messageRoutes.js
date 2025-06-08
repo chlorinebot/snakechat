@@ -17,4 +17,7 @@ router.post('/mark-all-read', messageController.markAllMessagesAsRead);
 // Lấy thông tin trạng thái đã đọc của tin nhắn
 router.get('/read-status', messageController.getMessageReadStatus);
 
+// Gửi tin nhắn hệ thống đến người dùng
+router.post('/system', messageController.sendSystemMessage);
+
 module.exports = router; 

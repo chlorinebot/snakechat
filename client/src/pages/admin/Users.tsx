@@ -31,6 +31,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString('vi-VN'));
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [roles, setRoles] = useState<any[]>([]);
   
   // Ref để theo dõi nếu đang cập nhật tự động
   const isAutoUpdateRef = useRef<boolean>(false);
@@ -42,6 +43,7 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   // Khởi tạo và cập nhật theo thời gian thực
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
     
     // Thiết lập interval để cập nhật danh sách người dùng theo thời gian thực
     const intervalId = setInterval(() => {
@@ -98,6 +100,15 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
       setMessage('Lỗi khi tải dữ liệu từ server');
       setIsUpdating(false);
       isAutoUpdateRef.current = false;
+    }
+  };
+
+  const fetchRoles = async () => {
+    try {
+      const roleData = await api.getRoles();
+      setRoles(roleData);
+    } catch (error) {
+      console.error('Lỗi khi lấy dữ liệu vai trò:', error);
     }
   };
 
@@ -297,9 +308,21 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   };
 
   const getRoleBadge = (roleId: number) => {
-    const adminStyle = {
-      backgroundColor: '#06d6a0',
-      color: '#000000',
+    const roleStyles: Record<number, { bg: string, color: string }> = {
+      1: { bg: '#06d6a0', color: '#000000' }, // Admin
+      2: { bg: '#4d7cfe', color: '#ffffff' }, // User
+      3: { bg: '#f5a623', color: '#000000' }  // System (mặc định cho vai trò mới)
+    };
+    
+    // Tìm vai trò tương ứng trong danh sách vai trò
+    const role = roles.find(r => r.role_id === roleId);
+    
+    // Xác định kiểu màu
+    const style = roleStyles[roleId] || { bg: '#9e9e9e', color: '#ffffff' };
+    
+    const badgeStyle = {
+      backgroundColor: style.bg,
+      color: style.color,
       fontWeight: 700,
       padding: '5px 12px',
       display: 'inline-block',
@@ -307,19 +330,11 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
       textAlign: 'center' as const
     };
     
-    const userStyle = {
-      backgroundColor: '#4d7cfe',
-      color: '#ffffff',
-      fontWeight: 700,
-      padding: '5px 12px',
-      display: 'inline-block',
-      minWidth: '70px',
-      textAlign: 'center' as const
-    };
-    
-    return roleId === 1 ? 
-      <Badge bg="success" className="role-badge" style={adminStyle}>Admin</Badge> : 
-      <Badge bg="primary" className="role-badge" style={userStyle}>User</Badge>;
+    return (
+      <Badge className="role-badge" style={badgeStyle}>
+        {role ? role.role_name : `Role #${roleId}`}
+      </Badge>
+    );
   };
 
   const formatDate = (dateString: string | undefined) => {
@@ -612,10 +627,11 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                 label: 'Vai trò',
                 type: 'select',
                 placeholder: '',
-                options: [
-                  { value: '2', label: 'User', selected: true },
-                  { value: '1', label: 'Admin' }
-                ]
+                options: roles.map(role => ({
+                  value: role.role_id.toString(),
+                  label: role.role_name,
+                  selected: role.role_id === 2
+                }))
               }
             ]}
             onSubmit={handleSubmit}
@@ -663,10 +679,11 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                   label: 'Vai trò',
                   type: 'select',
                   placeholder: '',
-                  options: [
-                    { value: '2', label: 'User', selected: selectedUser.role_id === 2 },
-                    { value: '1', label: 'Admin', selected: selectedUser.role_id === 1 }
-                  ]
+                  options: roles.map(role => ({
+                    value: role.role_id.toString(),
+                    label: role.role_name,
+                    selected: selectedUser.role_id === role.role_id
+                  }))
                 }
               ]}
               onSubmit={handleUpdate}

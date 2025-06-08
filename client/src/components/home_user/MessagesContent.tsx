@@ -26,6 +26,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [_isSocketConnected, setIsSocketConnected] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isSystemAccount, setIsSystemAccount] = useState<boolean>(false);
 
   // Hàm tiện ích để cuộn xuống dưới cùng
   const scrollToBottom = useCallback((smooth = false) => {
@@ -439,6 +440,23 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       }
     } else {
       setIsBlocked(false);
+    }
+  }, [currentConversation, userId]);
+
+  // Thêm useEffect để kiểm tra xem cuộc trò chuyện hiện tại có phải với tài khoản hệ thống không
+  useEffect(() => {
+    if (currentConversation?.conversation_type === 'personal' && currentConversation.members) {
+      // Tìm thành viên khác không phải người dùng hiện tại
+      const otherMember = currentConversation.members.find(member => member.user_id !== userId);
+      
+      // Kiểm tra xem người dùng kia có phải là tài khoản hệ thống (ID: 1) không
+      if (otherMember && otherMember.user_id === 1) {
+        setIsSystemAccount(true);
+      } else {
+        setIsSystemAccount(false);
+      }
+    } else {
+      setIsSystemAccount(false);
     }
   }, [currentConversation, userId]);
 
@@ -1471,7 +1489,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               display: 'flex',
               flexDirection: 'column',
               overflowY: 'scroll',
-              height: 'calc(100% - 65px)',
+              height: isSystemAccount ? '100%' : 'calc(100% - 65px)', // Điều chỉnh chiều cao khi không có thanh soạn tin nhắn
             }} 
             ref={messagesContainerRef} 
             onScroll={handleScroll}
@@ -1544,74 +1562,92 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             </div>
           </div>
           
-          {isBlocked ? (
-            <div className="blocked-chat-message" style={{ ...styles.inputArea, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#e74c3c' }}>
-              Không thể gửi tin nhắn. Hai người đã chặn nhau.
-            </div>
-          ) : (
-            <div className="input-area" style={styles.inputArea} onClick={() => inputRef.current?.focus()}>
-              <form style={styles.inputForm} onSubmit={handleSendMessage}>
-                <button
-                  type="button"
-                  className="emoji-button"
-                  style={styles.emojiButton}
-                  onClick={handleEmojiButtonClick}
-                >
-                  <i className="far fa-smile"></i>
-                </button>
-                {showEmojiPicker && (
-                  <div 
-                    className="emoji-picker-container" 
-                    style={styles.emojiPickerContainer} 
-                    onClick={handleEmojiPickerInteraction}
-                    onMouseDown={(e) => {
-                      // Ngăn chặn sự kiện mousedown để không ảnh hưởng đến focus
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShouldAutoFocus(false);
-                    }}
+          {/* Chỉ hiển thị thanh nhập tin nhắn nếu không phải tài khoản hệ thống */}
+          {!isSystemAccount && (
+            isBlocked ? (
+              <div className="blocked-chat-message" style={{ ...styles.inputArea, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#e74c3c' }}>
+                Không thể gửi tin nhắn. Hai người đã chặn nhau.
+              </div>
+            ) : (
+              <div className="input-area" style={styles.inputArea} onClick={() => inputRef.current?.focus()}>
+                <form style={styles.inputForm} onSubmit={handleSendMessage}>
+                  <button
+                    type="button"
+                    className="emoji-button"
+                    style={styles.emojiButton}
+                    onClick={handleEmojiButtonClick}
                   >
-                    <EmojiPicker
-                      onEmojiClick={onEmojiClick}
-                      searchDisabled={false}
-                      emojiStyle="native"
-                      theme="light"
-                      skinTonesDisabled={true}
-                      previewConfig={{
-                        defaultCaption: "Chọn Emoji...",
-                        defaultEmoji: "1f60a"
+                    <i className="far fa-smile"></i>
+                  </button>
+                  {showEmojiPicker && (
+                    <div 
+                      className="emoji-picker-container" 
+                      style={styles.emojiPickerContainer} 
+                      onClick={handleEmojiPickerInteraction}
+                      onMouseDown={(e) => {
+                        // Ngăn chặn sự kiện mousedown để không ảnh hưởng đến focus
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShouldAutoFocus(false);
                       }}
-                    />
-                  </div>
-                )}
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder="Nhập tin nhắn..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  style={styles.messageInput}
-                  disabled={sending}
-                  autoFocus={shouldAutoFocus}
-                  onFocus={() => {
-                    // Nếu đang hiển thị emoji picker và không nên auto focus, blur input
-                    if (showEmojiPicker && !shouldAutoFocus) {
-                      inputRef.current?.blur();
-                    }
-                  }}
-                />
-                <button 
-                  type="submit" 
-                  style={{
-                    ...styles.sendButton,
-                    opacity: !newMessage.trim() || sending ? 0.6 : 1,
-                  }} 
-                  disabled={!newMessage.trim() || sending}
-                >
-                  <i className="fas fa-paper-plane"></i>
-                </button>
-              </form>
+                    >
+                      <EmojiPicker
+                        onEmojiClick={onEmojiClick}
+                        searchDisabled={false}
+                        emojiStyle="native"
+                        theme="light"
+                        skinTonesDisabled={true}
+                        previewConfig={{
+                          defaultCaption: "Chọn Emoji...",
+                          defaultEmoji: "1f60a"
+                        }}
+                      />
+                    </div>
+                  )}
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Nhập tin nhắn..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    style={styles.messageInput}
+                    disabled={sending}
+                    autoFocus={shouldAutoFocus}
+                    onFocus={() => {
+                      // Nếu đang hiển thị emoji picker và không nên auto focus, blur input
+                      if (showEmojiPicker && !shouldAutoFocus) {
+                        inputRef.current?.blur();
+                      }
+                    }}
+                  />
+                  <button 
+                    type="submit" 
+                    style={{
+                      ...styles.sendButton,
+                      opacity: !newMessage.trim() || sending ? 0.6 : 1,
+                    }} 
+                    disabled={!newMessage.trim() || sending}
+                  >
+                    <i className="fas fa-paper-plane"></i>
+                  </button>
+                </form>
+              </div>
+            )
+          )}
+          {/* Hiển thị thông báo nếu là tài khoản hệ thống */}
+          {isSystemAccount && (
+            <div className="system-account-message" style={{ 
+              ...styles.inputArea, 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              color: '#666',
+              backgroundColor: '#f8f9fa',
+              fontStyle: 'italic',
+              borderTop: '1px solid #eee'
+            }}>
+              Đây là tin nhắn hệ thống. Bạn không thể trả lời trực tiếp.
             </div>
           )}
         </>

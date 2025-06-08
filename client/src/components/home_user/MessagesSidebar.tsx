@@ -204,10 +204,21 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
 
   // Lấy tên hiển thị cho cuộc trò chuyện
   const getConversationName = (conversation: Conversation) => {
+    // Nếu là cuộc trò chuyện hệ thống
+    if (conversation.conversation_type === 'system') {
+      return 'Thông báo Hệ thống';
+    }
+    
     // Nếu là cuộc trò chuyện 1-1
     if (conversation.conversation_type === 'personal' && conversation.members) {
       // Tìm thành viên khác không phải người dùng hiện tại
       const otherMember = conversation.members.find(member => member.user_id !== userId);
+      
+      // Nếu người dùng kia là tài khoản hệ thống (ID: 1)
+      if (otherMember && otherMember.user_id === 1) {
+        return 'Thông báo Hệ thống';
+      }
+      
       return otherMember?.username || 'Người dùng';
     }
     

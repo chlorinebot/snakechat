@@ -64,7 +64,7 @@ INSERT IGNORE INTO role (role_id, role_name, description) VALUES
 -- Tạo bảng cuộc trò chuyện
 CREATE TABLE IF NOT EXISTS conversations (
   conversation_id BIGINT(20) PRIMARY KEY AUTO_INCREMENT,
-  conversation_type ENUM('personal', 'group') NOT NULL,
+  conversation_type ENUM('personal', 'group', 'system') NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
