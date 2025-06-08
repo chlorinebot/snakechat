@@ -9,6 +9,7 @@ import LockedAccounts from './pages/admin/LockedAccounts';
 import HomePage from './pages/home_user/HomePage';
 import AccountLockGuard from './components/common/AccountLockGuard';
 import api from './services/api';
+import Reports from './pages/admin/Reports';
 
 // URL endpoint cho cập nhật trạng thái
 const API_URL = 'http://localhost:5000/api';
@@ -497,6 +498,15 @@ const App: React.FC = () => {
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
               <LockedAccounts onLogout={handleLogout} />
+            </AccountLockGuard>
+            : <Navigate to="/login" />
+          } 
+        />
+        <Route 
+          path="/admin/reports" 
+          element={isAuthenticated && isAdmin ? 
+            <AccountLockGuard>
+              <Reports onLogout={handleLogout} />
             </AccountLockGuard>
             : <Navigate to="/login" />
           } 

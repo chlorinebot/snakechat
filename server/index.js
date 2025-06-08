@@ -7,6 +7,7 @@ const roleRoutes = require('./routes/roleRoutes');
 const friendshipRoutes = require('./routes/friendshipRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { setupInactiveUsersCron } = require('./services/cronService');
 const { setupSocket } = require('./socket');
@@ -43,6 +44,7 @@ app.use('/api/role', roleRoutes);
 app.use('/api/friendship', friendshipRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/report', reportRoutes);
 
 // Error Handler
 app.use(errorHandler);

@@ -5,23 +5,34 @@ const roleController = require('./controllers/roleController');
 const friendshipController = require('./controllers/friendshipController');
 const conversationController = require('./controllers/conversationController');
 const messageController = require('./controllers/messageController');
+const reportController = require('./controllers/reportController');
 
 // User routes
 router.get('/user/data', userController.getUsers);
+router.get('/user/get/:id', userController.getUserById);
 router.post('/user/send', userController.createUser);
 router.put('/user/update/:id', userController.updateUser);
 router.delete('/user/delete/:id', userController.deleteUser);
 router.post('/user/login', userController.login);
 router.post('/user/lock', userController.lockUser);
 router.post('/user/unlock/:id', userController.unlockUser);
-router.post('/user/update-status', userController.updateStatus);
-router.post('/user/update-status-beacon', userController.updateStatusBeacon);
-router.post('/user/update-last-activity', userController.updateLastActivity);
-router.post('/user/heartbeat', userController.heartbeat);
+router.post('/user/block', userController.blockUser);
+router.delete('/user/unblock', userController.unblockUser);
+router.get('/user/block-status', userController.checkBlockStatus);
+router.get('/user/blocked-users/:id', userController.getBlockedUsers);
+router.post('/user/update-status', userController.updateUserStatus);
+router.post('/user/update-status-beacon', userController.updateUserStatusBeacon);
+router.post('/user/heartbeat', userController.sendHeartbeat);
 router.post('/user/appeal', userController.sendAccountAppeal);
 router.get('/user/check-lock-status/:id', userController.checkAccountLockStatus);
 router.get('/user/lock-history', userController.getLockHistory);
 router.post('/user/auto-unlock', userController.autoUnlockExpiredAccounts);
+
+// Report routes
+router.post('/report/send', reportController.sendReport);
+router.get('/report/user/:userId', reportController.getUserReports);
+router.get('/report/all', reportController.getAllReports);
+router.put('/report/update-status', reportController.updateReportStatus);
 
 // Role routes
 router.get('/role/data', roleController.getRoles);
@@ -41,14 +52,15 @@ router.get('/friendship/status', friendshipController.checkFriendshipStatus);
 
 // Conversation routes
 router.get('/conversations/user/:userId', conversationController.getUserConversations);
-router.get('/conversations/:conversationId', conversationController.getConversationDetails);
+router.get('/conversations/:id', conversationController.getConversationDetails);
 router.post('/conversations/create', conversationController.createConversation);
 router.post('/conversations/one-to-one', conversationController.getOrCreateOneToOneConversation);
 
 // Message routes
-router.get('/messages/conversation/:conversationId', messageController.getConversationMessages);
+router.get('/messages/conversation/:id', messageController.getConversationMessages);
 router.post('/messages/send', messageController.sendMessage);
-router.put('/messages/mark-read/:messageId', messageController.markMessageAsRead);
-router.put('/messages/mark-all-read', messageController.markAllMessagesAsRead);
+router.put('/messages/mark-read/:id', messageController.markMessageAsRead);
+router.post('/messages/mark-all-read', messageController.markAllMessagesAsRead);
+router.get('/messages/read-status', messageController.getMessageReadStatus);
 
 module.exports = router; 

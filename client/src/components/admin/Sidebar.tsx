@@ -46,6 +46,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ visible = true }) => {
           <i className="fas fa-lock me-2"></i>
           <span>Danh sách khóa tài khoản</span>
         </Nav.Link>
+        <Nav.Link 
+          href="/admin/reports" 
+          className={`admin-sidebar-item ${currentPath === '/admin/reports' ? 'active' : ''}`}
+        >
+          <i className="fas fa-flag me-2"></i>
+          <span>Danh sách báo cáo</span>
+        </Nav.Link>
         <div className="admin-sidebar-divider"></div>
         <div className="admin-sidebar-heading">Cài đặt hệ thống</div>
         <Nav.Link 

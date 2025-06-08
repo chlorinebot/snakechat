@@ -116,6 +116,21 @@ export interface Role {
   description: string;
 }
 
+// Interface cho báo cáo sự cố và góp ý
+export interface Report {
+  id_reports?: number; // Tự động tăng, không cần truyền khi tạo mới
+  id_user: number;
+  username?: string; // Tên người dùng, được join từ bảng users
+  title: string;
+  content: string; 
+  report_type: 'complaint' | 'suggestion' | 'bug_report'; // Loại báo cáo
+  status?: 'unresolved' | 'received' | 'resolved'; // Trạng thái xử lý
+  submission_time?: string; // Thời gian gửi, tự động tạo ở server
+  reception_time?: string; // Thời gian tiếp nhận
+  resolution_time?: string; // Thời gian giải quyết
+  notes?: string; // Ghi chú
+}
+
 // Hàm kiểm tra trạng thái online của user
 const isUserOnline = (user: User) => {
   return user.status === 'online';
@@ -879,6 +894,107 @@ export const api = {
     } catch (error) {
       console.error('Lỗi khi lấy danh sách người dùng bị chặn:', error);
       return [];
+    }
+  },
+
+  // Gửi báo cáo sự cố
+  sendBugReport: async (reportData: Report) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: Report }>(`${API_URL}/report/send`, {
+        ...reportData,
+        report_type: 'bug_report',
+        status: 'unresolved'
+      });
+      
+      return { 
+        success: true, 
+        message: 'Đã gửi báo cáo sự cố thành công', 
+        data: response.data.data 
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi gửi báo cáo sự cố:', error.message);
+      return { success: false, message: 'Lỗi khi gửi báo cáo sự cố' };
+    }
+  },
+
+  // Gửi góp ý
+  sendFeedback: async (feedbackData: Report) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: Report }>(`${API_URL}/report/send`, {
+        ...feedbackData,
+        report_type: 'suggestion',
+        status: 'unresolved'
+      });
+      
+      return { 
+        success: true, 
+        message: 'Đã gửi góp ý thành công', 
+        data: response.data.data 
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi gửi góp ý:', error.message);
+      return { success: false, message: 'Lỗi khi gửi góp ý' };
+    }
+  },
+
+  // Gửi khiếu nại
+  sendComplaint: async (complaintData: Report) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: Report }>(`${API_URL}/report/send`, {
+        ...complaintData,
+        report_type: 'complaint',
+        status: 'unresolved'
+      });
+      
+      return { 
+        success: true, 
+        message: 'Đã gửi khiếu nại thành công', 
+        data: response.data.data 
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi gửi khiếu nại:', error.message);
+      return { success: false, message: 'Lỗi khi gửi khiếu nại' };
+    }
+  },
+
+  // Lấy lịch sử báo cáo của người dùng
+  getUserReports: async (userId: number) => {
+    try {
+      const response = await axios.get<{ success: boolean; data: Report[] }>(`${API_URL}/report/user/${userId}`);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Lỗi khi lấy lịch sử báo cáo:', error.message);
+      return [];
+    }
+  },
+
+  // Lấy tất cả báo cáo (dành cho admin)
+  getAllReports: async () => {
+    try {
+      const response = await axios.get<{ success: boolean; data: Report[] }>(`${API_URL}/report/all`);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Lỗi khi lấy tất cả báo cáo:', error.message);
+      return [];
+    }
+  },
+
+  // Cập nhật trạng thái báo cáo
+  updateReportStatus: async (id_reports: number, status: 'unresolved' | 'received' | 'resolved', notes?: string) => {
+    try {
+      const response = await axios.put<{ success: boolean; message: string; data: Report }>(
+        `${API_URL}/report/update-status`,
+        { id_reports, status, notes }
+      );
+      
+      return { 
+        success: true, 
+        message: 'Đã cập nhật trạng thái báo cáo thành công', 
+        data: response.data.data 
+      };
+    } catch (error: any) {
+      console.error('Lỗi khi cập nhật trạng thái báo cáo:', error.message);
+      return { success: false, message: 'Lỗi khi cập nhật trạng thái báo cáo' };
     }
   },
 };

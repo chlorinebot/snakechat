@@ -7,6 +7,7 @@ interface UserDropdownProps {
   onProfileClick: () => void;
   onSettingsClick: () => void;
   onUpdateLastActivity?: () => void;
+  onSupportClick?: () => void;
   userStatus?: string;
   lastActivity?: string;
 }
@@ -18,6 +19,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
   onProfileClick,
   onSettingsClick,
   onUpdateLastActivity,
+  onSupportClick,
   userStatus = 'offline',
   lastActivity
 }) => {
@@ -112,6 +114,17 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
               <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 9h7V2l-2.35 4.35z"/>
             </svg>
             <span style={{ color: '#444' }}>Cập nhật thời gian hoạt động</span>
+          </div>
+        )}
+        {onSupportClick && (
+          <div 
+            style={{ padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            onClick={onSupportClick}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#0084ff" style={{ marginRight: '8px' }}>
+              <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>
+            </svg>
+            <span style={{ color: '#444' }}>Hỗ trợ</span>
           </div>
         )}
         <div style={{ height: '1px', backgroundColor: '#f5f5f5', margin: '5px 0' }}></div>

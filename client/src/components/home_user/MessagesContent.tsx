@@ -76,14 +76,12 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     if (currentConversation?.conversation_id) {
       setLoading(true);
       currentConversationIdRef.current = currentConversation.conversation_id;
-      console.log('[CONVERSATION] Đã cập nhật currentConversationIdRef:', currentConversationIdRef.current);
       
       const loadMessages = async () => {
         try {
           const msgs = await api.getConversationMessages(currentConversation.conversation_id);
           // Chỉ cập nhật tin nhắn nếu vẫn đang ở cùng một cuộc trò chuyện
           if (currentConversationIdRef.current === currentConversation.conversation_id) {
-            console.log('[CONVERSATION] Đã tải', msgs.length, 'tin nhắn cho cuộc trò chuyện', currentConversation.conversation_id);
             setMessages(msgs);
             setLoading(false);
             
@@ -92,12 +90,10 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             
             // Đảm bảo socket đã kết nối
             if (userId && !socketService.isConnected()) {
-              console.log('[SOCKET] Kết nối socket khi tải tin nhắn mới');
               socketService.connect(userId);
             }
           }
         } catch (error) {
-          console.error('[ERROR] Lỗi khi tải tin nhắn:', error);
           setLoading(false);
         }
       };
@@ -109,12 +105,10 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   // Lắng nghe sự kiện socket connect và disconnect
   useEffect(() => {
     const handleConnect = () => {
-      console.log('[SOCKET] Socket đã kết nối');
       setIsSocketConnected(true);
       
       // Khi kết nối lại, tải lại tin nhắn của cuộc trò chuyện hiện tại
       if (currentConversationIdRef.current) {
-        console.log('[SOCKET] Kết nối lại thành công, tải lại tin nhắn');
         api.getConversationMessages(currentConversationIdRef.current).then(msgs => {
           setMessages(msgs);
           setTimeout(() => scrollToBottom(false), 100);
@@ -125,7 +119,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
     
     const handleDisconnect = () => {
-      console.log('[SOCKET] Socket đã ngắt kết nối');
       setIsSocketConnected(false);
     };
     
@@ -145,35 +138,21 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   // Lắng nghe sự kiện tin nhắn mới với xử lý cải tiến
   useEffect(() => {
     if (!userId) {
-      console.log('[SOCKET] Không có userId, không đăng ký lắng nghe');
       return;
     }
     
     // Đảm bảo socket đã kết nối
     if (!socketService.isConnected()) {
-      console.log('[SOCKET] Socket chưa kết nối, đang kết nối...');
       socketService.connect(userId);
     }
 
-    console.log('[SOCKET] Đăng ký lắng nghe sự kiện new_message');
-    
     // Định nghĩa hàm xử lý tin nhắn mới
     const handleNewMessage = (data: any) => {
-      console.log('[SOCKET] Nhận tin nhắn mới:', data);
-      
-      // Không phát âm thanh khi nhận tin nhắn mới ở đây
-
       // Lấy ID cuộc trò chuyện hiện tại từ ref
       const currentConvId = currentConversationIdRef.current;
-      console.log('[SOCKET] So sánh conversation_id:', {
-        'Tin nhắn từ': data.conversation_id,
-        'Cuộc trò chuyện hiện tại': currentConvId
-      });
 
       // Chỉ xử lý tin nhắn cho cuộc trò chuyện hiện tại
       if (data.conversation_id === currentConvId) {
-        console.log('[SOCKET] Thêm tin nhắn vào cuộc trò chuyện hiện tại');
-        
         // Tạo đối tượng tin nhắn mới
         const newMessage: Message = {
           ...data,
@@ -195,10 +174,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           });
           
           if (exists) {
-            console.log('[SOCKET] Tin nhắn đã tồn tại, bỏ qua');
             return prevMessages;
           } else {
-            console.log('[SOCKET] Thêm tin nhắn mới:', newMessage);
             // Loại bỏ tin nhắn tạm thời nếu có (trong trường hợp người gửi là người dùng hiện tại)
             if (data.sender_id === userId) {
               return prevMessages
@@ -217,8 +194,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         
         // Đánh dấu đã đọc nếu là tin nhắn từ người khác
         if (data.sender_id !== userId && document.visibilityState === 'visible') {
-          console.log('[SOCKET] Đánh dấu tin nhắn đã đọc:', data.message_id);
-          
           api.markMessageAsRead(data.message_id)
             .then(() => {
               socketService.emit('message_read', {
@@ -229,19 +204,15 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             })
             .catch(err => console.error('[ERROR] Lỗi khi đánh dấu tin nhắn đã đọc:', err));
         }
-      } else {
-        console.log('[SOCKET] Tin nhắn cho cuộc trò chuyện khác, bỏ qua');
       }
     };
 
     // Định nghĩa hàm xử lý sự kiện kết nối thành công
     const handleConnectionSuccess = (data: any) => {
-      console.log('[SOCKET] Kết nối socket thành công với userId:', data.user_id);
       setIsSocketConnected(true);
       
       // Nếu đã có cuộc trò chuyện hiện tại, đăng ký lắng nghe sự kiện
       if (currentConversationIdRef.current) {
-        console.log('[SOCKET] Tải lại tin nhắn sau khi kết nối thành công');
         api.getConversationMessages(currentConversationIdRef.current)
           .then(msgs => {
             if (currentConversationIdRef.current) {
@@ -261,19 +232,16 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Ping định kỳ để giữ kết nối socket
     const pingInterval = setInterval(() => {
       if (socketService.isConnected()) {
-        console.log('[SOCKET] Gửi ping');
         socketService.emit('ping', { timestamp: new Date().toISOString() });
       }
     }, 30000); // Ping mỗi 30 giây
     
     const startPinging = () => {
-      console.log('[SOCKET] Bắt đầu ping định kỳ');
       socketService.emit('ping', { timestamp: new Date().toISOString() });
     };
     
     // Lắng nghe phản hồi ping
     const handlePong = (data: any) => {
-      console.log('[SOCKET] Nhận pong từ server:', data);
     };
 
     // Đăng ký lắng nghe các sự kiện
@@ -283,7 +251,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     
     // Cleanup khi component unmount
     return () => {
-      console.log('[SOCKET] Hủy đăng ký lắng nghe các sự kiện');
       socketService.off('new_message', handleNewMessage);
       socketService.off('connection_success', handleConnectionSuccess);
       socketService.off('pong', handlePong);
@@ -294,8 +261,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   // Lắng nghe sự kiện tin nhắn đã đọc
   useEffect(() => {
     const handleMessageReadReceipt = (data: any) => {
-      console.log('Nhận thông báo đã đọc tin nhắn:', data);
-      
       if (data.conversation_id === currentConversationIdRef.current) {
         if (data.message_ids && Array.isArray(data.message_ids)) {
           // Trường hợp nhận danh sách tin nhắn cụ thể đã đọc
@@ -335,10 +300,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
 
     socketService.on('message_read_receipt', handleMessageReadReceipt);
-    console.log('Đã đăng ký lắng nghe sự kiện message_read_receipt');
 
     return () => {
-      console.log('Hủy đăng ký lắng nghe sự kiện message_read_receipt');
       socketService.off('message_read_receipt', handleMessageReadReceipt);
     };
   }, [userId, currentConversation?.conversation_id]);
@@ -440,24 +403,14 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   // Giữ cập nhật conversation_id trong ref khi có thay đổi
   useEffect(() => {
     if (currentConversation?.conversation_id) {
-      console.log('[DEBUG] Cập nhật currentConversationIdRef:', currentConversation.conversation_id);
       currentConversationIdRef.current = currentConversation.conversation_id;
     }
   }, [currentConversation?.conversation_id]);
 
-  // Thêm debug để xác định khi currentConversationIdRef thay đổi
-  useEffect(() => {
-    console.log('[DEBUG] Giá trị của currentConversationIdRef.current:', currentConversationIdRef.current);
-  }, [currentConversationIdRef.current]);
-
   // Debug theo dõi socket connection
   useEffect(() => {
     const intervalId = setInterval(() => {
-      console.log('[SOCKET-STATUS]', 
-        socketService.isConnected() ? 
-        'Socket đã kết nối' : 
-        'Socket chưa kết nối hoặc đã mất kết nối');
-    }, 10000); // Kiểm tra mỗi 10 giây
+    }, 10000);
     
     return () => clearInterval(intervalId);
   }, []);
@@ -465,7 +418,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   // Force connect socket khi component được mount
   useEffect(() => {
     if (userId && !socketService.isConnected()) {
-      console.log('[SOCKET] Khởi tạo kết nối socket khi component được mount');
       socketService.connect(userId);
     }
   }, [userId]);
@@ -717,49 +669,60 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     chatArea: {
       flex: 1,
       overflowY: 'auto' as const,
-      padding: '30px',
-      paddingTop: '0', // Thêm để đảm bảo không có padding trên cùng
-      paddingBottom: '0', // Thêm để đảm bảo không có padding dưới cùng
+      padding: '20px 30px',
       scrollbarWidth: 'thin' as const,
       msOverflowStyle: 'none' as const,
-      height: '100%',
-      display: 'flex', // Thêm display flex
-      flexDirection: 'column', // Thêm flex-direction column
       '&::-webkit-scrollbar': {
-        width: '8px',
+        width: '6px',
       },
       '&::-webkit-scrollbar-track': {
-        background: '#f1f1f1',
+        background: 'transparent',
       },
       '&::-webkit-scrollbar-thumb': {
-        background: '#888',
-        borderRadius: '4px',
-      },
+        background: '#bcc0c4',
+        borderRadius: '10px',
+        '&:hover': {
+          background: '#8e8e8e',
+        }
+      }
     },
     messagesList: {
       display: 'flex',
       flexDirection: 'column' as const,
-      gap: '0',
-      paddingBottom: '10px',
-      paddingTop: '30px', // Thêm padding phía trên
-      marginTop: 'auto', // Đẩy nội dung xuống dưới cùng
+      gap: '2px',
       width: '100%',
     },
     messageDate: {
       textAlign: 'center' as const,
-      margin: '4px 0',
+      margin: '16px 0 8px 0',
       fontSize: '13px',
       color: '#000000',
-      fontWeight: 500,
+      fontWeight: '600',
+      position: 'relative' as const,
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        left: '0',
+        right: '0',
+        top: '50%',
+        height: '1px',
+        backgroundColor: '#e4e6eb',
+        zIndex: 0,
+      }
     },
     datePill: {
-      backgroundColor: '#f0f0f0',
-      padding: '4px 12px',
+      backgroundColor: '#ffffff',
+      padding: '6px 16px',
       borderRadius: '16px',
       display: 'inline-block',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.05)', // Thêm bóng nhẹ
+      position: 'relative' as const,
+      zIndex: 1,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      border: '1px solid #e4e6eb',
+      fontWeight: '600',
       color: '#000000',
-      fontWeight: 500,
+      fontSize: '13px',
+      letterSpacing: '0.3px',
     },
     messageGroup: {
       display: 'flex',
@@ -770,30 +733,32 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     messageRow: {
       display: 'flex',
       alignItems: 'flex-end',
-      gap: '1px',
+      gap: '8px',
       marginBottom: '2px',
       width: '100%',
-      padding: '0',
+      padding: '4px 0',
+      transition: 'all 0.2s ease',
     },
     messageAvatar: {
-      width: '24px',
-      height: '24px',
+      width: '32px',
+      height: '32px',
       borderRadius: '50%',
-      backgroundColor: '#0066ff33',
+      backgroundColor: '#e3f2fd',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '11px',
+      fontSize: '14px',
       fontWeight: 'bold',
       color: '#0066ff',
       flexShrink: 0,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+      border: '2px solid #ffffff',
     },
     messageContent: {
       display: 'flex',
       flexDirection: 'column' as const,
-      maxWidth: '80%',
-      width: 'fit-content' as const,
-      margin: '0',
+      maxWidth: '65%',
+      gap: '2px',
     },
     inputArea: {
       padding: '15px',
@@ -842,82 +807,72 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     messageBubbleOwn: {
       backgroundColor: '#0066ff',
       color: 'white',
-      padding: '10px 14px',
-      borderRadius: '18px',
+      padding: '12px 16px',
+      borderRadius: '18px 18px 4px 18px',
       maxWidth: '100%',
       alignSelf: 'flex-end' as const,
       wordBreak: 'break-word' as const,
       position: 'relative' as const,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-      whiteSpace: 'normal' as const,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      whiteSpace: 'pre-wrap' as const,
       overflowWrap: 'break-word' as const,
-      display: 'block' as const,
+      display: 'inline-block' as const,
       width: 'fit-content' as const,
-      margin: '0',
+      margin: '1px 0',
       fontSize: '15px',
+      lineHeight: '1.4',
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+      }
     },
     messageBubbleOther: {
-      backgroundColor: '#f0f0f0',
-      color: '#333',
-      padding: '10px 14px',
-      borderRadius: '18px',
+      backgroundColor: '#f0f2f5',
+      color: '#000000',
+      padding: '12px 16px',
+      borderRadius: '18px 18px 18px 4px',
       maxWidth: '100%',
       alignSelf: 'flex-start' as const,
       wordBreak: 'break-word' as const,
       position: 'relative' as const,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-      whiteSpace: 'normal' as const,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+      whiteSpace: 'pre-wrap' as const,
       overflowWrap: 'break-word' as const,
-      display: 'block' as const,
+      display: 'inline-block' as const,
       width: 'fit-content' as const,
-      margin: '0',
+      margin: '1px 0',
       fontSize: '15px',
+      lineHeight: '1.4',
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+      }
     },
     messageTime: {
-      fontSize: '10px',
-      color: '#999',
-      marginTop: '0',
-      width: '100%',
-      display: 'block' as const,
-      textAlign: 'right' as const,
-      paddingLeft: '4px',
-      paddingRight: '4px',
+      fontSize: '11px',
+      color: '#8e8e8e',
+      marginTop: '4px',
       opacity: 0,
-      transition: 'opacity 0.2s ease-in-out',
-      margin: '0',
+      transition: 'opacity 0.2s ease',
+      padding: '0 4px',
+      fontWeight: '500',
     },
     messageTimeVisible: {
       opacity: 1,
     },
-    messageContainer: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      position: 'relative' as const,
-      cursor: 'default',
-    },
     messageStatus: {
-      fontSize: '9px',
-      color: '#999',
-      marginTop: '0',
+      fontSize: '11px',
+      color: '#8e8e8e',
+      marginTop: '2px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'flex-end',
-      gap: '3px',
-      transition: 'all 0.3s ease-in-out',
-      opacity: 1,
-    },
-    statusIcon: {
-      width: '14px',
-      height: '14px',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      gap: '4px',
       transition: 'all 0.3s ease',
-    },
-    statusText: {
-      fontSize: '10px',
-      color: '#888',
-      transition: 'color 0.3s ease',
+      padding: '0 4px',
+      fontWeight: '500',
     },
     statusActive: {
       color: '#0066ff',
@@ -942,6 +897,26 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       bottom: '80px',
       left: '15px',
       zIndex: 1000,
+    },
+    messageContainer: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      position: 'relative' as const,
+      cursor: 'default',
+    },
+    statusIcon: {
+      width: '16px',
+      height: '16px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.3s ease',
+    },
+    statusText: {
+      fontSize: '11px',
+      color: '#8e8e8e',
+      transition: 'color 0.3s ease',
+      fontWeight: '500',
     },
   };
 
@@ -1272,17 +1247,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
 
   // Debug: Kiểm tra cập nhật tin nhắn
   useEffect(() => {
-    console.log('Danh sách tin nhắn được cập nhật:', messages.length, 'tin nhắn');
-    // Log tin nhắn mới nhất nếu có
-    if (messages.length > 0) {
-      const latestMessage = messages[messages.length - 1];
-      console.log('Tin nhắn mới nhất:', {
-        id: latestMessage.message_id,
-        content: latestMessage.content,
-        time: new Date(latestMessage.created_at).toLocaleString(),
-        sender: latestMessage.sender_id === userId ? 'Tôi' : 'Người khác'
-      });
-    }
   }, [messages, userId]);
 
   // Tự động làm mới tin nhắn mới trong cuộc trò chuyện hiện tại
@@ -1291,8 +1255,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     const intervalId = setInterval(() => {
       api.getConversationMessages(currentConversation.conversation_id)
         .then(msgs => setMessages(msgs))
-        .catch(error => console.error('Lỗi khi làm mới tin nhắn:', error));
-    }, 500); // Làm mới mỗi 0.5 giây
+        .catch(() => {});
+    }, 500);
 
     return () => {
       clearInterval(intervalId);
@@ -1368,7 +1332,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         <div className="empty-state" style={{
           ...styles.emptyState,
           display: 'flex',
-          flexDirection: 'column' as const,
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',

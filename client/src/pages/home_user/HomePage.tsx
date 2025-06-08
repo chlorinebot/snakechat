@@ -16,6 +16,7 @@ import ContactsContent from '../../components/home_user/ContactsContent';
 import SettingsModal from '../../components/home_user/SettingsModal';
 import ProfileModal from '../../components/home_user/ProfileModal';
 import UserProfileModal from '../../components/home_user/UserProfileModal';
+import SupportModal from '../../components/home_user/SupportModal';
 
 interface UserProps {
   onLogout: () => void;
@@ -53,6 +54,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [contactsTab, setContactsTab] = useState<ContactTab>('friends');
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [showSupportModal, setShowSupportModal] = useState<boolean>(false);
   const [friendRequestCount, setFriendRequestCount] = useState<number>(0);
   const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -254,6 +256,11 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
 
   const handleProfileClick = () => {
     setShowProfileModal(true);
+    setShowProfileDropdown(false);
+  };
+
+  const handleSupportClick = () => {
+    setShowSupportModal(true);
     setShowProfileDropdown(false);
   };
 
@@ -730,6 +737,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
           onProfileClick={handleProfileClick}
           onSettingsClick={handleSettingsClick}
           onUpdateLastActivity={handleUpdateLastActivity}
+          onSupportClick={handleSupportClick}
           userStatus={user.status}
           lastActivity={user.last_activity}
         />
@@ -744,6 +752,13 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
       />
+
+      {showSupportModal && (
+        <SupportModal
+          isOpen={showSupportModal}
+          onClose={() => setShowSupportModal(false)}
+        />
+      )}
 
       {showToast && (
         <div className="toast-container">

@@ -41,6 +41,21 @@ CREATE TABLE IF NOT EXISTS friendships (
   FOREIGN KEY (user_id_2) REFERENCES users(user_id)
 );
 
+-- Tạo bảng báo cáo sự cố và góp ý
+CREATE TABLE IF NOT EXISTS reports (
+  id_reports INT AUTO_INCREMENT PRIMARY KEY,
+  id_user INT(11) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  report_type ENUM('complaint', 'suggestion', 'bug_report') DEFAULT 'complaint',
+  status ENUM('unresolved', 'received', 'resolved') DEFAULT 'unresolved',
+  submission_time DATETIME,
+  reception_time DATETIME,
+  resolution_time DATETIME,
+  notes TEXT,
+  FOREIGN KEY (id_user) REFERENCES users(user_id)
+);
+
 -- Thêm dữ liệu mẫu cho vai trò
 INSERT IGNORE INTO role (role_id, role_name, description) VALUES 
 (1, 'admin', 'Quản trị viên'),
