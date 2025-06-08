@@ -1030,28 +1030,146 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     return null;
   };
 
-  // Thêm CSS cho hiệu ứng animation
   useEffect(() => {
-    // Tạo style element
+    const styleId = 'custom-emoji-picker-styles';
+    document.getElementById(styleId)?.remove();
+
     const styleElement = document.createElement('style');
+    styleElement.id = styleId;
     styleElement.innerHTML = `
-      .message-status-container {
-        transition: all 0.3s ease-in-out;
+      /* Tùy chỉnh toàn bộ emoji picker */
+      .EmojiPickerReact {
+        --epr-hover-bg-color: rgba(0, 0, 0, 0.05) !important;
+        --epr-focus-bg-color: rgba(0, 0, 0, 0.05) !important;
+        --epr-highlight-color: #007bff !important;
+        --epr-search-border-color: #e0e4e8 !important;
+        
+        background-color: #ffffff !important;
+        border: none !important;
+        border-radius: 16px !important;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.2s ease-in-out !important;
+        overflow: hidden !important;
       }
-      .status-updated {
-        animation: pulse 1s ease-in-out;
+
+      /* Tùy chỉnh thanh tìm kiếm */
+      .EmojiPickerReact .epr-search {
+        background: #f8f9fa !important;
+        border: 1px solid #e0e4e8 !important;
+        border-radius: 12px !important;
+        margin: 12px !important;
+        padding: 8px 12px !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
       }
-      @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
+
+      .EmojiPickerReact .epr-search:focus {
+        border-color: var(--epr-highlight-color) !important;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1) !important;
+      }
+
+      /* Tùy chỉnh thanh danh mục */
+      .EmojiPickerReact .epr-category-nav {
+        padding: 8px !important;
+        background: linear-gradient(to bottom, #ffffff, #f8f9fa) !important;
+        border-bottom: 1px solid #e0e4e8 !important;
+      }
+
+      .EmojiPickerReact .epr-category-nav .epr-cat-btn {
+        opacity: 0.5 !important;
+        transition: all 0.2s ease !important;
+        padding: 6px !important;
+        border-radius: 8px !important;
+      }
+
+      .EmojiPickerReact .epr-category-nav .epr-cat-btn:hover {
+        opacity: 0.8 !important;
+        background-color: rgba(0, 0, 0, 0.05) !important;
+      }
+
+      .EmojiPickerReact .epr-category-nav .epr-cat-btn.active {
+        opacity: 1 !important;
+        background-color: rgba(0, 123, 255, 0.1) !important;
+      }
+
+      /* Tùy chỉnh khu vực emoji */
+      .EmojiPickerReact .epr-body {
+        padding: 8px !important;
+      }
+
+      .EmojiPickerReact .epr-emoji-category-label {
+        background: transparent !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        color: #495057 !important;
+        padding: 8px 12px !important;
+        position: sticky !important;
+        top: 0 !important;
+        backdrop-filter: blur(8px) !important;
+      }
+
+      /* Tùy chỉnh từng emoji */
+      .EmojiPickerReact .epr-emoji {
+        border-radius: 8px !important;
+        transition: all 0.15s ease-in-out !important;
+        cursor: pointer !important;
+      }
+
+      .EmojiPickerReact .epr-emoji:hover {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+        transform: scale(1.2) !important;
+        z-index: 1 !important;
+      }
+
+      /* Tùy chỉnh preview */
+      .EmojiPickerReact .epr-preview {
+        border-top: 1px solid #e0e4e8 !important;
+        background: linear-gradient(to bottom, #f8f9fa, #ffffff) !important;
+        padding: 12px !important;
+      }
+
+      .EmojiPickerReact .epr-preview-emoji {
+        font-size: 32px !important;
+      }
+
+      .EmojiPickerReact .epr-preview-data {
+        font-size: 13px !important;
+        color: #495057 !important;
+      }
+
+      /* Tùy chỉnh thanh cuộn */
+      .EmojiPickerReact .epr-body::-webkit-scrollbar {
+        width: 8px !important;
+      }
+
+      .EmojiPickerReact .epr-body::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+
+      .EmojiPickerReact .epr-body::-webkit-scrollbar-thumb {
+        background-color: #d1d5db !important;
+        border-radius: 20px !important;
+        border: 2px solid transparent !important;
+        background-clip: content-box !important;
+      }
+
+      .EmojiPickerReact .epr-body::-webkit-scrollbar-thumb:hover {
+        background-color: #9ca3af !important;
+      }
+
+      /* Hiệu ứng hover cho toàn bộ picker */
+      .emoji-picker-container {
+        transition: transform 0.2s ease-in-out !important;
+      }
+
+      .emoji-picker-container:hover {
+        transform: translateY(-2px) !important;
       }
     `;
     document.head.appendChild(styleElement);
 
-    // Cleanup
     return () => {
-      document.head.removeChild(styleElement);
+      document.getElementById(styleId)?.remove();
     };
   }, []);
 
@@ -1489,11 +1607,14 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       setShouldAutoFocus(false);
                     }}
                   >
-                    <EmojiPicker 
+                    <EmojiPicker
                       onEmojiClick={onEmojiClick}
                       searchDisabled={false}
+                      emojiStyle="native"
+                      theme="light"
+                      skinTonesDisabled={true}
                       previewConfig={{
-                        defaultCaption: "Chọn emoji...",
+                        defaultCaption: "Chọn Emoji...",
                         defaultEmoji: "1f60a"
                       }}
                     />

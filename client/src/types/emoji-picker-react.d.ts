@@ -15,6 +15,7 @@ declare module 'emoji-picker-react' {
     height?: number | string;
     theme?: 'light' | 'dark' | 'auto';
     lazyLoadEmojis?: boolean;
+    emojiStyle?: 'native' | 'apple' | 'google' | 'twitter' | 'facebook';
     previewConfig?: {
       defaultCaption: string;
       defaultEmoji: string;
