@@ -1343,6 +1343,11 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     setShouldAutoFocus(false); // Đảm bảo auto focus vẫn bị tắt
   };
 
+  // Kiểm tra xem tin nhắn có phải từ tài khoản hệ thống không
+  const isSystemMessage = (message: Message) => {
+    return message.sender_id === 1;
+  };
+
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {
     return (
@@ -1519,6 +1524,15 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       padding: '0',
                     }}
                   >
+                    {!isOwnMessage(message) && (
+                      <div style={styles.messageAvatar}>
+                        {isSystemMessage(message) ? (
+                          <i className="fas fa-wrench" style={{ fontSize: '16px', color: '#0066ff' }}></i>
+                        ) : (
+                          message.sender_name ? message.sender_name.charAt(0).toUpperCase() : '?'
+                        )}
+                      </div>
+                    )}
                     <div 
                       className="message-content" 
                       style={{
@@ -1532,7 +1546,12 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       <div 
                         className="message-bubble"
                         style={{
-                          ...(isOwnMessage(message) ? styles.messageBubbleOwn : styles.messageBubbleOther),
+                          ...(isOwnMessage(message) ? styles.messageBubbleOwn : isSystemMessage(message) ? {
+                            ...styles.messageBubbleOther,
+                            backgroundColor: '#e9f5ff',
+                            color: '#333',
+                            border: '1px solid #d0e8ff'
+                          } : styles.messageBubbleOther),
                           marginTop: '0',
                           marginBottom: '0',
                         }}

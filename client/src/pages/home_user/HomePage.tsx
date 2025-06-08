@@ -673,7 +673,12 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
                     }}
                     onClick={handleUserHeaderClick}
                   >
-                    {getConversationName(currentConversation).charAt(0).toUpperCase()}
+                    {currentConversation.conversation_type === 'personal' && 
+                     currentConversation.members?.find(member => member.user_id !== user.user_id)?.user_id === 1 ? (
+                      <i className="fas fa-wrench" style={{ fontSize: '16px' }}></i>
+                    ) : (
+                      getConversationName(currentConversation).charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div 
                     style={{ 

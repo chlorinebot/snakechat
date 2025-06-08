@@ -386,7 +386,13 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
                   onMouseOut={e => e.currentTarget.style.backgroundColor = currentConversation?.conversation_id === conversation.conversation_id ? '#e9f5ff' : ''}
                 >
                   <div style={styles.conversationAvatar}>
-                    {getConversationName(conversation).charAt(0).toUpperCase()}
+                    {/* Hiển thị icon cờ lê cho tài khoản hệ thống, ngược lại hiển thị chữ cái đầu */}
+                    {conversation.conversation_type === 'personal' && conversation.members && 
+                     conversation.members.find(member => member.user_id !== userId)?.user_id === 1 ? (
+                      <i className="fas fa-wrench" style={{ fontSize: '18px' }}></i>
+                    ) : (
+                      getConversationName(conversation).charAt(0).toUpperCase()
+                    )}
                     {otherMember && canViewStatus && (
                       <span style={{
                         position: 'absolute',
