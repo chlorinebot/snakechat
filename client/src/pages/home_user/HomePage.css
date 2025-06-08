@@ -1224,4 +1224,46 @@ body, html {
   bottom: 5px;
   right: 5px;
   border: 2px solid white;
+}
+
+/* Emoji picker styles */
+.emoji-picker-container {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.emoji-button {
+  position: relative;
+}
+
+.emoji-button:hover {
+  color: #0066ff;
+  transform: scale(1.1);
+}
+
+.emoji-button:active {
+  transform: scale(0.95);
+}
+
+/* Tùy chỉnh giao diện emoji picker */
+.EmojiPickerReact {
+  --epr-bg-color: #ffffff;
+  --epr-category-label-bg-color: #f0f0f0;
+  --epr-hover-bg-color: #f5f5f5;
+  --epr-focus-bg-color: #e8e8e8;
+  --epr-search-border-color: #ddd;
+  --epr-category-label-text-color: #666;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .EmojiPickerReact {
+    --epr-bg-color: #2c2c2c;
+    --epr-category-label-bg-color: #222;
+    --epr-hover-bg-color: #333;
+    --epr-focus-bg-color: #444;
+    --epr-search-border-color: #444;
+    --epr-category-label-text-color: #ccc;
+  }
 } 

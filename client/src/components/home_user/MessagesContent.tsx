@@ -3,6 +3,8 @@ import api from '../../services/api';
 import type { Conversation, Message } from '../../services/api';
 import socketService from '../../services/socketService';
 import { playMessageSound } from '../../utils/sound';
+import EmojiPicker from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
 
 interface MessagesContentProps {
   userId: number;
@@ -14,6 +16,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [shouldAutoFocus, setShouldAutoFocus] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentConversationIdRef = useRef<number | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
@@ -40,21 +44,25 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
 
   // Giữ focus vào input khi component mount và sau mỗi lần gửi tin nhắn
   useEffect(() => {
-    if (!isBlocked) {
-      inputRef.current?.focus();
+    if (!isBlocked && shouldAutoFocus) {
+      // Chỉ focus khi không có element nào khác đang được focus
+      if (!document.activeElement || document.activeElement === document.body) {
+        inputRef.current?.focus();
+      }
     }
-  }, [currentConversation, isBlocked]);
+  }, [currentConversation, isBlocked, shouldAutoFocus]);
 
   // Thêm useEffect để duy trì focus sau khi cuộn hoặc các thao tác khác
   useEffect(() => {
     const focusInterval = setInterval(() => {
-      if (document.activeElement !== inputRef.current && !isBlocked) {
+      // Chỉ focus khi không có element nào khác đang được focus hoặc đang focus vào chính input này
+      if (document.activeElement === document.body && !isBlocked && shouldAutoFocus) {
         inputRef.current?.focus();
       }
     }, 300);
 
     return () => clearInterval(focusInterval);
-  }, [isBlocked]);
+  }, [isBlocked, shouldAutoFocus]);
 
   // Thêm xử lý click vào khung chat để giữ focus
   const handleChatAreaClick = () => {
@@ -513,9 +521,12 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       // Đặt lại input
       setNewMessage('');
 
-      // Đảm bảo input vẫn giữ focus
+      // Đảm bảo input vẫn giữ focus sau khi gửi tin nhắn
       setTimeout(() => {
-        inputRef.current?.focus();
+        // Chỉ focus khi không có element nào khác đang được focus
+        if (document.activeElement === document.body || document.activeElement === inputRef.current) {
+          inputRef.current?.focus();
+        }
       }, 0);
 
       // Cuộn xuống tin nhắn mới - luôn cuộn khi người dùng gửi tin
@@ -760,7 +771,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       display: 'flex',
       alignItems: 'flex-end',
       gap: '1px',
-      marginBottom: '0',
+      marginBottom: '2px',
       width: '100%',
       padding: '0',
     },
@@ -831,7 +842,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     messageBubbleOwn: {
       backgroundColor: '#0066ff',
       color: 'white',
-      padding: '6px 10px',
+      padding: '10px 14px',
       borderRadius: '18px',
       maxWidth: '100%',
       alignSelf: 'flex-end' as const,
@@ -843,12 +854,12 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       display: 'block' as const,
       width: 'fit-content' as const,
       margin: '0',
-      fontSize: '13px',
+      fontSize: '15px',
     },
     messageBubbleOther: {
       backgroundColor: '#f0f0f0',
       color: '#333',
-      padding: '6px 10px',
+      padding: '10px 14px',
       borderRadius: '18px',
       maxWidth: '100%',
       alignSelf: 'flex-start' as const,
@@ -860,10 +871,10 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       display: 'block' as const,
       width: 'fit-content' as const,
       margin: '0',
-      fontSize: '13px',
+      fontSize: '15px',
     },
     messageTime: {
-      fontSize: '9px',
+      fontSize: '10px',
       color: '#999',
       marginTop: '0',
       width: '100%',
@@ -910,7 +921,28 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     },
     statusActive: {
       color: '#0066ff',
-    }
+    },
+    emojiButton: {
+      backgroundColor: 'transparent',
+      border: 'none',
+      borderRadius: '50%',
+      width: '40px',
+      height: '40px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      color: '#666',
+      fontSize: '20px',
+      padding: 0,
+    },
+    emojiPickerContainer: {
+      position: 'absolute' as const,
+      bottom: '80px',
+      left: '15px',
+      zIndex: 1000,
+    },
   };
 
   // Hàm render biểu tượng trạng thái
@@ -1156,6 +1188,61 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     }
   }, [messages, scrollToBottom, isAtBottom]);
 
+  // Thêm emoji vào tin nhắn
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage(prev => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+    // Đợi một chút trước khi bật lại auto focus và focus vào input
+    setTimeout(() => {
+      setShouldAutoFocus(true);
+      inputRef.current?.focus();
+    }, 100);
+  };
+
+  // Đóng emoji picker khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      
+      // Kiểm tra xem người dùng có đang tương tác với emoji picker hay không
+      const isEmojiPickerInteraction = target.closest('.emoji-picker-react') || 
+                                      target.closest('.EmojiPickerReact') ||
+                                      target.closest('.emoji-picker-container') ||
+                                      target.closest('.emoji-button');
+      
+      // Nếu đang tương tác với emoji picker, tắt auto focus
+      if (isEmojiPickerInteraction) {
+        setShouldAutoFocus(false);
+        return;
+      }
+      
+      // Nếu click ra ngoài emoji picker, đóng picker và bật lại auto focus
+      if (!isEmojiPickerInteraction && showEmojiPicker) {
+        setShowEmojiPicker(false);
+        // Đợi một chút trước khi bật lại auto focus
+        setTimeout(() => {
+          setShouldAutoFocus(true);
+        }, 100);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPicker]);
+
+  // Thêm hàm để xử lý khi mở emoji picker
+  const handleEmojiButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Ngăn chặn sự kiện lan ra ngoài
+    setShowEmojiPicker(!showEmojiPicker);
+    setShouldAutoFocus(false); // Tắt auto focus khi mở emoji picker
+  };
+
+  // Thêm hàm xử lý khi tương tác với emoji picker
+  const handleEmojiPickerInteraction = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Ngăn chặn sự kiện lan ra ngoài
+    setShouldAutoFocus(false); // Đảm bảo auto focus vẫn bị tắt
+  };
+
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {
     return (
@@ -1382,6 +1469,36 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           ) : (
             <div className="input-area" style={styles.inputArea} onClick={() => inputRef.current?.focus()}>
               <form style={styles.inputForm} onSubmit={handleSendMessage}>
+                <button
+                  type="button"
+                  className="emoji-button"
+                  style={styles.emojiButton}
+                  onClick={handleEmojiButtonClick}
+                >
+                  <i className="far fa-smile"></i>
+                </button>
+                {showEmojiPicker && (
+                  <div 
+                    className="emoji-picker-container" 
+                    style={styles.emojiPickerContainer} 
+                    onClick={handleEmojiPickerInteraction}
+                    onMouseDown={(e) => {
+                      // Ngăn chặn sự kiện mousedown để không ảnh hưởng đến focus
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShouldAutoFocus(false);
+                    }}
+                  >
+                    <EmojiPicker 
+                      onEmojiClick={onEmojiClick}
+                      searchDisabled={false}
+                      previewConfig={{
+                        defaultCaption: "Chọn emoji...",
+                        defaultEmoji: "1f60a"
+                      }}
+                    />
+                  </div>
+                )}
                 <input
                   ref={inputRef}
                   type="text"
@@ -1391,8 +1508,13 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                   onKeyPress={handleKeyPress}
                   style={styles.messageInput}
                   disabled={sending}
-                  autoFocus
-                  onBlur={() => setTimeout(() => inputRef.current?.focus(), 100)}
+                  autoFocus={shouldAutoFocus}
+                  onFocus={() => {
+                    // Nếu đang hiển thị emoji picker và không nên auto focus, blur input
+                    if (showEmojiPicker && !shouldAutoFocus) {
+                      inputRef.current?.blur();
+                    }
+                  }}
                 />
                 <button 
                   type="submit" 
