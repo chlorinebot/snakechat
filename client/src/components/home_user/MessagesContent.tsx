@@ -153,10 +153,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     const handleNewMessage = (data: any) => {
       console.log('[SOCKET] Nhận tin nhắn mới:', data);
       
-      // Chỉ phát âm thanh khi tin nhắn từ người khác
-      if (data.sender_id !== userId) {
-        playMessageSound();
-      }
+      // Không phát âm thanh khi nhận tin nhắn mới ở đây
 
       // Lấy ID cuộc trò chuyện hiện tại từ ref
       const currentConvId = currentConversationIdRef.current;

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './HomePage.css';
 import api from '../../services/api';
 import socketService from '../../services/socketService';
 import type { Conversation, ConversationMember } from '../../services/api';
-import { playNotificationSound } from '../../utils/sound';
+import { playNotificationSound, playMessageSound } from '../../utils/sound';
 
 // Import các components
 import MainSidebar from '../../components/home_user/MainSidebar';
@@ -26,6 +26,28 @@ type ContactTab = 'friends' | 'requests' | 'explore' | 'blocked';
 
 const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('user') || '{}'));
+  // Đảm bảo cập nhật trạng thái user khi có thay đổi từ server
+  useEffect(() => {
+    if (user?.user_id) {
+      // Cập nhật thông tin người dùng mỗi 30 giây
+      const userRefreshInterval = setInterval(async () => {
+        try {
+          const userData = await api.getUserById(user.user_id);
+          if (userData) {
+            setUser((prevUser: any) => ({
+              ...prevUser,
+              status: userData.status || prevUser.status,
+              last_activity: userData.last_activity || prevUser.last_activity
+            }));
+          }
+        } catch (error) {
+          console.error('Lỗi khi cập nhật thông tin người dùng:', error);
+        }
+      }, 30000);
+      
+      return () => clearInterval(userRefreshInterval);
+    }
+  }, [user?.user_id]);
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('messages');
   const [contactsTab, setContactsTab] = useState<ContactTab>('friends');
@@ -287,7 +309,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         setShowToast(true);
         setLastToastId(data.friendship_id);
         
-        // Phát âm thanh thông báo
+        // Phát âm thanh thông báo lời mời kết bạn
         playNotificationSound();
         
         // Tự động ẩn toast sau 5 giây
@@ -304,9 +326,10 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       }
     };
     
-    const handleUnreadCountUpdate = () => {
-      console.log('Nhận cập nhật số tin nhắn chưa đọc từ socket, làm mới conversations');
+    const handleUnreadCountUpdate = (data: any) => {
+      console.log('Nhận cập nhật số tin nhắn chưa đọc từ socket, làm mới conversations', data);
       refreshConversations();
+      // Âm thanh đã được xử lý trong sự kiện new_message
     };
     
     // Cập nhật trạng thái hoạt động người dùng theo thời gian thực
@@ -436,6 +459,50 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       clearInterval(statusRefreshInterval);
     };
   }, [user?.user_id, conversations, currentConversation]);
+
+  // Đăng ký sự kiện socket cho tin nhắn mới
+  useEffect(() => {
+    // Tạo Set để theo dõi tin nhắn đã xử lý để tránh phát âm thanh trùng lặp
+    const processedMessageIds = new Set<string>();
+
+    // Xử lý tin nhắn mới
+    const handleNewMessage = (data: any) => {
+      console.log('HomePage nhận tin nhắn mới:', data);
+      
+      // Tạo key duy nhất cho tin nhắn này
+      const messageKey = `msg_${data.message_id}`;
+      
+      // Kiểm tra xem tin nhắn này đã được xử lý chưa
+      if (!processedMessageIds.has(messageKey)) {
+        // Đánh dấu tin nhắn đã được xử lý
+        processedMessageIds.add(messageKey);
+        
+        // Xóa ID tin nhắn sau 5 giây để tránh tràn bộ nhớ
+        setTimeout(() => {
+          processedMessageIds.delete(messageKey);
+        }, 5000);
+        
+        // Phát âm thanh khi nhận tin nhắn mới từ người khác
+        if (data.sender_id !== user?.user_id) {
+          console.log('Phát âm thanh tin nhắn mới');
+          // Luôn phát âm thanh khi có tin nhắn mới, bất kể đang ở đâu
+          playMessageSound(); // Sử dụng sound_mess.mp3
+        }
+      }
+    };
+    
+    // Đăng ký lắng nghe sự kiện
+    if (user) {
+      socketService.on('new_message', handleNewMessage);
+    }
+    
+    // Cleanup khi component unmount
+    return () => {
+      if (user) {
+        socketService.off('new_message', handleNewMessage);
+      }
+    };
+  }, [user, currentConversation, activeTab]);
 
   if (!user) {
     return <div className="loading">Đang tải...</div>;
@@ -663,6 +730,8 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
           onProfileClick={handleProfileClick}
           onSettingsClick={handleSettingsClick}
           onUpdateLastActivity={handleUpdateLastActivity}
+          userStatus={user.status}
+          lastActivity={user.last_activity}
         />
       )}
 

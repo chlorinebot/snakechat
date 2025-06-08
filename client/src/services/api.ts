@@ -133,6 +133,17 @@ export const api = {
     return response.data.items;
   },
 
+  // Lấy thông tin người dùng theo id
+  getUserById: async (userId: number) => {
+    try {
+      const response = await axios.get<{ data: User }>(`${API_URL}/user/get/${userId}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy thông tin người dùng:', error);
+      return null;
+    }
+  },
+
   // Tạo user mới
   createUser: async (userData: User) => {
     const response = await axios.post<{ message: string; data: User }>(`${API_URL}/user/send`, userData);

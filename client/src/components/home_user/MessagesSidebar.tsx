@@ -70,10 +70,7 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     const handleNewMessage = (data: any) => {
       console.log('MessagesSidebar nhận tin nhắn mới:', data);
 
-      // Phát âm thanh khi nhận tin nhắn mới từ người khác
-      if (data.sender_id !== userId) {
-        playMessageSound();
-      }
+      // Không phát âm thanh khi nhận tin nhắn mới ở đây
 
       // Cập nhật thông tin tin nhắn mới nhất vào cuộc trò chuyện
       setConversations(prevConversations => {

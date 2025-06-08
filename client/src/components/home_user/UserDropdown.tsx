@@ -7,6 +7,8 @@ interface UserDropdownProps {
   onProfileClick: () => void;
   onSettingsClick: () => void;
   onUpdateLastActivity?: () => void;
+  userStatus?: string;
+  lastActivity?: string;
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ 
@@ -15,8 +17,42 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
   onLogout, 
   onProfileClick,
   onSettingsClick,
-  onUpdateLastActivity
+  onUpdateLastActivity,
+  userStatus = 'offline',
+  lastActivity
 }) => {
+  const getLastActivityText = () => {
+    if (!lastActivity) return 'Không có dữ liệu';
+    try {
+      const date = new Date(lastActivity);
+      if (isNaN(date.getTime())) return 'Không có dữ liệu';
+      
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) {
+        return `Hoạt động lần cuối ${diffMins} phút trước`;
+      } else if (diffHours < 24) {
+        return `Hoạt động lần cuối ${diffHours} giờ trước`;
+      } else {
+        return `Hoạt động lần cuối ${diffDays} ngày trước`;
+      }
+    } catch (error) {
+      console.error('Lỗi khi tính thời gian hoạt động cuối cùng:', error);
+      return 'Không có dữ liệu';
+    }
+  };
+
+  const isOnline = userStatus === 'online';
+  
+  const getStatusText = () => {
+    if (isOnline) return 'Đang hoạt động';
+    return getLastActivityText();
+  };
+
   return (
     <div 
       className="profile-dropdown show" 
@@ -33,7 +69,20 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
       }}
     >
       <div style={{ padding: '15px 20px', borderBottom: '1px solid #f5f5f5' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#444' }}>{username}</div>
+        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#444', marginBottom: '2px' }}>{username}</div>
+        <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: '#777' }}>
+          <span 
+            style={{ 
+              width: '8px', 
+              height: '8px', 
+              borderRadius: '50%', 
+              backgroundColor: isOnline ? '#4CAF50' : '#CCCCCC',
+              display: 'inline-block', 
+              marginRight: '6px' 
+            }} 
+          />
+          {getStatusText()}
+        </div>
       </div>
       <div style={{ padding: '8px 0' }}>
         <div 
