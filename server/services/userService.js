@@ -110,8 +110,14 @@ const userService = {
       throw new Error('Không tìm thấy user');
     }
     
+    console.log('======= DEBUG TIMEZONE =======');
+    console.log('Thời gian khóa từ client (UTC ISO):', lock_time);
+    console.log('Thời gian mở khóa từ client (UTC ISO):', unlock_time);
+    
     // Kiểm tra xem đã có bản ghi lock cho user này chưa
     const [existingLock] = await pool.query('SELECT * FROM user_lock WHERE user_id = ?', [user_id]);
+    
+    let savedLockId = null;
     
     if (existingLock.length > 0) {
       // Nếu đã có, cập nhật thông tin khóa
@@ -123,6 +129,8 @@ const userService = {
       if (result.affectedRows === 0) {
         throw new Error('Không thể khóa tài khoản');
       }
+      
+      savedLockId = existingLock[0].lock_id;
     } else {
       // Nếu chưa có, tạo mới
       const [result] = await pool.query(
@@ -133,13 +141,43 @@ const userService = {
       if (result.affectedRows === 0) {
         throw new Error('Không thể khóa tài khoản');
       }
+      
+      savedLockId = result.insertId;
     }
+    
+    // Sau khi lưu, kiểm tra dữ liệu đã lưu để xác nhận
+    const [savedData] = await pool.query(
+      'SELECT * FROM user_lock WHERE lock_id = ?',
+      [savedLockId]
+    );
+    
+    console.log('Dữ liệu đã lưu trong database:', savedData[0]);
+    
+    // Thiết lập truy vấn để lấy dữ liệu với múi giờ rõ ràng
+    const [timeZoneData] = await pool.query(
+      `SELECT 
+        lock_time, 
+        unlock_time,
+        CONVERT_TZ(lock_time, @@session.time_zone, '+00:00') as lock_time_utc,
+        CONVERT_TZ(unlock_time, @@session.time_zone, '+00:00') as unlock_time_utc,
+        @@session.time_zone as db_timezone,
+        NOW() as server_now
+      FROM user_lock WHERE lock_id = ?`,
+      [savedLockId]
+    );
+    
+    console.log('Chi tiết múi giờ của dữ liệu đã lưu:', timeZoneData[0]);
+    console.log('======= END DEBUG TIMEZONE =======');
     
     return {
       user_id,
       status,
-      lock_time,
-      unlock_time
+      lock_time: savedData[0]?.lock_time,
+      unlock_time: savedData[0]?.unlock_time,
+      timezone_info: {
+        db_timezone: timeZoneData[0]?.db_timezone,
+        server_now: timeZoneData[0]?.server_now
+      }
     };
   },
 

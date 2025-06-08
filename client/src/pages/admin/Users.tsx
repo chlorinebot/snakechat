@@ -343,6 +343,18 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
   };
 
   const handleLock = (user: User) => {
+    // Kiểm tra nếu người dùng có vai trò là system (role_id = 3) thì không cho phép khóa
+    if (user.role_id === 3) {
+      setMessage('Không thể khóa tài khoản hệ thống!');
+      return;
+    }
+    
+    // Kiểm tra nếu người dùng có ID là 1 (thường là tài khoản hệ thống)
+    if (user.user_id === 1) {
+      setMessage('Không thể khóa tài khoản hệ thống!');
+      return;
+    }
+
     setSelectedUser(user);
     setShowLockModal(true);
   };
@@ -370,9 +382,19 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
     try {
       if (!selectedUser || !selectedUser.user_id) return;
       
+      // Lấy thời gian hiện tại theo định dạng ISO để đảm bảo UTC
       const currentDate = new Date().toISOString();
-      const unlockDateTime = new Date(unlockDate).toISOString();
       
+      // Xử lý múi giờ cho thời gian mở khóa
+      const unlockDateObj = new Date(unlockDate);
+      const unlockDateTime = unlockDateObj.toISOString();
+      
+      // Log thông tin debug
+      console.log('Thời gian hiện tại (UTC):', currentDate);
+      console.log('Thời gian mở khóa từ form:', unlockDate);
+      console.log('Thời gian mở khóa đã chuyển đổi (UTC):', unlockDateTime);
+      
+      // Tạo đối tượng để gửi lên server
       const lockData: UserLock = {
         user_id: selectedUser.user_id,
         reason: lockReason,
@@ -381,6 +403,10 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
       };
 
       const response = await api.lockUser(lockData);
+      
+      // Log phản hồi từ server để debug
+      console.log('Phản hồi từ server:', response);
+      
       setMessage(response.message);
       setShowLockModal(false);
       setLockReason('');
@@ -399,7 +425,11 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
 
   const formatDateTime = (dateString: string | undefined) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleString('vi-VN');
+    // Chuyển đổi sang múi giờ Việt Nam (UTC+7)
+    const date = new Date(dateString);
+    return new Date(date.getTime()).toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh'
+    });
   };
 
   // Thêm hàm hiển thị trạng thái online/offline
@@ -419,6 +449,11 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
         </Badge>
       );
     }
+  };
+
+  // Kiểm tra xem user có phải là tài khoản hệ thống không
+  const isSystemAccount = (user: User) => {
+    return user.role_id === 3 || user.user_id === 1;
   };
 
   return (
@@ -557,6 +592,12 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                               <i className="fas fa-lock me-1"></i>
                               Đang khóa
                             </Button>
+                          ) : isSystemAccount(user) ? (
+                            // Hiển thị badge thay vì nút khóa cho tài khoản hệ thống
+                            <Badge bg="info" className="px-3 py-2">
+                              <i className="fas fa-shield-alt me-1"></i>
+                              Tài khoản hệ thống
+                            </Badge>
                           ) : (
                             <Button
                               variant="outline-warning"
@@ -730,6 +771,9 @@ const Users: React.FC<UsersProps> = ({ onLogout }) => {
                   onChange={(e) => setUnlockDate(e.target.value)}
                   required
                 />
+                <Form.Text className="text-muted">
+                  Thời gian sẽ được hiển thị theo múi giờ Việt Nam (GMT+7). Khi lưu vào cơ sở dữ liệu, hệ thống sẽ chuyển đổi sang giờ UTC.
+                </Form.Text>
               </Form.Group>
             </Form>
           )}

@@ -131,6 +131,10 @@ const userController = {
       });
     }
 
+    console.log('Client gửi lên:');
+    console.log('- lock_time (UTC):', lock_time);
+    console.log('- unlock_time (UTC):', unlock_time);
+
     try {
       const result = await userService.lockUser({
         user_id,
@@ -147,7 +151,17 @@ const userController = {
       res.json({ 
         success: true,
         message: `Đã khóa tài khoản thành công`,
-        data: result
+        data: result,
+        debug: {
+          clientTime: {
+            lock: lock_time,
+            unlock: unlock_time
+          },
+          serverTime: {
+            lock: result.lock_time,
+            unlock: result.unlock_time
+          }
+        }
       });
     } catch (error) {
       console.error('Lỗi khi khóa tài khoản:', error);
