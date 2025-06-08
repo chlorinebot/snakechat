@@ -9,7 +9,10 @@ import LockedAccounts from './pages/admin/LockedAccounts';
 import HomePage from './pages/home_user/HomePage';
 import AccountLockGuard from './components/common/AccountLockGuard';
 import api from './services/api';
+import socketService from './services/socketService';
 import Reports from './pages/admin/Reports';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // URL endpoint cho cập nhật trạng thái
 const API_URL = 'http://localhost:5000/api';
@@ -180,6 +183,109 @@ const App: React.FC = () => {
           // Cập nhật trạng thái online
           api.updateUserActivity(userId);
           updateLastActivityTime();
+          
+          // Thiết lập lắng nghe sự kiện force_logout
+          socketService.on('force_logout', (data) => {
+            console.log('Nhận yêu cầu đăng xuất bắt buộc:', data);
+            
+            // Ngăn chặn tất cả các hành động tiếp theo ngay lập tức
+            document.body.classList.add('account-locked');
+            
+            // Hiển thị thông báo cho người dùng
+            toast.error(`${data.reason || 'Tài khoản của bạn đã bị khóa'}. Bạn sẽ bị đăng xuất trong 1 giây.`, {
+              position: "top-center",
+              autoClose: 1000,
+              hideProgressBar: false,
+              closeOnClick: false,
+              pauseOnHover: false,
+              draggable: false,
+            });
+            
+            // Tự động đăng xuất ngay lập tức
+            setTimeout(() => {
+              // Xóa dữ liệu người dùng và token
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              localStorage.removeItem('lastActivity');
+              localStorage.removeItem('tabHiddenTime');
+              localStorage.removeItem('userStatus');
+              localStorage.removeItem('offlineTimestamp');
+              localStorage.removeItem('offlineTimerId');
+              localStorage.removeItem('lastOfflineAction');
+              sessionStorage.clear();
+              
+              // Hủy tất cả timers
+              if (heartbeatTimerRef.current) {
+                clearInterval(heartbeatTimerRef.current);
+                heartbeatTimerRef.current = null;
+              }
+              
+              // Đặt trạng thái xác thực thành false
+              setIsAuthenticated(false);
+              setUser({});
+              
+              // Chuyển hướng người dùng về trang đăng nhập
+              window.location.href = '/login?locked=true';
+            }, 1000);
+          });
+          
+          // Lắng nghe sự kiện global_force_logout để đăng xuất tất cả các tab
+          socketService.on('global_force_logout', (data) => {
+            console.log('Nhận thông báo global_force_logout:', data);
+            
+            // Kiểm tra xem thông báo có phải dành cho người dùng hiện tại không
+            const userData = localStorage.getItem('user');
+            if (userData) {
+              try {
+                const parsedUser = JSON.parse(userData);
+                const currentUserId = parsedUser.user_id || parsedUser.id;
+                
+                // Nếu thông báo nhắm đến người dùng hiện tại
+                if (currentUserId && data.target_user_id && currentUserId.toString() === data.target_user_id.toString()) {
+                  console.log('Thông báo global_force_logout dành cho người dùng hiện tại, đang đăng xuất...');
+                  
+                  // Ngăn chặn tất cả các hành động tiếp theo
+                  document.body.classList.add('account-locked');
+                  
+                  // Hiển thị thông báo
+                  toast.error(`${data.reason || 'Tài khoản của bạn đã bị khóa'}. Đang đăng xuất...`, {
+                    position: "top-center",
+                    autoClose: 1000,
+                    hideProgressBar: false,
+                    closeOnClick: false,
+                    pauseOnHover: false,
+                    draggable: false,
+                  });
+                  
+                  // Thực hiện đăng xuất
+                  setTimeout(() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('lastActivity');
+                    localStorage.removeItem('tabHiddenTime');
+                    localStorage.removeItem('userStatus');
+                    localStorage.removeItem('offlineTimestamp');
+                    localStorage.removeItem('offlineTimerId');
+                    localStorage.removeItem('lastOfflineAction');
+                    sessionStorage.clear();
+                    
+                    // Hủy tất cả timers
+                    if (heartbeatTimerRef.current) {
+                      clearInterval(heartbeatTimerRef.current);
+                      heartbeatTimerRef.current = null;
+                    }
+                    
+                    setIsAuthenticated(false);
+                    setUser({});
+                    
+                    window.location.href = '/login?locked=true';
+                  }, 1000);
+                }
+              } catch (error) {
+                console.error('Lỗi khi xử lý thông báo global_force_logout:', error);
+              }
+            }
+          });
         }
       } catch (error) {
         console.error('Lỗi khi parse thông tin user từ localStorage:', error);
@@ -455,28 +561,29 @@ const App: React.FC = () => {
 
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         <Route 
           path="/login" 
-          element={!isAuthenticated ? <Login /> : <Navigate to={isAdmin ? "/admin/dashboard" : "/user-home"} />} 
+          element={!isAuthenticated ? <Login /> : (isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/user-home" />)} 
         />
         <Route 
           path="/register" 
-          element={!isAuthenticated ? <Register /> : <Navigate to={isAdmin ? "/admin/dashboard" : "/user-home"} />} 
+          element={!isAuthenticated ? <Register /> : (isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/user-home" />)} 
         />
         
         {/* Admin Routes */}
         <Route 
-          path="/admin/dashboard" 
+          path="/dashboard" 
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
               <Dashboard onLogout={handleLogout} />
             </AccountLockGuard> 
-            : <Navigate to={isRegularUser ? "/user-home" : "/login"} />
+            : <Navigate to="/login" />
           } 
         />
         <Route 
-          path="/admin/users" 
+          path="/users" 
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
               <Users onLogout={handleLogout} />
@@ -485,7 +592,7 @@ const App: React.FC = () => {
           } 
         />
         <Route 
-          path="/admin/roles" 
+          path="/roles" 
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
               <Roles onLogout={handleLogout} />
@@ -494,7 +601,7 @@ const App: React.FC = () => {
           } 
         />
         <Route 
-          path="/admin/locked-accounts" 
+          path="/locked-accounts" 
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
               <LockedAccounts onLogout={handleLogout} />
@@ -503,7 +610,7 @@ const App: React.FC = () => {
           } 
         />
         <Route 
-          path="/admin/reports" 
+          path="/reports" 
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
               <Reports onLogout={handleLogout} />
@@ -512,31 +619,32 @@ const App: React.FC = () => {
           } 
         />
         <Route 
-          path="/admin/settings" 
+          path="/settings" 
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
-              <Navigate to="/admin/dashboard" />
+              <Navigate to="/dashboard" />
             </AccountLockGuard>
             : <Navigate to="/login" />
           } 
         />
         <Route 
-          path="/admin/logs" 
+          path="/logs" 
           element={isAuthenticated && isAdmin ? 
             <AccountLockGuard>
-              <Navigate to="/admin/dashboard" />
+              <Navigate to="/dashboard" />
             </AccountLockGuard>
             : <Navigate to="/login" />
           } 
         />
         
         {/* Backward compatibility for old routes */}
-        <Route path="/dashboard" element={<Navigate to="/admin/dashboard" />} />
-        <Route path="/users" element={<Navigate to="/admin/users" />} />
-        <Route path="/roles" element={<Navigate to="/admin/roles" />} />
-        <Route path="/locked-accounts" element={<Navigate to="/admin/locked-accounts" />} />
-        <Route path="/settings" element={<Navigate to="/admin/settings" />} />
-        <Route path="/logs" element={<Navigate to="/admin/logs" />} />
+        <Route path="/dashboard" element={<Navigate to="/dashboard" />} />
+        <Route path="/users" element={<Navigate to="/users" />} />
+        <Route path="/roles" element={<Navigate to="/roles" />} />
+        <Route path="/locked-accounts" element={<Navigate to="/locked-accounts" />} />
+        <Route path="/reports" element={<Navigate to="/reports" />} />
+        <Route path="/settings" element={<Navigate to="/settings" />} />
+        <Route path="/logs" element={<Navigate to="/logs" />} />
         
         {/* User Routes */}
         <Route 
@@ -545,12 +653,12 @@ const App: React.FC = () => {
             <AccountLockGuard>
               <HomePage onLogout={handleLogout} />
             </AccountLockGuard>
-            : <Navigate to={isAdmin ? "/admin/dashboard" : "/login"} />
+            : <Navigate to="/login" />
           } 
         />
         <Route 
           path="/" 
-          element={<Navigate to={isAuthenticated ? (isAdmin ? "/admin/dashboard" : "/user-home") : "/login"} />} 
+          element={<Navigate to={isAuthenticated ? (isAdmin ? "/dashboard" : "/user-home") : "/login"} />} 
         />
       </Routes>
     </Router>

@@ -52,9 +52,10 @@ router.get('/check-lock-status/:userId', async (req, res) => {
         const { userId } = req.params;
         
         // Truy vấn bảng user_lock để kiểm tra tài khoản có đang bị khóa không
+        // Chỉ lấy bản ghi có status = 'locked' và thời gian mở khóa > thời gian hiện tại
         const [lockInfo] = await db.query(
             `SELECT * FROM user_lock 
-             WHERE user_id = ? AND unlock_time > NOW() 
+             WHERE user_id = ? AND status = 'locked' AND unlock_time > NOW() 
              ORDER BY lock_id DESC 
              LIMIT 1`,
             [userId]
@@ -93,29 +94,6 @@ router.get('/check-lock-status/:userId', async (req, res) => {
 });
 
 // Gửi khiếu nại cho tài khoản bị khóa
-router.post('/appeal', async (req, res) => {
-    try {
-        const { userId, username, email, reason, explanation } = req.body;
-        
-        // Lưu thông tin khiếu nại vào database
-        const [result] = await db.query(
-            'INSERT INTO account_appeals (user_id, explanation, appeal_time, status) VALUES (?, ?, NOW(), ?)',
-            [userId, explanation, 'pending']
-        );
-        
-        console.log(`Người dùng ${username} (ID: ${userId}) đã gửi khiếu nại`);
-        
-        res.status(201).json({
-            success: true,
-            message: 'Khiếu nại đã được gửi thành công'
-        });
-    } catch (error) {
-        console.error('Lỗi khi gửi khiếu nại:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Đã xảy ra lỗi khi xử lý khiếu nại'
-        });
-    }
-});
+router.post('/appeal', userController.sendAccountAppeal);
 
 module.exports = router; 

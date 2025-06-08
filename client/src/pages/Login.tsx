@@ -25,6 +25,7 @@ const Login: React.FC = () => {
   const [showLockedModal, setShowLockedModal] = useState(false);
   const [showAppealForm, setShowAppealForm] = useState(false);
   const [lockedUser, setLockedUser] = useState<User | null>(null);
+  const [appealSuccess, setAppealSuccess] = useState(false);
   const location = useLocation();
 
   // Kiểm tra xem có thông tin khóa tài khoản từ redirect không
@@ -49,13 +50,26 @@ const Login: React.FC = () => {
   }, [location]);
 
   const handleLogout = () => {
+    // Xóa dữ liệu đăng nhập
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Đóng modal tài khoản bị khóa
     setShowLockedModal(false);
-    window.location.href = '/login';
+    
+    // Đặt lại trạng thái người dùng bị khóa
+    setLockedUser(null);
+    
+    // Xóa state của location để tránh hiển thị lại modal khi tải lại trang
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Tải lại trang để làm mới hoàn toàn trạng thái ứng dụng
+    window.location.reload();
   };
 
   const handleAppeal = () => {
+    // Đặt lại trạng thái khiếu nại thành công
+    setAppealSuccess(false);
     setShowLockedModal(false);
     setShowAppealForm(true);
   };
@@ -63,8 +77,17 @@ const Login: React.FC = () => {
   const handleSubmitAppeal = async (appealData: AppealData) => {
     try {
       await api.sendAccountAppeal(appealData);
+      
+      // Đánh dấu khiếu nại thành công
+      setAppealSuccess(true);
+      
+      // Đóng form khiếu nại
       setShowAppealForm(false);
-      // Có thể hiển thị thông báo thành công nếu cần
+      
+      // Hiển thị lại modal tài khoản bị khóa sau khi gửi khiếu nại thành công
+      setTimeout(() => {
+        setShowLockedModal(true);
+      }, 200); // Đợi một chút để đảm bảo modal khiếu nại đã đóng hoàn toàn
     } catch (error) {
       console.error('Lỗi khi gửi khiếu nại:', error);
       // Xử lý lỗi
@@ -216,6 +239,7 @@ const Login: React.FC = () => {
           onHide={() => {}} // Không cho phép đóng modal bằng nút X
           onLogout={handleLogout}
           onAppeal={handleAppeal}
+          appealSuccess={appealSuccess}
         />
       )}
 

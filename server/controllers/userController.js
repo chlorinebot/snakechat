@@ -140,6 +140,10 @@ const userController = {
         status: 'locked'
       });
 
+      // Gửi thông báo đăng xuất đến người dùng nếu đang online
+      const socketService = require('../socket');
+      socketService.sendForceLogout(user_id, `Tài khoản của bạn đã bị khóa với lý do: ${reason}`);
+
       res.json({ 
         success: true,
         message: `Đã khóa tài khoản thành công`,
@@ -382,6 +386,56 @@ const userController = {
       res.status(500).json({ 
         success: false,
         message: 'Lỗi khi lấy dữ liệu từ server'
+      });
+    }
+  },
+
+  // Gửi khiếu nại cho tài khoản bị khóa
+  sendAccountAppeal: async (req, res) => {
+    const { userId, username, email, reason, explanation } = req.body;
+    
+    if (!userId || !explanation) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin cần thiết cho khiếu nại'
+      });
+    }
+
+    try {
+      // Tạo dữ liệu báo cáo khiếu nại
+      const reportData = {
+        id_user: userId,
+        title: `Khiếu nại về tài khoản bị khóa - ${username}`,
+        content: `Người dùng: ${username} (${email})\nLý do khóa: ${reason}\n\nGiải thích của người dùng: ${explanation}`,
+        report_type: 'complaint', // Loại báo cáo là khiếu nại
+      };
+      
+      // Gọi controller report để xử lý việc tạo báo cáo
+      const reportController = require('./reportController');
+      
+      // Gọi trực tiếp DB query để lưu báo cáo
+      const db = require('../db');
+      const [result] = await db.query(
+        'INSERT INTO reports (id_user, title, content, report_type, status, submission_time) VALUES (?, ?, ?, ?, ?, NOW())',
+        [userId, reportData.title, reportData.content, 'complaint', 'unresolved']
+      );
+      
+      if (result.affectedRows === 0) {
+        throw new Error('Không thể tạo báo cáo khiếu nại');
+      }
+      
+      res.json({
+        success: true,
+        message: 'Khiếu nại của bạn đã được gửi thành công. Chúng tôi sẽ xem xét và phản hồi sớm nhất có thể.',
+        data: {
+          report_id: result.insertId
+        }
+      });
+    } catch (error) {
+      console.error('Lỗi khi gửi khiếu nại tài khoản:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Đã xảy ra lỗi khi gửi khiếu nại. Vui lòng thử lại sau.'
       });
     }
   },

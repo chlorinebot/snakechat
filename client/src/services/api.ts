@@ -1011,6 +1011,46 @@ export const api = {
         { id_reports, status, notes }
       );
       
+      // Gửi thông báo cho người dùng khi admin tiếp nhận hoặc giải quyết báo cáo
+      if (response.data.success && response.data.data) {
+        const report = response.data.data;
+        const userId = report.id_user;
+        
+        // Kiểm tra có ID người dùng không
+        if (userId) {
+          // Xác định loại báo cáo để hiển thị đúng tên
+          let reportTypeName = '';
+          switch (report.report_type) {
+            case 'bug_report': 
+              reportTypeName = 'báo cáo lỗi';
+              break;
+            case 'suggestion': 
+              reportTypeName = 'góp ý';
+              break;
+            case 'complaint': 
+              reportTypeName = 'khiếu nại';
+              break;
+            default:
+              reportTypeName = 'báo cáo';
+          }
+          
+          // Nếu trạng thái là đang xử lý
+          if (status === 'received') {
+            await api.sendSystemMessage(
+              userId,
+              `Chúng tôi đã tiếp nhận ${reportTypeName} #${id_reports} của bạn và đang trong quá trình xem xét. Đội ngũ hỗ trợ sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất. Xin cảm ơn đóng góp của bạn để SnakeChat ngày càng hoàn thiện hơn!`
+            );
+          }
+          // Nếu trạng thái là đã giải quyết
+          else if (status === 'resolved') {
+            await api.sendSystemMessage(
+              userId,
+              `${reportTypeName.charAt(0).toUpperCase() + reportTypeName.slice(1)} #${id_reports} của bạn đã được xử lý. ${notes ? `Ghi chú: ${notes}` : 'Cảm ơn bạn đã đóng góp cho SnakeChat.'}`
+            );
+          }
+        }
+      }
+      
       return { 
         success: true, 
         message: 'Đã cập nhật trạng thái báo cáo thành công', 

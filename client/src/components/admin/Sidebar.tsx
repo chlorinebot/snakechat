@@ -1,6 +1,6 @@
 import React from 'react';
 import { Nav } from 'react-bootstrap';
-import { useLocation } from 'react-router-dom';
+import { useLocation, NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
 interface AdminSidebarProps {
@@ -11,68 +11,87 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ visible = true }) => {
   const location = useLocation();
   const currentPath = location.pathname;
 
+  // Hàm kiểm tra trạng thái active
+  const isActive = (path: string) => {
+    return currentPath === path;
+  };
+
   return (
     <div className={`admin-sidebar ${visible ? 'show' : ''}`}>
       <div className="admin-sidebar-header">
-        <i className="fas fa-user-shield me-2"></i>
+        <i className="fas fa-user-shield"></i>
         <span>SnakeChat Admin</span>
       </div>
       <Nav className="flex-column">
-        <Nav.Link 
-          href="/admin/dashboard" 
-          className={`admin-sidebar-item ${currentPath === '/admin/dashboard' ? 'active' : ''}`}
-        >
-          <i className="fas fa-tachometer-alt me-2"></i>
-          <span>Thống kê hệ thống</span>
-        </Nav.Link>
-        <Nav.Link 
-          href="/admin/users" 
-          className={`admin-sidebar-item ${currentPath === '/admin/users' ? 'active' : ''}`}
-        >
-          <i className="fas fa-users me-2"></i>
-          <span>Quản lý người dùng</span>
-        </Nav.Link>
-        <Nav.Link 
-          href="/admin/roles" 
-          className={`admin-sidebar-item ${currentPath === '/admin/roles' ? 'active' : ''}`}
-        >
-          <i className="fas fa-user-tag me-2"></i>
-          <span>Quản lý vai trò</span>
-        </Nav.Link>
-        <Nav.Link 
-          href="/admin/locked-accounts" 
-          className={`admin-sidebar-item ${currentPath === '/admin/locked-accounts' ? 'active' : ''}`}
-        >
-          <i className="fas fa-lock me-2"></i>
-          <span>Danh sách khóa tài khoản</span>
-        </Nav.Link>
-        <Nav.Link 
-          href="/admin/reports" 
-          className={`admin-sidebar-item ${currentPath === '/admin/reports' ? 'active' : ''}`}
-        >
-          <i className="fas fa-flag me-2"></i>
-          <span>Danh sách báo cáo</span>
-        </Nav.Link>
+        <Nav.Item>
+          <NavLink 
+            to="/dashboard" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-tachometer-alt"></i>
+            <span>Thống kê hệ thống</span>
+          </NavLink>
+        </Nav.Item>
+        <Nav.Item>
+          <NavLink 
+            to="/users" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-users"></i>
+            <span>Quản lý người dùng</span>
+          </NavLink>
+        </Nav.Item>
+        <Nav.Item>
+          <NavLink 
+            to="/roles" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-user-tag"></i>
+            <span>Quản lý vai trò</span>
+          </NavLink>
+        </Nav.Item>
+        <Nav.Item>
+          <NavLink 
+            to="/locked-accounts" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-lock"></i>
+            <span>Danh sách khóa tài khoản</span>
+          </NavLink>
+        </Nav.Item>
+        <Nav.Item>
+          <NavLink 
+            to="/reports" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-flag"></i>
+            <span>Danh sách báo cáo</span>
+          </NavLink>
+        </Nav.Item>
         <div className="admin-sidebar-divider"></div>
         <div className="admin-sidebar-heading">Cài đặt hệ thống</div>
-        <Nav.Link 
-          href="/admin/settings" 
-          className={`admin-sidebar-item ${currentPath === '/admin/settings' ? 'active' : ''}`}
-        >
-          <i className="fas fa-cog me-2"></i>
-          <span>Cấu hình chung</span>
-        </Nav.Link>
-        <Nav.Link 
-          href="/admin/logs" 
-          className={`admin-sidebar-item ${currentPath === '/admin/logs' ? 'active' : ''}`}
-        >
-          <i className="fas fa-history me-2"></i>
-          <span>Nhật ký hoạt động</span>
-        </Nav.Link>
+        <Nav.Item>
+          <NavLink 
+            to="/settings" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-cog"></i>
+            <span>Cấu hình chung</span>
+          </NavLink>
+        </Nav.Item>
+        <Nav.Item>
+          <NavLink 
+            to="/logs" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-history"></i>
+            <span>Nhật ký hoạt động</span>
+          </NavLink>
+        </Nav.Item>
       </Nav>
       <div className="admin-sidebar-footer">
         <small className="text-muted">
-          <i className="fas fa-circle text-success me-1 pulse-animation"></i>
+          <span className="pulse-animation"></span>
           <span>Hệ thống đang hoạt động</span>
         </small>
       </div>

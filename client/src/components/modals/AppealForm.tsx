@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
 import type { User } from '../../services/api';
 
@@ -27,6 +27,15 @@ const AppealForm: React.FC<AppealFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        onHide();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, onHide]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

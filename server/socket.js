@@ -209,9 +209,58 @@ const emitToUser = (userId, event, data) => {
   }
 };
 
+// Gửi thông báo buộc đăng xuất khi tài khoản bị khóa
+const sendForceLogout = (userId, reason) => {
+  try {
+    const userSocket = userSockets.get(parseInt(userId));
+    
+    if (userSocket) {
+      console.log(`[SOCKET-SERVER] Gửi yêu cầu đăng xuất bắt buộc đến người dùng ${userId} với lý do: ${reason}`);
+      
+      // Gửi thông báo đăng xuất đến client với mức độ ưu tiên cao
+      userSocket.emit('force_logout', {
+        user_id: userId,
+        reason: reason || 'Tài khoản của bạn đã bị khóa',
+        timestamp: new Date().toISOString(),
+        priority: 'high',
+        force: true
+      });
+      
+      // Gửi thêm một thông báo broadcast để đảm bảo tất cả các phiên của người dùng đều nhận được
+      userSocket.broadcast.emit('global_force_logout', {
+        target_user_id: userId,
+        reason: reason || 'Tài khoản của bạn đã bị khóa',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Ngắt kết nối socket ngay lập tức
+      setTimeout(() => {
+        if (userSockets.has(parseInt(userId))) {
+          try {
+            userSocket.disconnect(true);
+            userSockets.delete(parseInt(userId));
+            console.log(`[SOCKET-SERVER] Đã ngắt kết nối socket của người dùng ${userId}`);
+          } catch (disconnectError) {
+            console.error(`[SOCKET-SERVER] Lỗi khi ngắt kết nối socket cho người dùng ${userId}:`, disconnectError);
+          }
+        }
+      }, 1000); // Chờ 1 giây để đảm bảo thông báo được gửi đi
+      
+      return true;
+    }
+    
+    console.log(`[SOCKET-SERVER] Không thể gửi yêu cầu đăng xuất bắt buộc đến người dùng ${userId}: Không tìm thấy kết nối socket`);
+    return false;
+  } catch (error) {
+    console.error(`[SOCKET-SERVER] Lỗi khi gửi yêu cầu đăng xuất bắt buộc đến người dùng ${userId}:`, error);
+    return false;
+  }
+};
+
 module.exports = {
   setupSocket,
   sendNotificationToUser,
   sendUnreadCountUpdate,
-  emitToUser
+  emitToUser,
+  sendForceLogout
 }; 
