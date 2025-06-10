@@ -280,17 +280,14 @@ export const api = {
         
         // Xử lý trạng thái - đảm bảo luôn trả về chuỗi "online" hoặc "offline" 
         if (!normalizedStatus || (normalizedStatus !== 'online' && normalizedStatus !== 'offline')) {
-          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái không hợp lệ: ${friend.status}, đặt thành offline`);
           friend.status = 'offline';
         } else {
           // Chuẩn hóa trạng thái
           friend.status = normalizedStatus;
-          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái: ${friend.status}`);
         }
         return friend;
       });
       
-      console.log('Danh sách bạn bè sau khi xử lý:', friends);
       return friends;
     } catch (error) {
       console.error('Lỗi khi lấy danh sách bạn bè:', error);
@@ -575,9 +572,6 @@ export const api = {
       const response = await axios.get<{ items: User[] }>(`${API_URL}/user/data`);
       const users = response.data.items;
       
-      // Log tất cả người dùng để kiểm tra dữ liệu
-      console.log("Dữ liệu người dùng từ server:", users);
-      
       // Lọc người dùng theo tên hoặc email
       if (!searchTerm) return [];
       
@@ -597,7 +591,6 @@ export const api = {
         };
       });
       
-      console.log("Kết quả tìm kiếm đã xử lý:", filteredUsers);
       return filteredUsers;
     } catch (error) {
       console.error('Lỗi khi tìm kiếm người dùng:', error);
@@ -608,8 +601,6 @@ export const api = {
   // Làm mới trạng thái bạn bè (gọi thủ công)
   refreshFriendStatus: async (userId: number) => {
     try {
-      console.log('Đang làm mới trạng thái bạn bè...');
-      
       // Lấy danh sách bạn bè với trạng thái mới nhất từ server
       const response = await axios.get<{ items: any[] }>(`${API_URL}/friendship/friends/${userId}?t=${new Date().getTime()}`);
       
@@ -619,17 +610,13 @@ export const api = {
         
         // Xử lý trạng thái - đảm bảo luôn trả về chuỗi "online" hoặc "offline" 
         if (!normalizedStatus || (normalizedStatus !== 'online' && normalizedStatus !== 'offline')) {
-          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái không hợp lệ: ${friend.status}, đặt thành offline`);
           friend.status = 'offline';
         } else {
           // Chuẩn hóa trạng thái
           friend.status = normalizedStatus;
-          console.log(`Người dùng ${friend.username} (ID: ${friend.user_id}) có trạng thái: ${friend.status}`);
         }
         return friend;
       });
-      
-      console.log('Đã làm mới trạng thái bạn bè:', friends);
       
       // Lưu danh sách bạn bè đã cập nhật vào localStorage để có thể dùng ngay lập tức
       localStorage.setItem('cachedFriends', JSON.stringify(friends));
@@ -644,9 +631,7 @@ export const api = {
   // Cập nhật cơ sở dữ liệu và thời gian hoạt động
   updateLastActivitySystem: async () => {
     try {
-      console.log('Đang cập nhật cấu trúc cơ sở dữ liệu và thời gian hoạt động...');
       const response = await axios.get<{ success: boolean; message: string; data: any }>(`${API_URL}/user/update-last-activity`);
-      console.log('Kết quả cập nhật:', response.data);
       return response.data;
     } catch (error) {
       console.error('Lỗi khi cập nhật:', error);
@@ -722,14 +707,12 @@ export const api = {
     const attemptSend = async (): Promise<{ success: boolean; data: Message; error?: any }> => {
       try {
         attempts++;
-        console.log(`[API] Đang gửi tin nhắn, lần thử ${attempts}/${retryCount + 1}`);
         
         const response = await axios.post<{ success: boolean; data: Message }>(
           `${API_URL}/messages/send`,
           message
         );
         
-        console.log(`[API] Gửi tin nhắn thành công:`, response.data);
         return { success: true, data: response.data.data };
       } catch (error: any) {
         console.error(`[API] Lỗi khi gửi tin nhắn (lần ${attempts}):`, error);
@@ -739,7 +722,6 @@ export const api = {
             (error.message.includes('network') || 
              error.message.includes('timeout') || 
              !error.response)) {
-          console.log(`[API] Đợi 1 giây trước khi thử lại...`);
           await new Promise(resolve => setTimeout(resolve, 1000));
           return attemptSend();
         }
@@ -750,12 +732,7 @@ export const api = {
     
     // Thực hiện gửi tin nhắn với logic retry
     const result = await attemptSend();
-    
-    if (result.success) {
-      return { success: true, data: result.data };
-    } else {
-      throw result.error;
-    }
+    return result;
   },
 
   // Đánh dấu tin nhắn đã đọc

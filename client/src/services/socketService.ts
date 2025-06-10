@@ -23,17 +23,13 @@ class SocketService {
 
     // Nếu đã có socket và đã kết nối, không cần kết nối lại
     if (this.socket && this.socket.connected) {
-      console.log('[SOCKET-SERVICE] Socket đã kết nối, không cần kết nối lại');
       return;
     }
 
     // Đóng socket cũ nếu có
     if (this.socket) {
-      console.log('[SOCKET-SERVICE] Đóng socket cũ trước khi tạo kết nối mới');
       this.socket.disconnect();
     }
-
-    console.log(`[SOCKET-SERVICE] Đang kết nối socket với userId: ${userId}`);
     
     // Tạo socket mới với các tùy chọn tái kết nối
     this.socket = io('http://localhost:5000', {
@@ -55,8 +51,6 @@ class SocketService {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      console.log('[SOCKET-SERVICE] Kết nối socket thành công');
-      
       // Đặt lại số lần thử kết nối
       this.reconnectAttempts = 0;
       
@@ -70,8 +64,6 @@ class SocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.warn(`[SOCKET-SERVICE] Socket bị ngắt kết nối: ${reason}`);
-      
       // Nếu không phải do người dùng chủ động ngắt kết nối, thử kết nối lại
       if (reason !== 'io client disconnect') {
         this.handleReconnect();
@@ -83,12 +75,9 @@ class SocketService {
     // Tăng số lần thử kết nối
     this.reconnectAttempts++;
     
-    console.log(`[SOCKET-SERVICE] Đang thử kết nối lại (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-    
     // Nếu chưa vượt quá số lần thử tối đa, thử kết nối lại
     if (this.reconnectAttempts <= this.maxReconnectAttempts && this.userId) {
       setTimeout(() => {
-        console.log('[SOCKET-SERVICE] Thử kết nối lại...');
         this.connect(this.userId!);
       }, Math.min(1000 * this.reconnectAttempts, 5000)); // Thời gian chờ tăng dần, tối đa 5s
     } else {
@@ -102,7 +91,6 @@ class SocketService {
     // Đăng ký lại tất cả các sự kiện đã lưu
     this.eventListeners.forEach((callbacks, event) => {
       callbacks.forEach(callback => {
-        console.log(`[SOCKET-SERVICE] Đăng ký lại sự kiện: ${event}`);
         this.socket?.on(event, callback);
       });
     });
@@ -131,34 +119,25 @@ class SocketService {
     
     // Đăng ký sự kiện nếu socket đã kết nối
     if (this.socket) {
-      console.log(`[SOCKET-SERVICE] Đăng ký sự kiện: ${event}`);
       this.socket.on(event, callback);
     } else {
-      console.warn(`[SOCKET-SERVICE] Socket chưa kết nối, sẽ đăng ký sự kiện ${event} khi kết nối thành công`);
-      
       // Thử kết nối lại nếu có userId
       if (this.userId) {
-        console.log('[SOCKET-SERVICE] Thử kết nối lại để đăng ký sự kiện');
         this.connect(this.userId);
       }
     }
   }
 
-  public off(event: string, callback?: (...args: any[]) => void): void {
+  public off(event: string, callback: (...args: any[]) => void): void {
     // Xóa callback khỏi danh sách
-    if (callback && this.eventListeners.has(event)) {
-      this.eventListeners.get(event)?.delete(callback);
-    } else if (!callback && this.eventListeners.has(event)) {
-      this.eventListeners.delete(event);
+    const callbacks = this.eventListeners.get(event);
+    if (callbacks) {
+      callbacks.delete(callback);
     }
     
     // Hủy đăng ký sự kiện nếu socket đã kết nối
     if (this.socket) {
-      if (callback) {
-        this.socket.off(event, callback);
-      } else {
-        this.socket.off(event);
-      }
+      this.socket.off(event, callback);
     }
   }
 
@@ -166,17 +145,13 @@ class SocketService {
     if (this.socket && this.socket.connected) {
       this.socket.emit(event, data);
     } else {
-      console.warn(`[SOCKET-SERVICE] Không thể gửi sự kiện ${event} khi socket không kết nối`);
-      
       // Thử kết nối lại nếu có userId
       if (this.userId) {
-        console.log('[SOCKET-SERVICE] Thử kết nối lại để gửi sự kiện');
         this.connect(this.userId);
         
         // Thử gửi lại sau khi kết nối
         setTimeout(() => {
           if (this.socket && this.socket.connected) {
-            console.log(`[SOCKET-SERVICE] Gửi lại sự kiện ${event} sau khi kết nối`);
             this.socket.emit(event, data);
           }
         }, 1000);
@@ -185,4 +160,5 @@ class SocketService {
   }
 }
 
-export default SocketService.getInstance(); 
+const socketService = SocketService.getInstance();
+export default socketService; 

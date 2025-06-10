@@ -88,8 +88,6 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
   // Lắng nghe sự kiện tin nhắn mới để cập nhật danh sách cuộc trò chuyện
   useEffect(() => {
     const handleNewMessage = (data: any) => {
-      console.log('MessagesSidebar nhận tin nhắn mới:', data);
-
       // Không phát âm thanh khi nhận tin nhắn mới ở đây
 
       // Cập nhật thông tin tin nhắn mới nhất vào cuộc trò chuyện
@@ -99,7 +97,6 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
         );
 
         if (!conversationExists) {
-          console.log('Cuộc trò chuyện mới, làm mới danh sách');
           fetchConversations();
           return prevConversations;
         }
@@ -124,13 +121,53 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
         });
       });
     };
-    
+
+    // Cập nhật unread_count khi nhận được sự kiện tin nhắn đã đọc
+    const handleMessageRead = (data: any) => {
+      if (data.conversation_id && data.reader_id) {
+        setConversations(prevConversations => {
+          return prevConversations.map(conv => {
+            if (conv.conversation_id === data.conversation_id) {
+              // Đặt unread_count về 0 nếu người đọc là người dùng hiện tại
+              if (data.reader_id === userId) {
+                return { ...conv, unread_count: 0 };
+              }
+            }
+            return conv;
+          });
+        });
+      }
+    };
+
+    // Cập nhật unread_count khi nhận được sự kiện
+    const handleUnreadCountUpdate = (data: any) => {
+      if (data.conversation_id && typeof data.unread_count === 'number') {
+        setConversations(prevConversations => {
+          return prevConversations.map(conv => {
+            if (conv.conversation_id === data.conversation_id) {
+              return { ...conv, unread_count: data.unread_count };
+            }
+            return conv;
+          });
+        });
+      } else if (data.reader_id === userId) {
+        // Nếu người đọc là người dùng hiện tại, cập nhật tất cả cuộc trò chuyện
+        fetchConversations();
+      }
+    };
+
+    // Đăng ký lắng nghe các sự kiện
     socketService.on('new_message', handleNewMessage);
-    
+    socketService.on('message_read_receipt', handleMessageRead);
+    socketService.on('unread_count_update', handleUnreadCountUpdate);
+
+    // Hủy đăng ký khi component unmount
     return () => {
       socketService.off('new_message', handleNewMessage);
+      socketService.off('message_read_receipt', handleMessageRead);
+      socketService.off('unread_count_update', handleUnreadCountUpdate);
     };
-  }, [userId, currentConversation, setConversations, fetchConversations]);
+  }, [userId, fetchConversations, setConversations]);
 
   // Tải danh sách bạn bè
   useEffect(() => {
@@ -142,7 +179,6 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
         // Lấy mảng các ID của bạn bè
         const ids = friends.map(friend => friend.user_id);
         setFriendIds(ids);
-        console.log('Danh sách ID bạn bè:', ids);
       } catch (error) {
         console.error('Lỗi khi tải danh sách bạn bè:', error);
       }

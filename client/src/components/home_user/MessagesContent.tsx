@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../services/api';
 import type { Conversation, Message } from '../../services/api';
 import socketService from '../../services/socketService';
-import { playMessageSound } from '../../utils/sound';
 import EmojiPicker from 'emoji-picker-react';
 import type { EmojiClickData } from 'emoji-picker-react';
 
@@ -209,7 +208,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
 
     // Định nghĩa hàm xử lý sự kiện kết nối thành công
-    const handleConnectionSuccess = (data: any) => {
+    const handleConnectionSuccess = (_: any) => {
       setIsSocketConnected(true);
       
       // Nếu đã có cuộc trò chuyện hiện tại, đăng ký lắng nghe sự kiện
@@ -242,7 +241,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
     
     // Lắng nghe phản hồi ping
-    const handlePong = (data: any) => {
+    const handlePong = (_: any) => {
     };
 
     // Đăng ký lắng nghe các sự kiện
@@ -411,7 +410,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   // Debug theo dõi socket connection
   useEffect(() => {
     const intervalId = setInterval(() => {
-    }, 10000);
+    }, 10);
     
     return () => clearInterval(intervalId);
   }, []);
@@ -502,8 +501,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       // Cuộn xuống tin nhắn mới - luôn cuộn khi người dùng gửi tin
       setTimeout(() => scrollToBottom(true), 10);
       
-      console.log('[SEND] Gửi tin nhắn đến server...');
-      
       // Gửi tin nhắn đến server với tùy chọn thử lại
       const response = await api.sendMessage({
         conversation_id: currentConversation.conversation_id,
@@ -512,7 +509,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         message_type: 'text'
       }, 3); // Thử lại tối đa 3 lần nếu gặp lỗi mạng
       
-      console.log('[SEND] Phản hồi từ server:', response);
       setSending(false);
       
       if (response.success && response.data) {
@@ -525,8 +521,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           }
           return msg;
         }));
-        
-        console.log('[SEND] Đã cập nhật tin nhắn tạm thời thành tin nhắn chính thức.');
       } else {
         console.error('[SEND] Gửi tin nhắn không thành công:', response);
         // Đánh dấu tin nhắn là thất bại
@@ -690,19 +684,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       padding: '20px 30px',
       scrollbarWidth: 'thin' as const,
       msOverflowStyle: 'none' as const,
-      '&::-webkit-scrollbar': {
-        width: '6px',
-      },
-      '&::-webkit-scrollbar-track': {
-        background: 'transparent',
-      },
-      '&::-webkit-scrollbar-thumb': {
-        background: '#bcc0c4',
-        borderRadius: '10px',
-        '&:hover': {
-          background: '#8e8e8e',
-        }
-      }
     },
     messagesList: {
       display: 'flex',
@@ -741,12 +722,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       color: '#000000',
       fontSize: '13px',
       letterSpacing: '0.3px',
-    },
-    messageGroup: {
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: '0',
-      marginBottom: '0',
     },
     messageRow: {
       display: 'flex',
@@ -800,7 +775,14 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       maxHeight: '80px', // Giới hạn chiều cao
       overflowY: 'auto' as const,
       color: '#000000', // Màu chữ đen
-      caretColor: '#000000', // Màu con trỏ đen
+      caretColor: '#0066ff', // Màu con trỏ xanh nổi bật hơn
+      transition: 'all 0.2s ease-in-out', // Thêm hiệu ứng mượt mà
+      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)', // Thêm hiệu ứng shadow bên trong
+      '&:focus': {
+        border: '1px solid #b3d7ff',
+        backgroundColor: '#ffffff',
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05), 0 0 0 3px rgba(0,102,255,0.1)',
+      },
     },
     sendButton: {
       backgroundColor: '#0066ff',
@@ -813,7 +795,18 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
-      transition: 'all 0.2s',
+      transition: 'all 0.2s ease',
+      boxShadow: '0 2px 6px rgba(0,102,255,0.3)',
+      transform: 'scale(1)',
+      '&:hover': {
+        backgroundColor: '#0055dd',
+        transform: 'scale(1.05)',
+        boxShadow: '0 4px 8px rgba(0,102,255,0.4)',
+      },
+      '&:active': {
+        transform: 'scale(0.95)',
+        boxShadow: '0 1px 3px rgba(0,102,255,0.3)',
+      },
     },
     loadingMessages: {
       display: 'flex',
@@ -840,10 +833,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       fontSize: '15px',
       lineHeight: '1.4',
       transition: 'all 0.2s ease',
-      '&:hover': {
-        transform: 'translateY(-1px)',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
-      }
     },
     messageBubbleOther: {
       backgroundColor: '#f0f2f5',
@@ -863,10 +852,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       fontSize: '15px',
       lineHeight: '1.4',
       transition: 'all 0.2s ease',
-      '&:hover': {
-        transform: 'translateY(-1px)',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-      }
     },
     messageTime: {
       fontSize: '11px',
@@ -905,16 +890,31 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       alignItems: 'center',
       justifyContent: 'center',
       cursor: 'pointer',
-      transition: 'all 0.2s',
+      transition: 'all 0.2s ease',
       color: '#666',
       fontSize: '20px',
       padding: 0,
+      '&:hover': {
+        backgroundColor: '#f0f0f0',
+        color: '#0066ff',
+        transform: 'scale(1.05)',
+      },
+      '&:active': {
+        transform: 'scale(0.95)',
+        backgroundColor: '#e8e8e8',
+      },
     },
     emojiPickerContainer: {
       position: 'absolute' as const,
       bottom: '80px',
       left: '15px',
       zIndex: 1000,
+      transform: 'translateY(0)',
+      opacity: 1,
+      transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out',
+      animation: 'emojiPickerFadeIn 0.3s ease-in-out',
+      boxShadow: '0 12px 28px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.1)',
+      borderRadius: '16px',
     },
     messageContainer: {
       display: 'flex',
@@ -1214,8 +1214,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     // Hàm cập nhật trạng thái khi tab được kích hoạt lại
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && currentConversation?.conversation_id) {
-        console.log('Tab được kích hoạt lại, đang cập nhật trạng thái tin nhắn...');
-        
         // Cập nhật trạng thái đọc tin nhắn
         if (userId) {
           loadReadStatus();
@@ -1274,7 +1272,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       api.getConversationMessages(currentConversation.conversation_id)
         .then(msgs => setMessages(msgs))
         .catch(() => {});
-    }, 500);
+    }, /* tốc độ refresh tin nhắn */);
 
     return () => {
       clearInterval(intervalId);
@@ -1347,6 +1345,141 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const isSystemMessage = (message: Message) => {
     return message.sender_id === 1;
   };
+
+  // Thêm CSS tùy chỉnh cho webkit scrollbar
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      .chat-area::-webkit-scrollbar {
+        width: 6px;
+      }
+      .chat-area::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .chat-area::-webkit-scrollbar-thumb {
+        background: #bcc0c4;
+        border-radius: 10px;
+      }
+      .chat-area::-webkit-scrollbar-thumb:hover {
+        background: #8e8e8e;
+      }
+      .message-bubble-own:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      }
+      .message-bubble-other:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  // Thêm useEffect cho CSS của thanh soạn tin nhắn để làm mượt hơn
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.id = 'message-input-styles';
+    styleElement.innerHTML = `
+      @keyframes emojiPickerFadeIn {
+        from {
+          transform: translateY(10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      
+      .message-input-container {
+        position: relative;
+        flex: 1;
+        transition: all 0.3s ease;
+      }
+      
+      .message-input {
+        width: 100%;
+        transition: all 0.25s ease-in-out;
+        backface-visibility: hidden;
+        will-change: border, box-shadow, background-color;
+      }
+      
+      .message-input:focus {
+        border-color: #b3d7ff !important;
+        background-color: #ffffff !important;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.05), 0 0 0 3px rgba(0,102,255,0.1) !important;
+      }
+      
+      .emoji-button, .send-button {
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .emoji-button::after, .send-button::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        border-radius: 100%;
+        transform: scale(1, 1) translate(-50%, -50%);
+        transform-origin: 50% 50%;
+      }
+      
+      .emoji-button:active::after, .send-button:active::after {
+        opacity: 0.2;
+        transform: scale(50, 50) translate(-50%, -50%);
+        transition: transform 0.5s, opacity 1s;
+      }
+      
+      .input-area {
+        transition: all 0.3s ease;
+        transform: translateY(0);
+        backface-visibility: hidden;
+        will-change: transform;
+      }
+      
+      .input-form {
+        transition: all 0.3s ease;
+        transform: translateY(0);
+        opacity: 1;
+        backface-visibility: hidden;
+        will-change: transform, opacity;
+      }
+      
+      .input-area:focus-within .input-form {
+        transform: translateY(-2px);
+      }
+      
+      /* Hiệu ứng placeholder */
+      .message-input::placeholder {
+        transition: all 0.2s ease;
+        color: #aaa;
+      }
+      
+      .message-input:focus::placeholder {
+        opacity: 0.7;
+        transform: translateX(3px);
+      }
+      
+      /* Hiệu ứng gõ tin nhắn */
+      .message-input:not(:placeholder-shown) {
+        background-color: #ffffff !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.getElementById('message-input-styles')?.remove();
+    };
+  }, []);
 
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {
@@ -1554,7 +1687,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       onMouseLeave={() => setHoveredMessageId(null)}
                     >
                       <div 
-                        className="message-bubble"
+                        className={isOwnMessage(message) ? "message-bubble-own" : "message-bubble-other"}
                         style={{
                           ...(isOwnMessage(message) ? styles.messageBubbleOwn : isSystemMessage(message) ? {
                             ...styles.messageBubbleOther,
@@ -1599,7 +1732,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               </div>
             ) : (
               <div className="input-area" style={styles.inputArea} onClick={() => inputRef.current?.focus()}>
-                <form style={styles.inputForm} onSubmit={handleSendMessage}>
+                <form className="input-form" style={styles.inputForm} onSubmit={handleSendMessage}>
                   <button
                     type="button"
                     className="emoji-button"
@@ -1626,6 +1759,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                         emojiStyle="native"
                         theme="light"
                         skinTonesDisabled={true}
+                        width={320}
+                        height={400}
                         previewConfig={{
                           defaultCaption: "Chọn Emoji...",
                           defaultEmoji: "1f60a"
@@ -1633,25 +1768,29 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       />
                     </div>
                   )}
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Nhập tin nhắn..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    style={styles.messageInput}
-                    disabled={sending}
-                    autoFocus={shouldAutoFocus}
-                    onFocus={() => {
-                      // Nếu đang hiển thị emoji picker và không nên auto focus, blur input
-                      if (showEmojiPicker && !shouldAutoFocus) {
-                        inputRef.current?.blur();
-                      }
-                    }}
-                  />
+                  <div className="message-input-container">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      className="message-input"
+                      placeholder="Nhập tin nhắn..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      style={styles.messageInput}
+                      disabled={sending}
+                      autoFocus={shouldAutoFocus}
+                      onFocus={() => {
+                        // Nếu đang hiển thị emoji picker và không nên auto focus, blur input
+                        if (showEmojiPicker && !shouldAutoFocus) {
+                          inputRef.current?.blur();
+                        }
+                      }}
+                    />
+                  </div>
                   <button 
                     type="submit" 
+                    className="send-button"
                     style={{
                       ...styles.sendButton,
                       opacity: !newMessage.trim() || sending ? 0.6 : 1,
