@@ -570,6 +570,11 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const getMemberStatusText = (member?: ConversationMember) => {
     if (!member) return 'Ngoại tuyến';
 
+    // Kiểm tra xem có phải là tài khoản hệ thống không (user_id = 1)
+    if (member.user_id === 1) {
+      return ''; // Không hiển thị trạng thái cho tài khoản hệ thống
+    }
+
     // Kiểm tra xem người dùng có phải là bạn bè không
     const isFriend = friendIds.includes(member.user_id);
     
@@ -588,8 +593,13 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     return 'Ngoại tuyến';
   };
   const getMemberStatusColor = (member?: ConversationMember) => {
-    // Kiểm tra xem người dùng có phải là bạn bè không
+    // Kiểm tra xem người dùng có tồn tại không
     if (!member) return '#CCCCCC';
+    
+    // Kiểm tra xem có phải là tài khoản hệ thống không (user_id = 1)
+    if (member.user_id === 1) {
+      return 'transparent'; // Không hiển thị chỉ báo màu cho tài khoản hệ thống
+    }
     
     // Kiểm tra xem member.user_id có nằm trong danh sách bạn bè không
     const isFriend = friendIds.includes(member.user_id);
@@ -690,27 +700,33 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
                     onClick={handleUserHeaderClick}
                   >
                     <h2 style={{ margin: 0 }}>{getConversationName(currentConversation)}</h2>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      marginTop: '4px',
-                      fontSize: '14px',
-                      color: '#888'
-                    }}>
-                      <span style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: getMemberStatusColor(
-                          currentConversation.members?.find(m => m.user_id !== user.user_id)
-                        ),
-                        display: 'inline-block',
-                        marginRight: '6px'
-                      }} />
-                      {getMemberStatusText(
-                        currentConversation.members?.find(m => m.user_id !== user.user_id)
-                      )}
-                    </div>
+                    {/* Kiểm tra xem thành viên khác có phải là tài khoản hệ thống không */}
+                    {(() => {
+                      const otherMember = currentConversation.members?.find(m => m.user_id !== user.user_id);
+                      // Chỉ hiển thị trạng thái nếu không phải tài khoản hệ thống
+                      if (otherMember && otherMember.user_id !== 1) {
+                        return (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            marginTop: '4px',
+                            fontSize: '14px',
+                            color: '#888'
+                          }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: getMemberStatusColor(otherMember),
+                              display: 'inline-block',
+                              marginRight: '6px'
+                            }} />
+                            {getMemberStatusText(otherMember)}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </>
               ) : (
