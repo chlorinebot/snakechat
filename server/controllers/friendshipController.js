@@ -248,7 +248,9 @@ const FriendshipController = {
       
       // Lấy tất cả lời mời kết bạn mà người dùng đã nhận
       const query = `
-        SELECT f.*, u.* FROM friendships f
+        SELECT f.friendship_id, f.status, f.created_at, f.user_id_1, f.user_id_2,
+               u.user_id, u.username, u.email, u.status as user_status, u.join_date, u.avatar
+        FROM friendships f
         INNER JOIN users u ON f.user_id_1 = u.user_id
         WHERE f.user_id_2 = ? AND f.status = 'pending'
       `;
@@ -261,8 +263,9 @@ const FriendshipController = {
           user_id: request.user_id,
           username: request.username,
           email: request.email,
-          status: request.status || 'offline',
-          join_date: request.join_date
+          status: request.user_status || 'offline',
+          join_date: request.join_date,
+          avatar: request.avatar
         },
         status: request.status,
         created_at: request.created_at
