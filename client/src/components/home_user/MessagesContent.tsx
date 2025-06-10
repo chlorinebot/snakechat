@@ -410,7 +410,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   // Debug theo dõi socket connection
   useEffect(() => {
     const intervalId = setInterval(() => {
-    }, 10);
+    }, 10000);
     
     return () => clearInterval(intervalId);
   }, []);
