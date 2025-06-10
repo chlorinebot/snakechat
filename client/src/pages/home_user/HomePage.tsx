@@ -652,6 +652,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       <MainSidebar 
         activeTab={activeTab} 
         userInitial={userInitial} 
+        userAvatar={user.avatar}
         onTabChange={handleTabChange} 
         onAvatarClick={handleAvatarClick}
         avatarRef={avatarRef}
@@ -666,29 +667,41 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
             <div className="content-header">
               {currentConversation ? (
                 <>
-                  <div 
+                  <div
                     style={{
-                      width: '32px',
-                      height: '32px',
+                      width: '60px',
+                      height: '60px',
                       borderRadius: '50%',
-                      backgroundColor: '#0066ff',
-                      color: 'white',
+                      ...(currentConversation.conversation_type === 'personal' &&
+                         currentConversation.members?.find(m => m.user_id !== user.user_id)?.avatar
+                        ? {
+                            backgroundImage: `url(${currentConversation.members.find(m => m.user_id !== user.user_id)?.avatar})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            backgroundColor: 'transparent',
+                            color: 'transparent'
+                          }
+                        : {
+                            backgroundColor: '#0066ff',
+                            color: 'white'
+                          }),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 'bold',
-                      fontSize: '16px',
-                      marginRight: '10px',
+                      fontSize: '18px',
+                      marginRight: '12px',
                       cursor: 'pointer'
                     }}
                     onClick={handleUserHeaderClick}
                   >
-                    {currentConversation.conversation_type === 'personal' && 
-                     currentConversation.members?.find(member => member.user_id !== user.user_id)?.user_id === 1 ? (
-                      <i className="fas fa-wrench" style={{ fontSize: '16px' }}></i>
-                    ) : (
-                      getConversationName(currentConversation).charAt(0).toUpperCase()
-                    )}
+                    {!(currentConversation.conversation_type === 'personal' &&
+                       currentConversation.members?.find(m => m.user_id !== user.user_id)?.avatar) &&
+                      (currentConversation.conversation_type === 'personal' &&
+                       currentConversation.members?.find(member => member.user_id !== user.user_id)?.user_id === 1
+                        ? <i className="fas fa-wrench" style={{ fontSize: '16px' }}></i>
+                        : getConversationName(currentConversation).charAt(0).toUpperCase())
+                    }
                   </div>
                   <div 
                     style={{ 

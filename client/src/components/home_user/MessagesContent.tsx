@@ -1525,11 +1525,21 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                     }}
                   >
                     {!isOwnMessage(message) && (
-                      <div style={styles.messageAvatar}>
-                        {isSystemMessage(message) ? (
-                          <i className="fas fa-wrench" style={{ fontSize: '16px', color: '#0066ff' }}></i>
-                        ) : (
-                          message.sender_name ? message.sender_name.charAt(0).toUpperCase() : '?'
+                      <div style={{
+                        ...styles.messageAvatar,
+                        ...(message.sender_avatar ? {
+                          backgroundImage: `url(${message.sender_avatar})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          color: 'transparent'
+                        } : {})
+                      }}>
+                        {!message.sender_avatar && (
+                          isSystemMessage(message) ? (
+                            <i className="fas fa-wrench" style={{ fontSize: '16px', color: '#0066ff' }}></i>
+                          ) : (
+                            message.sender_name ? message.sender_name.charAt(0).toUpperCase() : '?'
+                          )
                         )}
                       </div>
                     )}

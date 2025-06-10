@@ -11,13 +11,26 @@ import AccountLockGuard from './components/common/AccountLockGuard';
 import api from './services/api';
 import socketService from './services/socketService';
 import Reports from './pages/admin/Reports';
+import Announcements from './pages/admin/Announcements';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // URL endpoint cho cập nhật trạng thái
 const API_URL = 'http://localhost:5000/api';
 const OFFLINE_URL = `${API_URL}/user/update-status-beacon`;
 const HEARTBEAT_INTERVAL = 10000; // 10 giây
+
+// Tạo component LoginPage để sử dụng AuthContext
+const LoginPage: React.FC = () => {
+  const { login } = useAuth();
+  
+  const handleLoginSuccess = (token: string, userData: any) => {
+    login(token, userData);
+  };
+  
+  return <Login onLoginSuccess={handleLoginSuccess} />;
+};
 
 const App: React.FC = () => {
   // Kiểm tra authentication và role từ localStorage
@@ -548,120 +561,63 @@ const App: React.FC = () => {
     // Cập nhật trạng thái offline trước khi đăng xuất
     await handleUserOffline();
     
-    // Xóa thông tin đăng nhập khỏi localStorage
+    // Xóa token và thông tin người dùng
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('lastActivity');
     localStorage.removeItem('tabHiddenTime');
+    localStorage.removeItem('userStatus');
+    localStorage.removeItem('offlineTimestamp');
+    localStorage.removeItem('offlineTimerId');
+    localStorage.removeItem('lastOfflineAction');
     
     // Cập nhật state
     setIsAuthenticated(false);
     setUser({});
+    
+    // Ngắt kết nối socket
+    socketService.disconnect();
+    
+    // Thông báo đăng xuất thành công
+    toast.success('Đã đăng xuất thành công', {
+      position: "top-center",
+      autoClose: 3000,
+    });
   };
 
   return (
-    <Router>
-      <ToastContainer />
-      <Routes>
-        <Route 
-          path="/login" 
-          element={!isAuthenticated ? <Login /> : (isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/user-home" />)} 
-        />
-        <Route 
-          path="/register" 
-          element={!isAuthenticated ? <Register /> : (isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/user-home" />)} 
-        />
-        
-        {/* Admin Routes */}
-        <Route 
-          path="/dashboard" 
-          element={isAuthenticated && isAdmin ? 
-            <AccountLockGuard>
-              <Dashboard onLogout={handleLogout} />
-            </AccountLockGuard> 
-            : <Navigate to="/login" />
-          } 
-        />
-        <Route 
-          path="/users" 
-          element={isAuthenticated && isAdmin ? 
-            <AccountLockGuard>
-              <Users onLogout={handleLogout} />
-            </AccountLockGuard> 
-            : <Navigate to="/login" />
-          } 
-        />
-        <Route 
-          path="/roles" 
-          element={isAuthenticated && isAdmin ? 
-            <AccountLockGuard>
-              <Roles onLogout={handleLogout} />
-            </AccountLockGuard> 
-            : <Navigate to="/login" />
-          } 
-        />
-        <Route 
-          path="/locked-accounts" 
-          element={isAuthenticated && isAdmin ? 
-            <AccountLockGuard>
-              <LockedAccounts onLogout={handleLogout} />
-            </AccountLockGuard>
-            : <Navigate to="/login" />
-          } 
-        />
-        <Route 
-          path="/reports" 
-          element={isAuthenticated && isAdmin ? 
-            <AccountLockGuard>
-              <Reports onLogout={handleLogout} />
-            </AccountLockGuard>
-            : <Navigate to="/login" />
-          } 
-        />
-        <Route 
-          path="/settings" 
-          element={isAuthenticated && isAdmin ? 
-            <AccountLockGuard>
-              <Navigate to="/dashboard" />
-            </AccountLockGuard>
-            : <Navigate to="/login" />
-          } 
-        />
-        <Route 
-          path="/logs" 
-          element={isAuthenticated && isAdmin ? 
-            <AccountLockGuard>
-              <Navigate to="/dashboard" />
-            </AccountLockGuard>
-            : <Navigate to="/login" />
-          } 
-        />
-        
-        {/* Backward compatibility for old routes */}
-        <Route path="/dashboard" element={<Navigate to="/dashboard" />} />
-        <Route path="/users" element={<Navigate to="/users" />} />
-        <Route path="/roles" element={<Navigate to="/roles" />} />
-        <Route path="/locked-accounts" element={<Navigate to="/locked-accounts" />} />
-        <Route path="/reports" element={<Navigate to="/reports" />} />
-        <Route path="/settings" element={<Navigate to="/settings" />} />
-        <Route path="/logs" element={<Navigate to="/logs" />} />
-        
-        {/* User Routes */}
-        <Route 
-          path="/user-home" 
-          element={isAuthenticated && isRegularUser ? 
-            <AccountLockGuard>
-              <HomePage onLogout={handleLogout} />
-            </AccountLockGuard>
-            : <Navigate to="/login" />
-          } 
-        />
-        <Route 
-          path="/" 
-          element={<Navigate to={isAuthenticated ? (isAdmin ? "/dashboard" : "/user-home") : "/login"} />} 
-        />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <ToastContainer />
+        <Routes>
+          <Route path="/login" element={!isAuthenticated ? <LoginPage /> : (isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/" />)} />
+          
+          <Route path="/register" element={!isAuthenticated ? <Register /> : (isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/" />)} />
+          
+          {/* Admin routes */}
+          <Route path="/admin/dashboard" element={isAuthenticated && isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/admin/users" element={isAuthenticated && isAdmin ? <Users onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/admin/roles" element={isAuthenticated && isAdmin ? <Roles onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/admin/locked-accounts" element={isAuthenticated && isAdmin ? <LockedAccounts onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/admin/reports" element={isAuthenticated && isAdmin ? <Reports onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/admin/announcements" element={isAuthenticated && isAdmin ? <Announcements onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          
+          {/* User routes - với AccountLockGuard để kiểm tra trạng thái khóa */}
+          <Route path="/" element={
+            isAuthenticated && isRegularUser ? (
+              <AccountLockGuard>
+                <HomePage onLogout={handleLogout} />
+              </AccountLockGuard>
+            ) : (
+              <Navigate to="/login" />
+            )
+          } />
+          
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to={isAuthenticated ? (isAdmin ? "/admin/dashboard" : "/") : "/login"} />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 };
 

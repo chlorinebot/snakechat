@@ -21,6 +21,7 @@ export interface User {
   status?: string; // 'online' hoặc 'offline'
   join_date?: string;
   last_activity?: string; // Thời gian hoạt động gần nhất
+  avatar?: string; // URL hình đại diện của người dùng
 }
 
 export interface UserLock {
@@ -52,6 +53,7 @@ export interface Message {
   conversation_id: number;
   sender_id: number;
   sender_name?: string;
+  sender_avatar?: string; // URL avatar của người gửi tin nhắn
   content: string;
   message_type?: string;
   created_at: string;
@@ -77,6 +79,7 @@ export interface ConversationMember {
   user_id: number;
   username?: string;
   status?: string;
+  avatar?: string; // URL hình đại diện của thành viên
   joined_at: string;
   left_at?: string;
 }
@@ -1074,6 +1077,115 @@ export const api = {
     } catch (error: any) {
       console.error('Lỗi khi gửi tin nhắn hệ thống:', error.message);
       return { success: false, message: 'Lỗi khi gửi tin nhắn hệ thống' };
+    }
+  },
+
+  // API cho thông báo chung
+  getAnnouncements: async () => {
+    try {
+      const response = await axios.get<{ success: boolean; message: string; items: any[] }>(`${API_URL}/announcement/all`);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách thông báo:', error);
+      return { success: false, message: 'Lỗi khi lấy dữ liệu thông báo', items: [] };
+    }
+  },
+
+  getAnnouncementById: async (id: number) => {
+    try {
+      const response = await axios.get<{ success: boolean; message: string; data: any }>(`${API_URL}/announcement/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy thông tin thông báo:', error);
+      return { success: false, message: 'Lỗi khi lấy thông tin thông báo', data: null };
+    }
+  },
+
+  createAnnouncement: async (data: { content: string; announcementType: string }) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: any }>(`${API_URL}/announcement/create`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi tạo thông báo:', error);
+      return { success: false, message: 'Lỗi khi tạo thông báo', data: null };
+    }
+  },
+
+  updateAnnouncement: async (id: number, data: { content?: string; announcementType?: string }) => {
+    try {
+      const response = await axios.put<{ success: boolean; message: string; data: any }>(`${API_URL}/announcement/update/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi cập nhật thông báo:', error);
+      return { success: false, message: 'Lỗi khi cập nhật thông báo', data: null };
+    }
+  },
+
+  deleteAnnouncement: async (id: number) => {
+    try {
+      const response = await axios.delete<{ success: boolean; message: string }>(`${API_URL}/announcement/delete/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi xóa thông báo:', error);
+      return { success: false, message: 'Lỗi khi xóa thông báo' };
+    }
+  },
+
+  // API cho upload và quản lý avatar
+  uploadAvatar: async (file: File) => {
+    try {
+      // Tạo FormData để gửi file
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      // Gửi request upload
+      const response = await axios.post<{ success: boolean; message: string; data: { url: string; public_id: string } }>(
+        `${API_URL}/upload/avatar`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi upload avatar:', error);
+      return { success: false, message: 'Lỗi khi upload avatar', data: null };
+    }
+  },
+
+  updateAvatarUrl: async (userId: number, avatarUrl: string) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: { user_id: number; avatar_url: string } }>(
+        `${API_URL}/upload/avatar/update`,
+        {
+          user_id: userId,
+          avatar_url: avatarUrl
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi cập nhật URL avatar:', error);
+      return { success: false, message: 'Lỗi khi cập nhật URL avatar', data: null };
+    }
+  },
+
+  deleteOldAvatar: async (publicId: string) => {
+    try {
+      const response = await axios.post<{ success: boolean; message: string; data: any }>(
+        `${API_URL}/upload/avatar/delete`,
+        {
+          public_id: publicId
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi xóa avatar cũ:', error);
+      return { success: false, message: 'Lỗi khi xóa avatar cũ', data: null };
     }
   },
 };

@@ -13,7 +13,7 @@ exports.getConversationMessages = async (req, res) => {
     // Lấy tin nhắn từ database với thông tin người gửi
     const [messages] = await db.query(`
       SELECT m.message_id, m.conversation_id, m.sender_id, 
-             u.username as sender_name, m.content, 
+             u.username as sender_name, u.avatar as sender_avatar, m.content, 
              m.message_type, m.created_at, m.is_read
       FROM messages m
       LEFT JOIN users u ON m.sender_id = u.user_id
@@ -61,10 +61,11 @@ exports.sendMessage = async (req, res) => {
     
     // Lấy thông tin người gửi
     const [senderResults] = await db.query(`
-      SELECT username FROM users WHERE user_id = ?
+      SELECT username, avatar FROM users WHERE user_id = ?
     `, [sender_id]);
     
     const senderName = senderResults.length > 0 ? senderResults[0].username : null;
+    const senderAvatar = senderResults.length > 0 ? senderResults[0].avatar : null;
     
     // Lấy thông tin chi tiết tin nhắn vừa gửi
     const [messageDetails] = await db.query(`
@@ -76,7 +77,8 @@ exports.sendMessage = async (req, res) => {
     
     const message = {
       ...messageDetails[0],
-      sender_name: senderName
+      sender_name: senderName,
+      sender_avatar: senderAvatar
     };
     
     // Lấy danh sách TẤT CẢ thành viên trong cuộc trò chuyện để gửi thông báo (bao gồm cả người gửi)
@@ -294,7 +296,7 @@ exports.sendSystemMessage = async (req, res) => {
     // Lấy thông tin chi tiết tin nhắn vừa gửi
     const [messageDetails] = await connection.query(`
       SELECT m.message_id, m.conversation_id, m.sender_id, u.username as sender_name,
-             m.content, m.message_type, m.created_at, m.is_read
+             u.avatar as sender_avatar, m.content, m.message_type, m.created_at, m.is_read
       FROM messages m
       JOIN users u ON m.sender_id = u.user_id
       WHERE m.message_id = ?

@@ -35,7 +35,7 @@ exports.getUserConversations = async (req, res) => {
     // Lấy danh sách thành viên cho mỗi cuộc trò chuyện
     const enrichedConversations = await Promise.all(conversations.map(async (conv) => {
       const [members] = await db.query(`
-        SELECT cm.user_id, u.username, u.status, cm.joined_at, cm.left_at
+        SELECT cm.user_id, u.username, u.status, u.avatar, cm.joined_at, cm.left_at
         FROM conversation_members cm
         LEFT JOIN users u ON cm.user_id = u.user_id
         WHERE cm.conversation_id = ?
@@ -95,7 +95,7 @@ exports.getConversationDetails = async (req, res) => {
     
     // Lấy danh sách thành viên
     const [members] = await db.query(`
-      SELECT cm.user_id, u.username, u.status, cm.joined_at, cm.left_at
+      SELECT cm.user_id, u.username, u.status, u.avatar, cm.joined_at, cm.left_at
       FROM conversation_members cm
       LEFT JOIN users u ON cm.user_id = u.user_id
       WHERE cm.conversation_id = ?

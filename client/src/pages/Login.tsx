@@ -20,7 +20,11 @@ interface LocationState {
   };
 }
 
-const Login: React.FC = () => {
+interface LoginProps {
+  onLoginSuccess?: (token: string, userData: any) => void;
+}
+
+const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [showLockedModal, setShowLockedModal] = useState(false);
   const [showAppealForm, setShowAppealForm] = useState(false);
@@ -158,13 +162,18 @@ const Login: React.FC = () => {
           console.error('Không tìm thấy user_id hoặc id trong dữ liệu đăng nhập:', userData);
         }
         
-        // Kiểm tra role_id và điều hướng
+        // Gọi callback nếu có
+        if (onLoginSuccess) {
+          onLoginSuccess(result.token, userData);
+        }
+        
+        // Điều hướng dựa vào role_id
         if (result.user.role_id === 1) {
           // Nếu là admin (role_id = 1)
-          window.location.href = '/dashboard';
+          window.location.href = '/admin/dashboard';
         } else {
           // Nếu là người dùng thường (role_id = 2)
-          window.location.href = '/user-home'; // hoặc trang dành cho người dùng thường
+          window.location.href = '/';
         }
       } else {
         setError(result.message || 'Thông tin đăng nhập không chính xác');

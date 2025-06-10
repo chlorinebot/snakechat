@@ -6,6 +6,8 @@ const friendshipController = require('./controllers/friendshipController');
 const conversationController = require('./controllers/conversationController');
 const messageController = require('./controllers/messageController');
 const reportController = require('./controllers/reportController');
+const reportRoutes = require('./routes/reportRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
 
 // User routes
 router.get('/user/data', userController.getUsers);
@@ -29,10 +31,10 @@ router.get('/user/lock-history', userController.getLockHistory);
 router.post('/user/auto-unlock', userController.autoUnlockExpiredAccounts);
 
 // Report routes
-router.post('/report/send', reportController.sendReport);
-router.get('/report/user/:userId', reportController.getUserReports);
-router.get('/report/all', reportController.getAllReports);
-router.put('/report/update-status', reportController.updateReportStatus);
+router.use('/report', reportRoutes);
+
+// Announcement routes
+router.use('/announcement', announcementRoutes);
 
 // Role routes
 router.get('/role/data', roleController.getRoles);

@@ -566,8 +566,13 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     }
     
     return (
-      <div className="contact-avatar">
-        {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+      <div className="contact-avatar" style={user.avatar ? {
+        backgroundImage: `url(${user.avatar})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        color: 'transparent'
+      } : {}}>
+        {!user.avatar && (user.username ? user.username.charAt(0).toUpperCase() : 'U')}
         <div className={`status-indicator ${getStatusIndicatorClass(user.user_id, user.status)}`}></div>
       </div>
     );
@@ -753,8 +758,13 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
                   BAN
                 </div>
               ) : (
-                <div className="friend-request-avatar">
-                  {request.user.username ? request.user.username.charAt(0).toUpperCase() : 'U'}
+                <div className="friend-request-avatar" style={request.user.avatar ? {
+                  backgroundImage: `url(${request.user.avatar})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  color: 'transparent'
+                } : {}}>
+                  {!request.user.avatar && (request.user.username ? request.user.username.charAt(0).toUpperCase() : 'U')}
                 </div>
               )}
               <div className="friend-request-info">
@@ -903,8 +913,14 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                <div className="friend-request-avatar blocked-avatar">
-                  {user.username.charAt(0).toUpperCase()}
+                <div className="friend-request-avatar blocked-avatar" style={user.avatar ? {
+                  backgroundImage: `url(${user.avatar})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: '#f44336',
+                  color: 'transparent'
+                } : { backgroundColor: '#f44336' }}>
+                  {!user.avatar && user.username.charAt(0).toUpperCase()}
                 </div>
                 <div className="friend-request-info">
                   <div className="friend-request-name">{user.username}</div>
@@ -1197,8 +1213,13 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
                         {isUserLocked(user.user_id) ? (
                           <div className="friend-request-avatar banned-avatar">BAN</div>
                         ) : (
-                          <div className="friend-request-avatar">
-                            {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                          <div className="friend-request-avatar" style={user.avatar ? {
+                            backgroundImage: `url(${user.avatar})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            color: 'transparent'
+                          } : {}}>
+                            {!user.avatar && (user.username ? user.username.charAt(0).toUpperCase() : 'U')}
                           </div>
                         )}
                         <div className="friend-request-info">

@@ -246,6 +246,17 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     return 'profile-avatar';
   };
 
+  // Lấy style cho avatar (để hỗ trợ hiển thị hình ảnh)
+  const getAvatarStyle = () => {
+    if (userData?.avatar) {
+      return {
+        backgroundImage: `url(${userData.avatar})`,
+        color: 'transparent'
+      };
+    }
+    return {};
+  };
+
   // Xử lý chặn người dùng
   const handleBlockUser = async () => {
     if (!userData || !currentUser || !userData.user_id || !currentUser.user_id) {
@@ -806,11 +817,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
               return (
                 <div className="profile-content">
                   <div className="profile-avatar-section">
-                    <div className={getAvatarClass()}>
-                      {isUserLocked ? 'BAN' : 
-                       isBlockedByMe ? 'BLK' :
-                       isBlockingMe ? 'BLK' :
-                       userData.username ? userData.username.charAt(0).toUpperCase() : '?'}
+                    <div className={getAvatarClass()} style={getAvatarStyle()}>
+                      {!isUserLocked && !isBlockedByMe && !isBlockingMe && !userData.avatar && 
+                        (userData.username ? userData.username.charAt(0).toUpperCase() : '?')}
                       <div className={`profile-status-indicator ${getStatusIndicatorClass()}`}></div>
                     </div>
                     <div className="profile-user-info">

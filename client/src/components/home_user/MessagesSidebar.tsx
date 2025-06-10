@@ -34,14 +34,34 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       setLoading(true);
       if (!userId) return;
       
+      // Lấy danh sách cuộc trò chuyện từ API
       const userConversations = await api.getUserConversations(userId);
-      
+      // Enrich: lấy avatar và status cho thành viên khác trong cuộc trò chuyện cá nhân
+      const enrichedConversations = await Promise.all(
+        userConversations.map(async (conv) => {
+          if (conv.conversation_type === 'personal' && conv.members) {
+            const other = conv.members.find(m => m.user_id !== userId);
+            if (other) {
+              try {
+                const userData = await api.getUserById(other.user_id);
+                if (userData) {
+                  other.avatar = userData.avatar;
+                  other.status = userData.status;
+                }
+              } catch (err) {
+                console.error('Lỗi khi lấy thông tin người dùng:', err);
+              }
+            }
+          }
+          return conv;
+        })
+      );
+       
+      // Cập nhật state với dữ liệu đã enrich
       if (!propConversations) {
-        setLocalConversations(userConversations);
-      }
-      // Nếu có propSetConversations, component cha sẽ xử lý việc cập nhật
-      else if (propSetConversations) {
-        propSetConversations(userConversations);
+        setLocalConversations(enrichedConversations);
+      } else if (propSetConversations) {
+        propSetConversations(enrichedConversations);
       }
     } catch (error) {
       console.error('Lỗi khi lấy danh sách cuộc trò chuyện:', error);
@@ -130,25 +150,19 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     
     loadFriends();
     
-    // Thêm interval để làm mới trạng thái bạn bè mỗi 10 giây
+    // Thêm interval để làm mới trạng thái bạn bè mỗi 10 giây và làm mới cuộc trò chuyện
     const statusRefreshInterval = setInterval(async () => {
       await loadFriends();
-      
-      // Làm mới danh sách cuộc trò chuyện để cập nhật trạng thái
+      // Làm mới danh sách cuộc trò chuyện với fetchConversations (bao gồm enrich avatar)
       if (!propConversations) {
-        try {
-          const userConversations = await api.getUserConversations(userId);
-          setLocalConversations(userConversations);
-        } catch (error) {
-          console.error('Lỗi khi làm mới danh sách cuộc trò chuyện:', error);
-        }
+        fetchConversations();
       }
     }, 10000);
     
     return () => {
       clearInterval(statusRefreshInterval);
     };
-  }, [userId, propConversations]);
+  }, [userId, propConversations, fetchConversations]);
 
   // Lọc cuộc trò chuyện theo từ khóa tìm kiếm
   const filteredConversations = conversations.filter(conversation => {
@@ -258,6 +272,9 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       fontSize: '16px',
       marginRight: '12px',
       position: 'relative' as const,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      border: '1px solid #e0e0e0',
     },
     conversationTime: {
       fontSize: '12px',
@@ -385,25 +402,31 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
                   onMouseOver={e => e.currentTarget.style.backgroundColor = '#f5f5f5'}
                   onMouseOut={e => e.currentTarget.style.backgroundColor = currentConversation?.conversation_id === conversation.conversation_id ? '#e9f5ff' : ''}
                 >
-                  <div style={styles.conversationAvatar}>
-                    {/* Hiển thị icon cờ lê cho tài khoản hệ thống, ngược lại hiển thị chữ cái đầu */}
-                    {conversation.conversation_type === 'personal' && conversation.members && 
-                     conversation.members.find(member => member.user_id !== userId)?.user_id === 1 ? (
-                      <i className="fas fa-wrench" style={{ fontSize: '18px' }}></i>
-                    ) : (
-                      getConversationName(conversation).charAt(0).toUpperCase()
-                    )}
+                  <div style={{
+                    ...styles.conversationAvatar,
+                    ...(otherMember && otherMember.avatar
+                      ? { backgroundImage: `url(${otherMember.avatar})` }
+                      : {}),
+                  }}>
+                    {(!otherMember || !otherMember.avatar) &&
+                      (conversation.conversation_type === 'personal' &&
+                      otherMember?.user_id === 1 ? (
+                        <i className="fas fa-wrench" style={{ fontSize: '18px' }}></i>
+                      ) : (
+                        getConversationName(conversation).charAt(0).toUpperCase()
+                      ))}
                     {otherMember && canViewStatus && (
-                      <span style={{
-                        position: 'absolute',
-                        bottom: '2px',
-                        right: '2px',
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: statusColor,
-                        border: '2px solid white'
-                      }} />
+                      <span
+                        style={{
+                          position: 'absolute',
+                          bottom: '2px',
+                          right: '2px',
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '50%',
+                          backgroundColor: statusColor,
+                          border: '2px solid white'
+                        }} />
                     )}
                   </div>
                   <div style={styles.conversationInfo}>

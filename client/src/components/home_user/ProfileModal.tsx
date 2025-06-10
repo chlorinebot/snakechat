@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './ProfileModal.css';
 import api from '../../services/api';
 import type { User } from '../../services/api';
+import AvatarUpload from '../profile/AvatarUpload';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -151,6 +152,24 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, userId }) 
     }
   };
 
+  // Xử lý khi avatar được cập nhật
+  const handleAvatarUpdate = (newAvatarUrl: string) => {
+    if (userData) {
+      setUserData({
+        ...userData,
+        avatar: newAvatarUrl
+      });
+      
+      // Cập nhật thông tin người dùng trong localStorage nếu là người dùng hiện tại
+      const storedUser = localStorage.getItem('user');
+      if (storedUser && !userId) {
+        const parsedUser = JSON.parse(storedUser);
+        parsedUser.avatar = newAvatarUrl;
+        localStorage.setItem('user', JSON.stringify(parsedUser));
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   // Format ngày thành dd/mm/yyyy
@@ -194,9 +213,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, userId }) 
           ) : userData ? (
             <div className="profile-content">
               <div className="profile-avatar-section">
-                <div className="profile-avatar">
-                  {userData.username ? userData.username.charAt(0).toUpperCase() : '?'}
-                </div>
+                {userData.user_id && (
+                  <AvatarUpload
+                    userId={userData.user_id}
+                    currentAvatar={userData.avatar}
+                    onAvatarUpdate={handleAvatarUpdate}
+                  />
+                )}
                 <div className="profile-user-info">
                   <div className="profile-username">{userData.username}</div>
                   <div className="profile-status">

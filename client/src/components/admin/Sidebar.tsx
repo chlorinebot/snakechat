@@ -68,6 +68,15 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ visible = true }) => {
             <span>Danh sách báo cáo</span>
           </NavLink>
         </Nav.Item>
+        <Nav.Item>
+          <NavLink 
+            to="/announcements" 
+            className={({isActive}) => `admin-sidebar-item nav-link ${isActive ? 'active' : ''}`}
+          >
+            <i className="fas fa-bullhorn"></i>
+            <span>Thông báo chung</span>
+          </NavLink>
+        </Nav.Item>
         <div className="admin-sidebar-divider"></div>
         <div className="admin-sidebar-heading">Cài đặt hệ thống</div>
         <Nav.Item>

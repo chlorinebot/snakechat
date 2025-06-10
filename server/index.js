@@ -8,6 +8,8 @@ const friendshipRoutes = require('./routes/friendshipRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const { setupInactiveUsersCron } = require('./services/cronService');
 const { setupSocket } = require('./socket');
@@ -45,6 +47,8 @@ app.use('/api/friendship', friendshipRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/report', reportRoutes);
+app.use('/api/announcement', announcementRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Error Handler
 app.use(errorHandler);

@@ -97,6 +97,26 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+/* Điều chỉnh style cho AvatarUpload trong ProfileModal */
+.profile-avatar-section .avatar-upload-container {
+  margin-bottom: 0;
+}
+
+.profile-avatar-section .avatar-preview-container {
+  width: 80px;
+  height: 80px;
+}
+
+.profile-avatar-section .camera-button {
+  width: 30px;
+  height: 30px;
+}
+
+.profile-avatar-section .camera-button i {
+  font-size: 14px;
+}
+
+/* Giữ lại các style cũ cho trường hợp không sử dụng AvatarUpload */
 .profile-avatar {
   width: 80px;
   height: 80px;
@@ -110,6 +130,8 @@
   font-weight: 500;
   flex-shrink: 0;
   position: relative;
+  background-size: cover;
+  background-position: center;
 }
 
 .profile-status-indicator {
@@ -520,4 +542,42 @@
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+
+.banned-avatar {
+  background-color: #f44336 !important;
+  color: white !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.banned-avatar::before {
+  content: "BAN";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  font-size: 20px;
+  color: white;
+  z-index: 1;
+}
+
+.blocked-avatar {
+  background-color: #9e9e9e !important;
+  color: white !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.blocked-avatar::before {
+  content: "BLK";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  font-size: 20px;
+  color: white;
+  z-index: 1;
 } 

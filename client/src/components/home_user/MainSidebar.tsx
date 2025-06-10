@@ -5,6 +5,7 @@ type ActiveTab = 'messages' | 'contacts';
 interface MainSidebarProps {
   activeTab: ActiveTab;
   userInitial: string;
+  userAvatar?: string;
   onTabChange: (tab: ActiveTab) => void;
   onAvatarClick: (e: React.MouseEvent) => void;
   avatarRef: React.RefObject<HTMLDivElement | null>;
@@ -16,6 +17,7 @@ interface MainSidebarProps {
 const MainSidebar: React.FC<MainSidebarProps> = ({ 
   activeTab, 
   userInitial, 
+  userAvatar,
   onTabChange, 
   onAvatarClick,
   avatarRef,
@@ -45,11 +47,17 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
             cursor: 'pointer',
             boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
             transition: 'all 0.3s ease',
-            backgroundColor: '#0084ff'
+            backgroundColor: userAvatar ? 'transparent' : '#0084ff',
+            backgroundImage: userAvatar ? `url(${userAvatar})` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
           title="Nhấp để mở menu cài đặt"
         >
-          {userInitial}
+          {!userAvatar && userInitial}
         </div>
       </div>
       
