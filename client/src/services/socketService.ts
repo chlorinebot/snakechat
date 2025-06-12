@@ -137,7 +137,7 @@ class SocketService {
     
     // Hủy đăng ký sự kiện nếu socket đã kết nối
     if (this.socket) {
-      this.socket.off(event, callback);
+        this.socket.off(event, callback);
     }
   }
 

@@ -52,13 +52,18 @@ export interface Message {
   message_id: number;
   conversation_id: number;
   sender_id: number;
-  sender_name?: string;
-  sender_avatar?: string; // URL avatar của người gửi tin nhắn
+  sender_name: string;
+  sender_avatar?: string;
   content: string;
-  message_type?: string;
+  message_type: string;
   created_at: string;
   is_read: boolean;
-  send_failed?: boolean; // Trạng thái gửi không thành công
+  send_failed?: boolean;
+  reply_to?: {
+    message_id: number;
+    content: string;
+    sender_name: string;
+  };
 }
 
 // Interface cho cuộc trò chuyện
@@ -143,6 +148,14 @@ const isUserOnline = (user: User) => {
 const getToken = (): string => {
   return localStorage.getItem('token') || '';
 };
+
+interface SendMessageParams {
+  conversation_id: number;
+  sender_id: number;
+  content: string;
+  message_type?: string;
+  reply_to_message_id?: number;
+}
 
 export const api = {
   // Lấy danh sách users
@@ -695,12 +708,7 @@ export const api = {
   },
 
   // Gửi tin nhắn mới
-  sendMessage: async (message: {
-    conversation_id: number;
-    sender_id: number;
-    content: string;
-    message_type?: string;
-  }, retryCount: number = 3) => {
+  sendMessage: async (params: SendMessageParams, retries = 3): Promise<any> => {
     let attempts = 0;
     
     // Hàm thử gửi tin nhắn với retry
@@ -710,7 +718,7 @@ export const api = {
         
         const response = await axios.post<{ success: boolean; data: Message }>(
           `${API_URL}/messages/send`,
-          message
+          params
         );
         
         return { success: true, data: response.data.data };
@@ -718,7 +726,7 @@ export const api = {
         console.error(`[API] Lỗi khi gửi tin nhắn (lần ${attempts}):`, error);
         
         // Nếu chưa vượt quá số lần thử và lỗi là lỗi mạng, thử lại
-        if (attempts <= retryCount && 
+        if (attempts <= retries && 
             (error.message.includes('network') || 
              error.message.includes('timeout') || 
              !error.response)) {

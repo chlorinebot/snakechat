@@ -121,7 +121,7 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
         });
       });
     };
-
+    
     // Cập nhật unread_count khi nhận được sự kiện tin nhắn đã đọc
     const handleMessageRead = (data: any) => {
       if (data.conversation_id && data.reader_id) {
@@ -160,7 +160,7 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     socketService.on('new_message', handleNewMessage);
     socketService.on('message_read_receipt', handleMessageRead);
     socketService.on('unread_count_update', handleUnreadCountUpdate);
-
+    
     // Hủy đăng ký khi component unmount
     return () => {
       socketService.off('new_message', handleNewMessage);

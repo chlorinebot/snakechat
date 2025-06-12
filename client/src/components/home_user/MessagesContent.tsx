@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import api from '../../services/api';
 import type { Conversation, Message } from '../../services/api';
 import socketService from '../../services/socketService';
@@ -26,6 +26,25 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   const [_isSocketConnected, setIsSocketConnected] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isSystemAccount, setIsSystemAccount] = useState<boolean>(false);
+  // Thêm state cho chức năng trả lời tin nhắn
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  // Ref lưu chiều cao trước khi load thêm tin nhắn cũ
+  const prevScrollHeightRef = useRef<number>(0);
+  // Lazy loading: chỉ hiển thị 20 tin nhắn mỗi trang
+  const pageSize = 20;
+  const [page, setPage] = useState(0);
+  const displayedMessages = useMemo(() => {
+    const start = Math.max(messages.length - (page + 1) * pageSize, 0);
+    return messages.slice(start);
+  }, [messages, page]);
+
+  // Kiểm tra xem có cần hiển thị ngày cho tin nhắn trong lazy load
+  const shouldShowDateDisplayed = (index: number) => {
+    if (index === 0) return true;
+    const curr = new Date(displayedMessages[index].created_at).toDateString();
+    const prev = new Date(displayedMessages[index - 1].created_at).toDateString();
+    return curr !== prev;
+  };
 
   // Hàm tiện ích để cuộn xuống dưới cùng
   const scrollToBottom = useCallback((smooth = false) => {
@@ -85,8 +104,11 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             setMessages(msgs);
             setLoading(false);
             
-            // Luôn cuộn xuống dưới cùng khi tải tin nhắn xong
-            setTimeout(() => scrollToBottom(false), 100);
+            // Kiểm tra xem đây có phải là lần đầu tải tin nhắn không
+            if (messages.length === 0) {
+              // Luôn cuộn xuống dưới cùng khi tải tin nhắn lần đầu
+              setTimeout(() => scrollToBottom(false), 100);
+            }
             
             // Đảm bảo socket đã kết nối
             if (userId && !socketService.isConnected()) {
@@ -110,8 +132,27 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       // Khi kết nối lại, tải lại tin nhắn của cuộc trò chuyện hiện tại
       if (currentConversationIdRef.current) {
         api.getConversationMessages(currentConversationIdRef.current).then(msgs => {
+          // Lưu vị trí cuộn hiện tại
+          const scrollPosition = messagesContainerRef.current?.scrollTop || 0;
+          const scrollHeight = messagesContainerRef.current?.scrollHeight || 0;
+          const clientHeight = messagesContainerRef.current?.clientHeight || 0;
+          const wasAtBottom = scrollHeight - scrollPosition - clientHeight < 50;
+          
           setMessages(msgs);
-          setTimeout(() => scrollToBottom(false), 100);
+          
+          // Chỉ cuộn xuống nếu đang ở dưới cùng
+          if (wasAtBottom) {
+            setTimeout(() => scrollToBottom(false), 100);
+          } else if (messagesContainerRef.current) {
+            // Nếu không ở dưới cùng, giữ nguyên vị trí cuộn tương đối
+            setTimeout(() => {
+              if (messagesContainerRef.current) {
+                const newScrollHeight = messagesContainerRef.current.scrollHeight;
+                const heightDiff = newScrollHeight - scrollHeight;
+                messagesContainerRef.current.scrollTop = scrollPosition + heightDiff;
+              }
+            }, 100);
+          }
         }).catch(error => {
           console.error('[ERROR] Lỗi khi tải lại tin nhắn:', error);
         });
@@ -159,6 +200,13 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           is_read: data.sender_id === userId ? false : true
         };
         
+        // Kiểm tra xem tin nhắn này có phải do người dùng hiện tại gửi không
+        const isSentByCurrentUser = data.sender_id === userId;
+        
+        // Lưu vị trí cuộn hiện tại
+        const el = messagesContainerRef.current;
+        const isNearBottom = el && el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+        
         // Cập nhật danh sách tin nhắn
         setMessages(prevMessages => {
           // Kiểm tra xem tin nhắn đã tồn tại chưa
@@ -177,7 +225,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             return prevMessages;
           } else {
             // Loại bỏ tin nhắn tạm thời nếu có (trong trường hợp người gửi là người dùng hiện tại)
-            if (data.sender_id === userId) {
+            if (isSentByCurrentUser) {
               return prevMessages
                 .filter(msg => {
                   const msgId = msg.message_id.toString();
@@ -189,11 +237,17 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           }
         });
         
-        // Cuộn xuống dưới khi nhận tin nhắn mới
-        setTimeout(() => scrollToBottom(true), 100);
+        // Chỉ cuộn xuống dưới trong 2 trường hợp:
+        // 1. Người dùng đang ở gần dưới cùng (isNearBottom)
+        // 2. Tin nhắn do chính người dùng hiện tại gửi (isSentByCurrentUser)
+        setTimeout(() => {
+          if (isNearBottom || isSentByCurrentUser) {
+            scrollToBottom(true);
+          }
+        }, 100);
         
         // Đánh dấu đã đọc nếu là tin nhắn từ người khác
-        if (data.sender_id !== userId && document.visibilityState === 'visible') {
+        if (!isSentByCurrentUser && document.visibilityState === 'visible') {
           api.markMessageAsRead(data.message_id)
             .then(() => {
               socketService.emit('message_read', {
@@ -216,8 +270,27 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         api.getConversationMessages(currentConversationIdRef.current)
           .then(msgs => {
             if (currentConversationIdRef.current) {
+              // Lưu vị trí cuộn hiện tại
+              const scrollPosition = messagesContainerRef.current?.scrollTop || 0;
+              const scrollHeight = messagesContainerRef.current?.scrollHeight || 0;
+              const clientHeight = messagesContainerRef.current?.clientHeight || 0;
+              const wasAtBottom = scrollHeight - scrollPosition - clientHeight < 50;
+              
               setMessages(msgs);
-              setTimeout(() => scrollToBottom(false), 100);
+              
+              // Chỉ cuộn xuống nếu đang ở dưới cùng
+              if (wasAtBottom) {
+                setTimeout(() => scrollToBottom(false), 100);
+              } else if (messagesContainerRef.current) {
+                // Nếu không ở dưới cùng, giữ nguyên vị trí cuộn tương đối
+                setTimeout(() => {
+                  if (messagesContainerRef.current) {
+                    const newScrollHeight = messagesContainerRef.current.scrollHeight;
+                    const heightDiff = newScrollHeight - scrollHeight;
+                    messagesContainerRef.current.scrollTop = scrollPosition + heightDiff;
+                  }
+                }, 100);
+              }
             }
           })
           .catch(error => {
@@ -459,7 +532,18 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     }
   }, [currentConversation, userId]);
 
-  // Gửi tin nhắn mới
+  // Thêm hàm xử lý khi bấm nút trả lời
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
+    inputRef.current?.focus();
+  };
+
+  // Thêm hàm hủy trả lời
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Cập nhật hàm gửi tin nhắn để hỗ trợ trả lời
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -468,54 +552,50 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     
     try {
       setSending(true);
-      // Tạo ID tạm thời để theo dõi tin nhắn
       const tempMessageId = `temp_${Date.now()}`;
       
-      // Tạo đối tượng tin nhắn tạm thời để hiển thị ngay lập tức
       const tempMessage: Message = {
-        message_id: tempMessageId as unknown as number, // Sửa lỗi kiểu dữ liệu
+        message_id: tempMessageId as unknown as number,
         conversation_id: currentConversation.conversation_id,
         sender_id: userId,
-        sender_name: 'Bạn', // Hiển thị tạm thời
+        sender_name: 'Bạn',
         content: trimmedMessage,
         message_type: 'text',
         created_at: new Date().toISOString(),
         is_read: false,
-        send_failed: false
+        send_failed: false,
+        reply_to: replyingTo ? {
+          message_id: replyingTo.message_id,
+          content: replyingTo.content,
+          sender_name: replyingTo.sender_name
+        } : undefined
       };
 
-      // Thêm tin nhắn tạm thời vào danh sách
       setMessages(prevMessages => [...prevMessages, tempMessage]);
-      
-      // Đặt lại input
       setNewMessage('');
+      setReplyingTo(null); // Reset trạng thái trả lời sau khi gửi
 
-      // Đảm bảo input vẫn giữ focus sau khi gửi tin nhắn
       setTimeout(() => {
-        // Chỉ focus khi không có element nào khác đang được focus
         if (document.activeElement === document.body || document.activeElement === inputRef.current) {
           inputRef.current?.focus();
         }
       }, 0);
 
-      // Cuộn xuống tin nhắn mới - luôn cuộn khi người dùng gửi tin
       setTimeout(() => scrollToBottom(true), 10);
       
-      // Gửi tin nhắn đến server với tùy chọn thử lại
       const response = await api.sendMessage({
         conversation_id: currentConversation.conversation_id,
         sender_id: userId,
         content: trimmedMessage,
-        message_type: 'text'
-      }, 3); // Thử lại tối đa 3 lần nếu gặp lỗi mạng
+        message_type: 'text',
+        reply_to_message_id: replyingTo?.message_id // Thêm ID tin nhắn được trả lời
+      }, 3);
       
       setSending(false);
       
       if (response.success && response.data) {
-        // Cập nhật danh sách tin nhắn, thay thế tin nhắn tạm thời
         setMessages(prevMessages => prevMessages.map(msg => {
           const msgId = msg.message_id.toString();
-          // So sánh dựa trên chuỗi tempMessageId
           if (msgId === tempMessageId) {
             return response.data;
           }
@@ -523,7 +603,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
         }));
       } else {
         console.error('[SEND] Gửi tin nhắn không thành công:', response);
-        // Đánh dấu tin nhắn là thất bại
         setMessages(prevMessages => prevMessages.map(msg => {
           const msgId = msg.message_id.toString();
           if (msgId === tempMessageId) {
@@ -536,9 +615,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       console.error('[SEND] Lỗi khi gửi tin nhắn:', error);
       setSending(false);
       
-      // Đánh dấu tin nhắn là thất bại
       setMessages(prevMessages => prevMessages.map(msg => {
-        // Kiểm tra nếu message_id là chuỗi và bắt đầu bằng 'temp_'
         const msgId = msg.message_id.toString();
         if (typeof msgId === 'string' && msgId.startsWith('temp_')) {
           return { ...msg, send_failed: true };
@@ -936,6 +1013,66 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       transition: 'color 0.3s ease',
       fontWeight: '500',
     },
+    replyButton: {
+      backgroundColor: 'transparent',
+      border: 'none',
+      padding: '4px 8px',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      fontSize: '12px',
+      color: '#666',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      opacity: 0,
+      transition: 'all 0.2s ease',
+      '&:hover': {
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        color: '#0066ff'
+      }
+    },
+    replyPreview: {
+      display: 'flex',
+      alignItems: 'center',
+      padding: '8px 12px',
+      backgroundColor: '#f0f2f5',
+      borderRadius: '8px',
+      marginBottom: '8px',
+      gap: '8px'
+    },
+    replyPreviewContent: {
+      flex: 1,
+      fontSize: '13px',
+      color: '#666'
+    },
+    replyPreviewClose: {
+      backgroundColor: 'transparent',
+      border: 'none',
+      padding: '4px',
+      cursor: 'pointer',
+      color: '#666',
+      borderRadius: '50%',
+      '&:hover': {
+        backgroundColor: 'rgba(0,0,0,0.05)'
+      }
+    },
+    replyIndicator: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      fontSize: '13px',
+      color: '#666',
+      marginBottom: '4px'
+    },
+    replyContent: {
+      fontSize: '13px',
+      color: '#666',
+      textDecoration: 'none',
+      cursor: 'pointer',
+      '&:hover': {
+        textDecoration: 'underline'
+      }
+    }
   };
 
   // Hàm render biểu tượng trạng thái
@@ -1270,14 +1407,41 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     if (!currentConversation?.conversation_id) return;
     const intervalId = setInterval(() => {
       api.getConversationMessages(currentConversation.conversation_id)
-        .then(msgs => setMessages(msgs))
+        .then(msgs => {
+          // Kiểm tra xem có tin nhắn mới không
+          if (msgs.length > messages.length) {
+            // Lưu trạng thái cuộn hiện tại
+            const scrollPosition = messagesContainerRef.current?.scrollTop || 0;
+            const scrollHeight = messagesContainerRef.current?.scrollHeight || 0;
+            const clientHeight = messagesContainerRef.current?.clientHeight || 0;
+            const wasAtBottom = scrollHeight - scrollPosition - clientHeight < 50;
+            
+            // Cập nhật tin nhắn
+            setMessages(msgs);
+            
+            // Nếu không ở đáy, giữ nguyên vị trí cuộn
+            if (!wasAtBottom && messagesContainerRef.current) {
+              // Dùng setTimeout để đảm bảo DOM đã được cập nhật
+              setTimeout(() => {
+                if (messagesContainerRef.current) {
+                  const newScrollHeight = messagesContainerRef.current.scrollHeight;
+                  const heightDiff = newScrollHeight - scrollHeight;
+                  messagesContainerRef.current.scrollTop = scrollPosition + heightDiff;
+                }
+              }, 0);
+            }
+          } else {
+            // Không có tin nhắn mới, cập nhật bình thường
+            setMessages(msgs);
+          }
+        })
         .catch(() => {});
-    }, /* tốc độ refresh tin nhắn */);
+    }, 5000); // 5 giây
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [currentConversation?.conversation_id]);
+  }, [currentConversation?.conversation_id, messages.length]);
 
   // Tự động cuộn xuống khi có tin nhắn mới và đang ở đáy
   useEffect(() => {
@@ -1481,6 +1645,35 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     };
   }, []);
 
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const scrollTop = messagesContainerRef.current.scrollTop;
+    const scrollHeight = messagesContainerRef.current.scrollHeight;
+    const clientHeight = messagesContainerRef.current.clientHeight;
+    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setIsAtBottom(atBottom);
+    // cuộn lên trên cùng: load trang cũ hơn
+    if (scrollTop === 0 && (page + 1) * pageSize < messages.length) {
+      // Lưu chiều cao trước khi load thêm
+      prevScrollHeightRef.current = scrollHeight;
+      setPage(prev => prev + 1);
+    }
+    // cuộn xuống dưới cùng: reset về trang mới nhất
+    if (atBottom && page > 0) {
+      setPage(0);
+    }
+  };
+
+  // Điều chỉnh scrollTop sau khi page thay đổi
+  useEffect(() => {
+    if (prevScrollHeightRef.current && messagesContainerRef.current) {
+      const newScrollHeight = messagesContainerRef.current.scrollHeight;
+      const diff = newScrollHeight - prevScrollHeightRef.current;
+      messagesContainerRef.current.scrollTop = diff;
+      prevScrollHeightRef.current = 0;
+    }
+  }, [page]);
+
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {
     return (
@@ -1607,13 +1800,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     );
   }
 
-  const handleScroll = () => {
-    if (messagesContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-      setIsAtBottom(scrollHeight - scrollTop - clientHeight < 50);
-    }
-  };
-
   return (
     <div className="messages-content" style={styles.messagesContent}>
       {loading ? (
@@ -1627,7 +1813,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               display: 'flex',
               flexDirection: 'column',
               overflowY: 'scroll',
-              height: isSystemAccount ? '100%' : 'calc(100% - 65px)', // Điều chỉnh chiều cao khi không có thanh soạn tin nhắn
+              height: isSystemAccount ? '100%' : 'calc(100% - 65px)',
+              paddingTop: '60px',
             }} 
             ref={messagesContainerRef} 
             onScroll={handleScroll}
@@ -1635,12 +1822,12 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           >
             <div className="messages-list" style={{
               ...styles.messagesList,
-              marginTop: 'auto', // Đẩy nội dung xuống dưới cùng
+              marginTop: 'auto',
               width: '100%',
             }}>
-              {messages.map((message, index) => (
+              {displayedMessages.map((message, index) => (
                 <React.Fragment key={message.message_id}>
-                  {shouldShowDate(message, index) && (
+                  {shouldShowDateDisplayed(index) && (
                     <div className="message-date" style={styles.messageDate}>
                       <span className="date-pill" style={styles.datePill}>
                         {formatMessageDate(message.created_at)}
@@ -1686,6 +1873,15 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       onMouseEnter={() => setHoveredMessageId(message.message_id as number)}
                       onMouseLeave={() => setHoveredMessageId(null)}
                     >
+                      {/* Hiển thị thông tin tin nhắn được trả lời */}
+                      {message.reply_to && (
+                        <div style={styles.replyIndicator}>
+                          <i className="fas fa-reply" style={{ fontSize: '12px' }}></i>
+                          <span>Trả lời {message.reply_to.sender_name}</span>
+                          <span style={styles.replyContent}>{message.reply_to.content}</span>
+                        </div>
+                      )}
+                      
                       <div 
                         className={isOwnMessage(message) ? "message-bubble-own" : "message-bubble-other"}
                         style={{
@@ -1702,17 +1898,38 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                         {message.content}
                       </div>
                       
-                      <div 
-                        className="message-time" 
-                        style={{
-                          ...styles.messageTime,
-                          textAlign: isOwnMessage(message) ? 'right' : 'left',
-                          ...(hoveredMessageId === message.message_id ? styles.messageTimeVisible : {}),
-                          margin: '0',
-                          padding: '0',
-                        }}
-                      >
-                        {formatMessageTime(message.created_at)}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginTop: '2px'
+                      }}>
+                        <div 
+                          className="message-time" 
+                          style={{
+                            ...styles.messageTime,
+                            textAlign: isOwnMessage(message) ? 'right' : 'left',
+                            ...(hoveredMessageId === message.message_id ? styles.messageTimeVisible : {}),
+                            margin: '0',
+                            padding: '0',
+                          }}
+                        >
+                          {formatMessageTime(message.created_at)}
+                        </div>
+                        
+                        {/* Nút trả lời tin nhắn */}
+                        {!isSystemAccount && hoveredMessageId === message.message_id && (
+                          <button
+                            onClick={() => handleReply(message)}
+                            style={{
+                              ...styles.replyButton,
+                              opacity: 1
+                            }}
+                          >
+                            <i className="fas fa-reply"></i>
+                            <span>Trả lời</span>
+                          </button>
+                        )}
                       </div>
                       
                       {renderMessageStatus(message)}
@@ -1724,7 +1941,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
             </div>
           </div>
           
-          {/* Chỉ hiển thị thanh nhập tin nhắn nếu không phải tài khoản hệ thống */}
           {!isSystemAccount && (
             isBlocked ? (
               <div className="blocked-chat-message" style={{ ...styles.inputArea, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#e74c3c' }}>
@@ -1732,6 +1948,23 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               </div>
             ) : (
               <div className="input-area" style={styles.inputArea} onClick={() => inputRef.current?.focus()}>
+                {/* Hiển thị preview tin nhắn đang trả lời */}
+                {replyingTo && (
+                  <div style={styles.replyPreview}>
+                    <i className="fas fa-reply" style={{ color: '#666' }}></i>
+                    <div style={styles.replyPreviewContent}>
+                      <div style={{ fontWeight: 500 }}>Trả lời {replyingTo.sender_name}</div>
+                      <div style={{ color: '#888', marginTop: '2px' }}>{replyingTo.content}</div>
+                    </div>
+                    <button 
+                      onClick={cancelReply}
+                      style={styles.replyPreviewClose}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  </div>
+                )}
+                
                 <form className="input-form" style={styles.inputForm} onSubmit={handleSendMessage}>
                   <button
                     type="button"
@@ -1747,7 +1980,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       style={styles.emojiPickerContainer} 
                       onClick={handleEmojiPickerInteraction}
                       onMouseDown={(e) => {
-                        // Ngăn chặn sự kiện mousedown để không ảnh hưởng đến focus
                         e.preventDefault();
                         e.stopPropagation();
                         setShouldAutoFocus(false);
@@ -1773,7 +2005,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       ref={inputRef}
                       type="text"
                       className="message-input"
-                      placeholder="Nhập tin nhắn..."
+                      placeholder={replyingTo ? `Trả lời ${replyingTo.sender_name}...` : "Nhập tin nhắn..."}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
@@ -1781,7 +2013,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       disabled={sending}
                       autoFocus={shouldAutoFocus}
                       onFocus={() => {
-                        // Nếu đang hiển thị emoji picker và không nên auto focus, blur input
                         if (showEmojiPicker && !shouldAutoFocus) {
                           inputRef.current?.blur();
                         }
@@ -1803,7 +2034,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               </div>
             )
           )}
-          {/* Hiển thị thông báo nếu là tài khoản hệ thống */}
           {isSystemAccount && (
             <div className="system-account-message" style={{ 
               ...styles.inputArea, 
