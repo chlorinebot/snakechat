@@ -12,6 +12,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('notifications');
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [theme, setTheme] = useState<string>(() => {
+    const saved = localStorage.getItem('darkMode');
+    if (saved === 'true') return 'dark';
+    return 'light';
+  });
+
+  const handleThemeChange = (value: string) => {
+    setTheme(value);
+    if (value === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('darkMode', 'true');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('darkMode', 'false');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -81,6 +97,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
           <div className="settings-content">
+            {activeTab === 'interface' && (
+              <div className="interface-settings">
+                <h3>Chế độ giao diện</h3>
+                <div className="theme-options" style={{marginTop: '20px'}}>
+                  <label style={{marginRight: '30px', fontWeight: 600, color: '#000'}}>
+                    <input
+                      type="radio"
+                      name="theme-mode"
+                      value="light"
+                      checked={theme === 'light'}
+                      onChange={() => handleThemeChange('light')}
+                      style={{marginRight: '8px'}}
+                    />
+                    Sáng
+                  </label>
+                  <label style={{fontWeight: 600, color: '#000'}}>
+                    <input
+                      type="radio"
+                      name="theme-mode"
+                      value="dark"
+                      checked={theme === 'dark'}
+                      onChange={() => handleThemeChange('dark')}
+                      style={{marginRight: '8px'}}
+                    />
+                    Tối
+                  </label>
+                </div>
+                <p style={{marginTop: '16px', color: '#555'}}>Bạn có thể chuyển đổi giữa giao diện sáng và tối. Lựa chọn của bạn sẽ được ghi nhớ cho các lần đăng nhập sau.</p>
+              </div>
+            )}
             {activeTab === 'notifications' && (
               <div className="notification-settings">
                 <h3>Cài đặt thông báo</h3>

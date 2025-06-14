@@ -15,6 +15,7 @@ import Announcements from './pages/admin/Announcements';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import './styles/auth.css';
 
 // URL endpoint cho cập nhật trạng thái
 const API_URL = 'http://localhost:5000/api';
@@ -40,6 +41,23 @@ const App: React.FC = () => {
   const isRegularUser = user.role_id === 2;
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isTabActive, setIsTabActive] = useState<boolean>(document.visibilityState === 'visible');
+  const [theme, setTheme] = useState<string>(() => {
+    const savedTheme = localStorage.getItem('darkMode');
+    return savedTheme === 'true' ? 'dark' : 'light';
+  });
+
+  // Hàm thay đổi theme
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('darkMode', 'true');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('darkMode', 'false');
+    }
+  };
 
   // Hàm cập nhật thời gian hoạt động cuối cùng
   const updateLastActivityTime = () => {
@@ -590,17 +608,17 @@ const App: React.FC = () => {
       <Router>
         <ToastContainer />
         <Routes>
-          <Route path="/login" element={!isAuthenticated ? <LoginPage /> : (isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/" />)} />
+          <Route path="/login" element={!isAuthenticated ? <LoginPage /> : (isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/" />)} />
           
-          <Route path="/register" element={!isAuthenticated ? <Register /> : (isAdmin ? <Navigate to="/admin/dashboard" /> : <Navigate to="/" />)} />
+          <Route path="/register" element={!isAuthenticated ? <Register /> : (isAdmin ? <Navigate to="/dashboard" /> : <Navigate to="/" />)} />
           
           {/* Admin routes */}
-          <Route path="/admin/dashboard" element={isAuthenticated && isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/admin/users" element={isAuthenticated && isAdmin ? <Users onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/admin/roles" element={isAuthenticated && isAdmin ? <Roles onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/admin/locked-accounts" element={isAuthenticated && isAdmin ? <LockedAccounts onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/admin/reports" element={isAuthenticated && isAdmin ? <Reports onLogout={handleLogout} /> : <Navigate to="/login" />} />
-          <Route path="/admin/announcements" element={isAuthenticated && isAdmin ? <Announcements onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/dashboard" element={isAuthenticated && isAdmin ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/users" element={isAuthenticated && isAdmin ? <Users onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/roles" element={isAuthenticated && isAdmin ? <Roles onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/locked-accounts" element={isAuthenticated && isAdmin ? <LockedAccounts onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/reports" element={isAuthenticated && isAdmin ? <Reports onLogout={handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/announcements" element={isAuthenticated && isAdmin ? <Announcements onLogout={handleLogout} /> : <Navigate to="/login" />} />
           
           {/* User routes - với AccountLockGuard để kiểm tra trạng thái khóa */}
           <Route path="/" element={
@@ -614,7 +632,7 @@ const App: React.FC = () => {
           } />
           
           {/* Fallback route */}
-          <Route path="*" element={<Navigate to={isAuthenticated ? (isAdmin ? "/admin/dashboard" : "/") : "/login"} />} />
+          <Route path="*" element={<Navigate to={isAuthenticated ? (isAdmin ? "/dashboard" : "/") : "/login"} />} />
         </Routes>
       </Router>
     </AuthProvider>

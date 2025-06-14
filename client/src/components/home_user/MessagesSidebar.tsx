@@ -23,6 +23,9 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [friendIds, setFriendIds] = useState<number[]>([]);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('darkMode') === 'true';
+  });
 
   // Sử dụng conversations từ prop nếu có, ngược lại sử dụng state nội bộ
   const conversations = propConversations || localConversations;
@@ -70,6 +73,58 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     }
   }, [userId, propConversations, propSetConversations]);
 
+  // Lắng nghe sự kiện thay đổi theme
+  useEffect(() => {
+    // Hàm xử lý khi localStorage thay đổi
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'darkMode') {
+        const newDarkMode = event.newValue === 'true';
+        setIsDarkMode(newDarkMode);
+        // Làm mới danh sách cuộc trò chuyện
+        setLoading(true);
+        fetchConversations();
+      }
+    };
+
+    // Hàm xử lý sự kiện tùy chỉnh cho thay đổi theme
+    const handleThemeChange = (e: Event) => {
+      const newDarkMode = localStorage.getItem('darkMode') === 'true';
+      if (isDarkMode !== newDarkMode) {
+        setIsDarkMode(newDarkMode);
+        // Làm mới danh sách cuộc trò chuyện
+        setLoading(true);
+        fetchConversations();
+      }
+    };
+
+    // Kiểm tra thay đổi theme
+    const checkThemeChange = () => {
+      const currentDarkMode = localStorage.getItem('darkMode') === 'true';
+      if (isDarkMode !== currentDarkMode) {
+        setIsDarkMode(currentDarkMode);
+        // Làm mới danh sách cuộc trò chuyện
+        setLoading(true);
+        fetchConversations();
+      }
+    };
+
+    // Đăng ký lắng nghe các sự kiện
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('themeChanged', handleThemeChange);
+    document.addEventListener('themeToggled', handleThemeChange);
+    
+    // Kiểm tra định kỳ mỗi 500ms
+    const intervalCheck = setInterval(checkThemeChange, 500);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('themeChanged', handleThemeChange);
+      document.removeEventListener('themeToggled', handleThemeChange);
+      clearInterval(intervalCheck);
+    };
+  }, [isDarkMode, fetchConversations]);
+
+  // Tải ban đầu danh sách cuộc trò chuyện
   useEffect(() => {
     // Chỉ gọi API lấy danh sách cuộc trò chuyện nếu không nhận được từ props
     if (!propConversations) {
@@ -276,24 +331,26 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     return `Nhóm (${conversation.members?.length || 0} thành viên)`;
   };
 
-  // Styles
+  // Định nghĩa styles
   const styles = {
     conversationList: {
-      display: 'flex',
+      display: 'flex' as const,
       flexDirection: 'column' as const,
+      gap: '2px',
     },
     conversationItem: {
-      display: 'flex',
+      display: 'flex' as const,
+      alignItems: 'center',
       padding: '12px 15px',
-      borderBottom: '1px solid #eee',
       cursor: 'pointer',
       transition: 'background-color 0.2s',
-    },
-    conversationItemHover: {
-      backgroundColor: '#f5f5f5',
+      borderRadius: '8px',
+      margin: '0 5px',
     },
     conversationItemActive: {
-      backgroundColor: '#e9f5ff',
+      backgroundColor: isDarkMode ? '#000000' : '#e9f5ff',
+      border: isDarkMode ? '1px solid #444444' : 'none',
+      boxShadow: isDarkMode ? '0 2px 8px rgba(255, 255, 255, 0.1)' : 'none',
     },
     conversationAvatar: {
       width: '40px',
@@ -349,14 +406,21 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       whiteSpace: 'nowrap' as const,
       overflow: 'hidden' as const,
       textOverflow: 'ellipsis' as const,
-      color: '#000000',
+      color: isDarkMode ? '#ffffff' : '#000000',
+    },
+    conversationNameActive: {
+      color: isDarkMode ? '#ffffff' : '#000000',
+      fontWeight: 600,
     },
     conversationLastMessage: {
       fontSize: '13px',
-      color: '#666',
+      color: isDarkMode ? '#aaaaaa' : '#666',
       whiteSpace: 'nowrap' as const,
       overflow: 'hidden' as const,
       textOverflow: 'ellipsis' as const,
+    },
+    conversationLastMessageActive: {
+      color: isDarkMode ? '#cccccc' : '#333',
     },
     loadingConversations: {
       padding: '20px',
@@ -370,14 +434,14 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       justifyContent: 'center',
       padding: '40px 20px',
       textAlign: 'center' as const,
-      color: '#000',
+      color: isDarkMode ? '#cccccc' : '#000',
       height: '100%',
     },
     emptyIcon: {
       width: '80px',
       height: '80px',
       margin: '0 auto 20px',
-      backgroundColor: '#f0f0f0',
+      backgroundColor: isDarkMode ? '#333333' : '#f0f0f0',
       borderRadius: '50%',
       display: 'flex',
       alignItems: 'center',
@@ -387,19 +451,22 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
       fontWeight: 500,
       fontSize: '16px',
       marginBottom: '5px',
-      color: '#000',
+      color: isDarkMode ? '#ffffff' : '#000',
     },
     emptyDescription: {
       fontSize: '14px',
-      color: '#444',
+      color: isDarkMode ? '#aaaaaa' : '#444',
       maxWidth: '220px',
       lineHeight: '1.5',
     },
+    sidebarHeader: {
+      padding: '15px 15px 10px',
+    }
   };
 
   return (
     <div className="messages-sidebar">
-      <div className="messages-sidebar-header">
+      <div className="messages-sidebar-header" style={styles.sidebarHeader}>
         <h3>Tất cả tin nhắn</h3>
       </div>
       <div className="messages-search-bar">
@@ -427,16 +494,27 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
               const canViewStatus = otherMember ? friendIds.includes(otherMember.user_id) : false;
               const statusColor = canViewStatus && otherMember?.status === 'online' ? '#4CAF50' : '#CCCCCC';
               
+              // Kiểm tra xem đây có phải là cuộc trò chuyện đang active không
+              const isActive = currentConversation?.conversation_id === conversation.conversation_id;
+              
               return (
                 <div
                   key={conversation.conversation_id}
                   style={{
                     ...styles.conversationItem,
-                    ...(currentConversation?.conversation_id === conversation.conversation_id ? styles.conversationItemActive : {})
+                    ...(isActive ? styles.conversationItemActive : {})
                   }}
                   onClick={() => handleSelectConversation(conversation)}
-                  onMouseOver={e => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                  onMouseOut={e => e.currentTarget.style.backgroundColor = currentConversation?.conversation_id === conversation.conversation_id ? '#e9f5ff' : ''}
+                  onMouseOver={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = isDarkMode ? '#222222' : '#f5f5f5';
+                    }
+                  }}
+                  onMouseOut={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = '';
+                    }
+                  }}
                 >
                   <div style={{
                     ...styles.conversationAvatar,
@@ -467,7 +545,12 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
                   </div>
                   <div style={styles.conversationInfo}>
                     <div style={styles.conversationHeader}>
-                      <div style={styles.conversationName}>{getConversationName(conversation)}</div>
+                      <div style={{
+                        ...styles.conversationName,
+                        ...(isActive ? styles.conversationNameActive : {})
+                      }}>
+                        {getConversationName(conversation)}
+                      </div>
                       <div style={styles.conversationTime}>
                         {conversation.last_message_time ? formatTime(conversation.last_message_time) : ''}
                         {(conversation.unread_count ?? 0) > 0 && (
@@ -477,7 +560,10 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
                         )}
                       </div>
                     </div>
-                    <div style={styles.conversationLastMessage}>
+                    <div style={{
+                      ...styles.conversationLastMessage,
+                      ...(isActive ? styles.conversationLastMessageActive : {})
+                    }}>
                       {conversation.last_message_content || 'Bắt đầu cuộc trò chuyện...'}
                     </div>
                   </div>
@@ -489,7 +575,7 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
           <div style={styles.emptyConversations}>
             <div style={styles.emptyIcon}>
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H5.17L4 17.17V4H20V16Z" fill="#888888"/>
+                <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H5.17L4 17.17V4H20V16Z" fill={isDarkMode ? "#aaaaaa" : "#888888"}/>
               </svg>
             </div>
             <p style={styles.emptyText}>Không có cuộc trò chuyện nào</p>

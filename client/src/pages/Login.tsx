@@ -189,52 +189,60 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       name: 'identity',
       label: 'Email hoặc tên đăng nhập',
       type: 'text',
-      placeholder: 'Nhập email hoặc tên đăng nhập'
+      placeholder: 'Nhập email hoặc tên đăng nhập',
+      icon: 'fas fa-user'
     },
     {
       name: 'password',
       label: 'Mật khẩu',
       type: 'password',
-      placeholder: '••••••••'
+      placeholder: '••••••••',
+      icon: 'fas fa-lock'
     }
   ];
 
   return (
-    <Container fluid className="min-vh-100 d-flex align-items-center justify-content-center bg-light py-5">
+    <Container fluid className="min-vh-100 d-flex align-items-center justify-content-center bg-auth">
+      <div className="auth-background"></div>
+      <div className="light-effect light-effect-1"></div>
+      <div className="light-effect light-effect-2"></div>
       <Row className="justify-content-center w-100">
         <Col xs={12} sm={10} md={8} lg={6} xl={4}>
-          <Card className="shadow-sm border-0">
-            <Card.Body className="p-4 p-md-5">
-              <UserForm
-                title="Đăng nhập"
-                subtitle="Chào mừng bạn trở lại!"
-                fields={loginFields}
-                onSubmit={handleSubmit}
-                error={error}
-                buttonText="Đăng nhập"
-                footerText="Chưa có tài khoản?"
-                footerLink={{
-                  text: "Đăng ký ngay",
-                  to: "/register"
-                }}
-                extraFields={
-                  <div className="d-flex justify-content-between align-items-center mb-4">
-                    <div className="form-check mb-0">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="rememberMe"
-                      />
-                      <label className="form-check-label" htmlFor="rememberMe">
-                        Ghi nhớ đăng nhập
-                      </label>
+          <Card className="border-0 bg-transparent">
+            <Card.Body className="p-0">
+              <div className="dark-text-form">
+                <UserForm
+                  title="Đăng nhập"
+                  subtitle="Chào mừng bạn trở lại!"
+                  fields={loginFields}
+                  onSubmit={handleSubmit}
+                  error={error}
+                  buttonText="Đăng nhập"
+                  footerText="Chưa có tài khoản?"
+                  footerLink={{
+                    text: "Đăng ký ngay",
+                    to: "/register"
+                  }}
+                  formLogo="/logo.png"
+                  extraFields={
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                      <div className="form-check mb-0">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="rememberMe"
+                        />
+                        <label className="form-check-label" htmlFor="rememberMe" style={{color: "#000", fontWeight: "bold"}}>
+                          Ghi nhớ đăng nhập
+                        </label>
+                      </div>
+                      <a href="/forgot-password" className="auth-link" style={{color: "#4776E6", fontWeight: "bold"}}>
+                        Quên mật khẩu?
+                      </a>
                     </div>
-                    <a href="/forgot-password" className="text-primary text-decoration-none small">
-                      Quên mật khẩu?
-                    </a>
-                  </div>
-                }
-              />
+                  }
+                />
+              </div>
             </Card.Body>
           </Card>
         </Col>
