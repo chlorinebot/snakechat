@@ -580,4 +580,69 @@
   font-size: 20px;
   color: white;
   z-index: 1;
+}
+
+[data-theme="dark"] .profile-modal {
+  background: #18191a !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .profile-modal-header {
+  background: #18191a !important;
+  color: #fff !important;
+  border-bottom: 1px solid #333 !important;
+}
+[data-theme="dark"] .profile-modal-header h2 {
+  color: #fff !important;
+}
+[data-theme="dark"] .profile-modal-content,
+[data-theme="dark"] .profile-content,
+[data-theme="dark"] .profile-info {
+  background: #18191a !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .profile-avatar-section {
+  background: #232526 !important;
+  color: #fff !important;
+  border-bottom: 1px solid #333 !important;
+}
+[data-theme="dark"] .profile-user-info,
+[data-theme="dark"] .profile-username,
+[data-theme="dark"] .status-text,
+[data-theme="dark"] .account-status {
+  color: #fff !important;
+}
+[data-theme="dark"] .info-label,
+[data-theme="dark"] .info-value {
+  color: #fff !important;
+}
+[data-theme="dark"] .edit-button {
+  background: #2196F3 !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .edit-button:hover {
+  background: #1565c0 !important;
+}
+[data-theme="dark"] .form-group label {
+  color: #fff !important;
+}
+[data-theme="dark"] .form-group input {
+  background: #232526 !important;
+  color: #fff !important;
+  border: 1px solid #444 !important;
+}
+[data-theme="dark"] .form-group input::placeholder {
+  color: #bbb !important;
+}
+[data-theme="dark"] .profile-modal__close,
+[data-theme="dark"] .user-profile-modal-close {
+  color: #fff !important;
+}
+[data-theme="dark"] .profile-modal__edit-btn,
+[data-theme="dark"] .user-profile-actions .edit-profile-btn {
+  background: #2196F3 !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .profile-modal__edit-btn:hover,
+[data-theme="dark"] .user-profile-actions .edit-profile-btn:hover {
+  background: #1565c0 !important;
 } 

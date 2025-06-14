@@ -561,7 +561,7 @@ body, html {
 }
 
 [data-theme="dark"] .messages-content {
-  background-color: #121212;
+  background: #18191a !important;
 }
 
 .chat-area {
@@ -732,12 +732,12 @@ body, html {
 .contacts-sidebar-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #000 !important;
+  color: #000;
   margin: 0;
 }
 
 [data-theme="dark"] .contacts-sidebar-header h3 {
-  color: #e9ecef;
+  color: #e9ecef !important;
 }
 
 .contacts-sidebar-content {
@@ -766,7 +766,7 @@ body, html {
   padding: 14px 20px;
   cursor: pointer;
   transition: all 0.3s ease;
-  color: #000 !important;
+  color: #000;
   border-radius: 6px;
   margin: 2px 10px;
 }
@@ -792,11 +792,11 @@ body, html {
 .contact-sidebar-item span {
   font-size: 14.5px;
   font-weight: 500;
-  color: #000 !important;
+  color: #000;
 }
 
 [data-theme="dark"] .contact-sidebar-item span {
-  color: #e9ecef;
+  color: #e9ecef !important;
 }
 
 .contact-sidebar-item.active {
@@ -976,7 +976,7 @@ body, html {
 }
 
 [data-theme="dark"] .contact-name {
-  color: #e9ecef;
+  color: #e9ecef !important;
 }
 
 .contact-status {
@@ -1289,6 +1289,15 @@ body, html {
   justify-content: space-between;
   margin: 0 20px 15px 20px;
   gap: 10px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  padding: 12px 20px;
+}
+
+[data-theme="dark"] .contacts-header {
+  background: #18191a !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
 .friends-count {
@@ -1301,11 +1310,28 @@ body, html {
 
 .contacts-header .contacts-search-bar {
   flex: 1;
-  margin: 0;
+  margin: 0 10px;
+  background: #f5f5f5;
+  border-radius: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+[data-theme="dark"] .contacts-header .contacts-search-bar {
+  background: #18191a !important;
+  color: #fff !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
 }
 
 .sort-dropdown-container {
   margin-left: 8px;
+  background: #f5f5f5;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  padding: 0 8px;
+}
+[data-theme="dark"] .sort-dropdown-container {
+  background: #18191a !important;
+  color: #fff !important;
+  border: none;
 }
 
 /* Danh sách bạn bè có nhóm chữ cái */
@@ -1419,4 +1445,225 @@ body, html {
     --epr-search-border-color: #444;
     --epr-category-label-text-color: #ccc;
   }
+}
+
+[data-theme="dark"] .friends-count,
+[data-theme="dark"] .contacts-header .friends-count span {
+  color: #fff !important;
+}
+[data-theme="dark"] .sort-dropdown-container,
+[data-theme="dark"] .contacts-header .contacts-search-bar {
+  color: #fff;
+}
+[data-theme="dark"] .contacts-header .contacts-search-bar input,
+[data-theme="dark"] .contacts-header .contacts-search-bar .contacts-search-input {
+  background: #18191a;
+  color: #fff;
+  border: none;
+}
+[data-theme="dark"] .contacts-header .contacts-search-bar input::placeholder,
+[data-theme="dark"] .contacts-header .contacts-search-bar .contacts-search-input::placeholder {
+  color: #bbb;
+}
+[data-theme="dark"] .sort-dropdown-container * {
+  color: #fff !important;
+  background: #18191a !important;
+}
+
+/* Ghi đè mạnh cho dark mode phần header, tìm kiếm, số bạn bè */
+[data-theme="dark"] .contacts-header {
+  background: #18191a !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+[data-theme="dark"] .friends-count {
+  color: #fff !important;
+}
+[data-theme="dark"] .contacts-header .contacts-search-bar,
+[data-theme="dark"] .contacts-header .search-input-wrapper {
+  background: #18191a !important;
+  color: #fff !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  border: 1px solid #333 !important;
+}
+[data-theme="dark"] .contacts-header .contacts-search-bar input,
+[data-theme="dark"] .contacts-header .contacts-search-bar .contacts-search-input,
+[data-theme="dark"] .contacts-header .search-input {
+  background: #18191a !important;
+  color: #fff !important;
+  border: none !important;
+}
+[data-theme="dark"] .contacts-header .contacts-search-bar input::placeholder,
+[data-theme="dark"] .contacts-header .contacts-search-bar .contacts-search-input::placeholder,
+[data-theme="dark"] .contacts-header .search-input::placeholder {
+  color: #bbb !important;
+}
+[data-theme="dark"] .sort-dropdown-container {
+  background: #18191a !important;
+  color: #fff !important;
+  border: none !important;
+}
+[data-theme="dark"] .sort-dropdown-container * {
+  color: #fff !important;
+  background: #18191a !important;
+}
+/* Ẩn viền trắng hoặc bóng trắng nếu có */
+[data-theme="dark"] .contacts-header .contacts-search-bar,
+[data-theme="dark"] .contacts-header .search-input-wrapper {
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .blocked-users-container {
+  background: #18191a !important;
+}
+[data-theme="dark"] .blocked-users-container .friend-request-item {
+  background: #232526 !important;
+  color: #fff !important;
+  border: 1px solid #333 !important;
+}
+[data-theme="dark"] .blocked-users-container .user-info-container {
+  background: transparent !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .blocked-users-container .friend-request-name,
+[data-theme="dark"] .blocked-users-container .block-details,
+[data-theme="dark"] .blocked-users-container .block-reason,
+[data-theme="dark"] .blocked-users-container .block-time,
+[data-theme="dark"] .blocked-users-container .label,
+[data-theme="dark"] .blocked-users-container .section-header {
+  color: #fff !important;
+}
+[data-theme="dark"] .blocked-users-container .block-details span {
+  color: #fff !important;
+}
+[data-theme="dark"] .blocked-users-container .unblock-btn {
+  background: #2196F3 !important;
+  color: #fff !important;
+}
+
+[data-theme="dark"] .explore-content,
+[data-theme="dark"] .search-results-container {
+  background: #18191a !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .search-input-wrapper {
+  background: #232526 !important;
+  color: #fff !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+[data-theme="dark"] .search-input {
+  background: #232526 !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .search-input::placeholder {
+  color: #bbb !important;
+}
+[data-theme="dark"] .friend-request-item {
+  background: #232526 !important;
+  color: #fff !important;
+  border: 1px solid #333 !important;
+}
+[data-theme="dark"] .friend-request-name {
+  color: #fff !important;
+}
+[data-theme="dark"] .add-friend-btn {
+  background: #388E3C !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .add-friend-btn:hover {
+  background: #2e7031 !important;
+}
+[data-theme="dark"] .friend-status-label {
+  background: #232526 !important;
+  color: #43a047 !important;
+}
+[data-theme="dark"] .pending-request-label {
+  background: #232526 !important;
+  color: #ffa000 !important;
+}
+[data-theme="dark"] .current-user-label {
+  background: #232526 !important;
+  color: #4eaaff !important;
+}
+[data-theme="dark"] .locked-user-label {
+  background: #232526 !important;
+  color: #f44336 !important;
+}
+
+[data-theme="dark"] .search-results-title,
+[data-theme="dark"] .section-header {
+  color: #fff !important;
+}
+
+[data-theme="dark"] .chat-area {
+  background: #18191a !important;
+}
+[data-theme="dark"] .input-area,
+[data-theme="dark"] .messages-content .input-area {
+  background-color: #18191a !important;
+  border-top: 1px solid #333 !important;
+}
+
+[data-theme="dark"] .message-bubble,
+[data-theme="dark"] .message,
+[data-theme="dark"] .chat-bubble,
+[data-theme="dark"] .chat-message {
+  background: #232526 !important;
+  color: #fff !important;
+}
+
+[data-theme="dark"] .message-bubble-own {
+  background: #0066ff !important;
+  color: #fff !important;
+}
+[data-theme="dark"] .message-bubble-other {
+  background: #232526 !important;
+  color: #fff !important;
+}
+
+[data-theme="dark"] .message-input,
+[data-theme="dark"] .input-area .message-input,
+[data-theme="dark"] .messages-content .input-area .message-input {
+  background-color: #18191a !important;
+  color: #fff !important;
+  border: 1px solid #444 !important;
+}
+[data-theme="dark"] .message-input::placeholder {
+  color: #bbb !important;
+}
+
+[data-theme="dark"] .EmojiPickerReact {
+  background-color: #232526 !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.7) !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-search {
+  background: #18191a !important;
+  color: #fff !important;
+  border: 1px solid #444 !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-search::placeholder {
+  color: #bbb !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-category-nav {
+  background: #232526 !important;
+  border-bottom: 1px solid #444 !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-category-nav .epr-cat-btn {
+  color: #fff !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-emoji-category-label {
+  color: #fff !important;
+  background: #232526 !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-body {
+  background: #232526 !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-emoji {
+  background: transparent !important;
+}
+[data-theme="dark"] .EmojiPickerReact .epr-preview {
+  background: #18191a !important;
+  color: #fff !important;
+  border-top: 1px solid #444 !important;
 } 

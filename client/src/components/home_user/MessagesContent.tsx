@@ -4,11 +4,160 @@ import type { Conversation, Message } from '../../services/api';
 import socketService from '../../services/socketService';
 import EmojiPicker from 'emoji-picker-react';
 import type { EmojiClickData } from 'emoji-picker-react';
+import throttle from 'lodash/throttle';
 
 interface MessagesContentProps {
   userId: number;
   currentConversation: Conversation | null;
 }
+
+// Tối ưu hiệu suất bằng cách memo hóa các component con
+const MessageDate = React.memo(({ date, styles }: { date: string; styles: any }) => {
+  const formatMessageDate = useCallback((timeString: string) => {
+    const date = new Date(timeString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Hôm nay';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Hôm qua';
+    } else {
+      return date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+  }, []);
+
+  return (
+    <div className="message-date" style={styles.messageDate}>
+      <span className="date-pill" style={styles.datePill}>
+        {formatMessageDate(date)}
+      </span>
+    </div>
+  );
+});
+
+const MessageAvatar = React.memo(({ sender_name, sender_avatar, isSystem, styles }: {
+  sender_name: string;
+  sender_avatar?: string;
+  isSystem: boolean;
+  styles: any;
+}) => (
+  <div style={{
+    ...styles.messageAvatar,
+    ...(sender_avatar ? {
+      backgroundImage: `url(${sender_avatar})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      color: 'transparent'
+    } : {})
+  }}>
+    {!sender_avatar && (
+      isSystem ? (
+        <i className="fas fa-wrench" style={{ fontSize: '16px', color: '#0066ff' }}></i>
+      ) : (
+        sender_name ? sender_name.charAt(0).toUpperCase() : '?'
+      )
+    )}
+  </div>
+));
+
+// Tối ưu hiệu suất bằng cách memo hóa các component con
+const MessageBubble = React.memo(({ message, isOwnMessage, isSystemMessage, hoveredMessageId, onHover, onReply, styles }: {
+  message: Message;
+  isOwnMessage: boolean;
+  isSystemMessage: boolean;
+  hoveredMessageId: number | null;
+  onHover: (id: number | null) => void;
+  onReply: (message: Message) => void;
+  styles: any;
+}) => {
+  const formatMessageTime = useCallback((timeString: string) => {
+    const date = new Date(timeString);
+    return date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+  }, []);
+
+  const messageStyle = useMemo(() => ({
+    ...(isOwnMessage ? styles.messageBubbleOwn : isSystemMessage ? {
+      ...styles.messageBubbleOther,
+      backgroundColor: '#e9f5ff',
+      color: '#333',
+      border: '1px solid #d0e8ff'
+    } : styles.messageBubbleOther),
+    marginTop: '0',
+    marginBottom: '0',
+  }), [isOwnMessage, isSystemMessage, styles]);
+
+  const timeStyle = useMemo(() => ({
+    ...styles.messageTime,
+    textAlign: isOwnMessage ? 'right' : 'left',
+    ...(hoveredMessageId === message.message_id ? styles.messageTimeVisible : {}),
+    margin: '0',
+    padding: '0',
+  }), [isOwnMessage, hoveredMessageId, message.message_id, styles]);
+
+  return (
+    <div 
+      className="message-content" 
+      style={{
+        ...styles.messageContent,
+        alignItems: isOwnMessage ? 'flex-end' : 'flex-start',
+        margin: '0',
+      }}
+      onMouseEnter={() => onHover(message.message_id as number)}
+      onMouseLeave={() => onHover(null)}
+    >
+      {message.reply_to && (
+        <div style={styles.replyIndicator}>
+          <i className="fas fa-reply" style={{ fontSize: '12px' }}></i>
+          <span>Trả lời {message.reply_to.sender_name}</span>
+          <span style={styles.replyContent}>{message.reply_to.content}</span>
+        </div>
+      )}
+      
+      <div 
+        className={isOwnMessage ? "message-bubble-own" : "message-bubble-other"}
+        style={messageStyle}
+      >
+        {message.content}
+      </div>
+      
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginTop: '2px'
+      }}>
+        <div 
+          className="message-time" 
+          style={timeStyle}
+        >
+          {formatMessageTime(message.created_at)}
+        </div>
+        
+        {!isSystemMessage && hoveredMessageId === message.message_id && (
+          <button
+            onClick={() => onReply(message)}
+            style={{
+              ...styles.replyButton,
+              opacity: 1
+            }}
+          >
+            <i className="fas fa-reply"></i>
+            <span>Trả lời</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
 
 const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConversation }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -640,26 +789,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
       hour: '2-digit', 
       minute: '2-digit'
     });
-  };
-
-  // Định dạng ngày
-  const formatMessageDate = (timeString: string) => {
-    const date = new Date(timeString);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return 'Hôm nay';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Hôm qua';
-    } else {
-      return date.toLocaleDateString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    }
   };
 
   // Kiểm tra xem tin nhắn có cần hiển thị ngày không
@@ -1674,6 +1803,134 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
     }
   }, [page]);
 
+  // Tối ưu việc tải tin nhắn với throttle
+  const throttledLoadMessages = useCallback(
+    throttle(async (conversationId: number) => {
+      try {
+        const msgs = await api.getConversationMessages(conversationId);
+        if (currentConversationIdRef.current === conversationId) {
+          setMessages(prevMessages => {
+            // Chỉ cập nhật nếu có sự thay đổi
+            if (JSON.stringify(prevMessages) !== JSON.stringify(msgs)) {
+              return msgs;
+            }
+            return prevMessages;
+          });
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải tin nhắn:', error);
+      }
+    }, 1000), // Throttle 1 giây
+    []
+  );
+
+  // Tối ưu việc tải tin nhắn
+  useEffect(() => {
+    if (!currentConversation?.conversation_id) return;
+    
+    let isSubscribed = true;
+    const conversationId = currentConversation.conversation_id;
+    
+    const loadMessages = async () => {
+      try {
+        const msgs = await api.getConversationMessages(conversationId);
+        if (isSubscribed && currentConversationIdRef.current === conversationId) {
+          setMessages(msgs);
+          if (messages.length === 0) {
+            requestAnimationFrame(() => scrollToBottom(false));
+          }
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải tin nhắn:', error);
+      } finally {
+        if (isSubscribed) {
+          setLoading(false);
+        }
+      }
+    };
+
+    setLoading(true);
+    currentConversationIdRef.current = conversationId;
+    loadMessages();
+
+    // Cleanup function
+    return () => {
+      isSubscribed = false;
+      throttledLoadMessages.cancel();
+    };
+  }, [currentConversation?.conversation_id, throttledLoadMessages]);
+
+  // Tối ưu việc tự động làm mới tin nhắn với throttle
+  useEffect(() => {
+    if (!currentConversation?.conversation_id) return;
+    
+    let isSubscribed = true;
+    const conversationId = currentConversation.conversation_id;
+    let lastMessageCount = messages.length;
+    
+    const refreshMessages = async () => {
+      if (!isSubscribed) return;
+      
+      try {
+        const msgs = await api.getConversationMessages(conversationId);
+        if (!isSubscribed || currentConversationIdRef.current !== conversationId) return;
+
+        if (msgs.length > lastMessageCount) {
+          const scrollPosition = messagesContainerRef.current?.scrollTop || 0;
+          const scrollHeight = messagesContainerRef.current?.scrollHeight || 0;
+          const clientHeight = messagesContainerRef.current?.clientHeight || 0;
+          const wasAtBottom = scrollHeight - scrollPosition - clientHeight < 50;
+          
+          setMessages(msgs);
+          lastMessageCount = msgs.length;
+          
+          if (wasAtBottom) {
+            requestAnimationFrame(() => scrollToBottom(true));
+          }
+        }
+      } catch (error) {
+        console.error('Lỗi khi làm mới tin nhắn:', error);
+      }
+    };
+
+    const throttledRefresh = throttle(refreshMessages, 1000);
+    const intervalId = setInterval(throttledRefresh, 2000);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(intervalId);
+      throttledRefresh.cancel();
+    };
+  }, [currentConversation?.conversation_id]);
+
+  // Tối ưu hiệu suất cuộn với throttle
+  const throttledHandleScroll = useMemo(
+    () => throttle(() => {
+      if (!messagesContainerRef.current) return;
+      const scrollTop = messagesContainerRef.current.scrollTop;
+      const scrollHeight = messagesContainerRef.current.scrollHeight;
+      const clientHeight = messagesContainerRef.current.clientHeight;
+      const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+      
+      setIsAtBottom(atBottom);
+      
+      if (scrollTop === 0 && (page + 1) * pageSize < messages.length) {
+        prevScrollHeightRef.current = scrollHeight;
+        setPage(prev => prev + 1);
+      }
+      if (atBottom && page > 0) {
+        setPage(0);
+      }
+    }, 100),
+    [page, messages.length, pageSize]
+  );
+
+  // Tối ưu việc render tin nhắn
+  const memoizedMessages = useMemo(() => {
+    const start = Math.max(messages.length - (page + 1) * pageSize, 0);
+    return messages.slice(start);
+  }, [messages, page, pageSize]);
+
   // Nếu không có cuộc trò chuyện nào được chọn
   if (!currentConversation) {
     return (
@@ -1817,7 +2074,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               paddingTop: '60px',
             }} 
             ref={messagesContainerRef} 
-            onScroll={handleScroll}
+            onScroll={throttledHandleScroll}
             onClick={handleChatAreaClick}
           >
             <div className="messages-list" style={{
@@ -1825,14 +2082,10 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               marginTop: 'auto',
               width: '100%',
             }}>
-              {displayedMessages.map((message, index) => (
+              {memoizedMessages.map((message, index) => (
                 <React.Fragment key={message.message_id}>
                   {shouldShowDateDisplayed(index) && (
-                    <div className="message-date" style={styles.messageDate}>
-                      <span className="date-pill" style={styles.datePill}>
-                        {formatMessageDate(message.created_at)}
-                      </span>
-                    </div>
+                    <MessageDate date={message.created_at} styles={styles} />
                   )}
                   
                   <div 
@@ -1845,99 +2098,25 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                     }}
                   >
                     {!isOwnMessage(message) && (
-                      <div style={{
-                        ...styles.messageAvatar,
-                        ...(message.sender_avatar ? {
-                          backgroundImage: `url(${message.sender_avatar})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          color: 'transparent'
-                        } : {})
-                      }}>
-                        {!message.sender_avatar && (
-                          isSystemMessage(message) ? (
-                            <i className="fas fa-wrench" style={{ fontSize: '16px', color: '#0066ff' }}></i>
-                          ) : (
-                            message.sender_name ? message.sender_name.charAt(0).toUpperCase() : '?'
-                          )
-                        )}
-                      </div>
+                      <MessageAvatar
+                        sender_name={message.sender_name}
+                        sender_avatar={message.sender_avatar}
+                        isSystem={isSystemMessage(message)}
+                        styles={styles}
+                      />
                     )}
-                    <div 
-                      className="message-content" 
-                      style={{
-                        ...styles.messageContent,
-                        alignItems: isOwnMessage(message) ? 'flex-end' : 'flex-start',
-                        margin: '0',
-                      }}
-                      onMouseEnter={() => setHoveredMessageId(message.message_id as number)}
-                      onMouseLeave={() => setHoveredMessageId(null)}
-                    >
-                      {/* Hiển thị thông tin tin nhắn được trả lời */}
-                      {message.reply_to && (
-                        <div style={styles.replyIndicator}>
-                          <i className="fas fa-reply" style={{ fontSize: '12px' }}></i>
-                          <span>Trả lời {message.reply_to.sender_name}</span>
-                          <span style={styles.replyContent}>{message.reply_to.content}</span>
-                        </div>
-                      )}
-                      
-                      <div 
-                        className={isOwnMessage(message) ? "message-bubble-own" : "message-bubble-other"}
-                        style={{
-                          ...(isOwnMessage(message) ? styles.messageBubbleOwn : isSystemMessage(message) ? {
-                            ...styles.messageBubbleOther,
-                            backgroundColor: '#e9f5ff',
-                            color: '#333',
-                            border: '1px solid #d0e8ff'
-                          } : styles.messageBubbleOther),
-                          marginTop: '0',
-                          marginBottom: '0',
-                        }}
-                      >
-                        {message.content}
-                      </div>
-                      
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginTop: '2px'
-                      }}>
-                        <div 
-                          className="message-time" 
-                          style={{
-                            ...styles.messageTime,
-                            textAlign: isOwnMessage(message) ? 'right' : 'left',
-                            ...(hoveredMessageId === message.message_id ? styles.messageTimeVisible : {}),
-                            margin: '0',
-                            padding: '0',
-                          }}
-                        >
-                          {formatMessageTime(message.created_at)}
-                        </div>
-                        
-                        {/* Nút trả lời tin nhắn */}
-                        {!isSystemAccount && hoveredMessageId === message.message_id && (
-                          <button
-                            onClick={() => handleReply(message)}
-                            style={{
-                              ...styles.replyButton,
-                              opacity: 1
-                            }}
-                          >
-                            <i className="fas fa-reply"></i>
-                            <span>Trả lời</span>
-                          </button>
-                        )}
-                      </div>
-                      
-                      {renderMessageStatus(message)}
-                    </div>
+                    <MessageBubble
+                      message={message}
+                      isOwnMessage={isOwnMessage(message)}
+                      isSystemMessage={isSystemMessage(message)}
+                      hoveredMessageId={hoveredMessageId}
+                      onHover={setHoveredMessageId}
+                      onReply={handleReply}
+                      styles={styles}
+                    />
                   </div>
                 </React.Fragment>
               ))}
-              <div ref={messagesEndRef}></div>
             </div>
           </div>
           
@@ -1947,7 +2126,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                 Không thể gửi tin nhắn. Hai người đã chặn nhau.
               </div>
             ) : (
-              <div className="input-area" style={styles.inputArea} onClick={() => inputRef.current?.focus()}>
+              <div className="input-area" onClick={() => inputRef.current?.focus()}>
                 {/* Hiển thị preview tin nhắn đang trả lời */}
                 {replyingTo && (
                   <div style={styles.replyPreview}>
@@ -1965,7 +2144,7 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                   </div>
                 )}
                 
-                <form className="input-form" style={styles.inputForm} onSubmit={handleSendMessage}>
+                <form className="input-form" onSubmit={handleSendMessage}>
                   <button
                     type="button"
                     className="emoji-button"
@@ -2009,7 +2188,6 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      style={styles.messageInput}
                       disabled={sending}
                       autoFocus={shouldAutoFocus}
                       onFocus={() => {
@@ -2054,4 +2232,4 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
   );
 };
 
-export default MessagesContent; 
+export default React.memo(MessagesContent); 

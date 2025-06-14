@@ -54,7 +54,7 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
     <div className="contacts-sidebar">
       {/* Sidebar cho danh sách nhóm danh bạ */}
       <div className="contacts-sidebar-header">
-        <h3 style={{ color: '#000' }}>Tất cả danh bạ</h3>
+        <h3>Tất cả danh bạ</h3>
       </div>
       <div className="contacts-sidebar-content">
         <div 
@@ -66,7 +66,7 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
           </div>
-          <span style={{ color: currentTab === 'friends' ? '#0084ff' : '#000' }}>Danh sách bạn bè</span>
+          <span>Danh sách bạn bè</span>
         </div>
         <div 
           className={`contact-sidebar-item ${currentTab === 'requests' ? 'active' : ''}`}
@@ -78,7 +78,7 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
               <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
           </div>
-          <span style={{ color: currentTab === 'requests' ? '#0084ff' : '#000' }}>Lời mời kết bạn</span>
+          <span>Lời mời kết bạn</span>
           
           {/* Hiển thị badge khi có lời mời kết bạn */}
           {showBadge && (
@@ -96,7 +96,7 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
               <path d="M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z"/>
             </svg>
           </div>
-          <span style={{ color: currentTab === 'explore' ? '#0084ff' : '#000' }}>Khám phá</span>
+          <span>Khám phá</span>
         </div>
         <div 
           className={`contact-sidebar-item ${currentTab === 'blocked' ? 'active' : ''}`}
@@ -107,7 +107,7 @@ const ContactsSidebar: React.FC<ContactsSidebarProps> = ({ activeTab, onTabChang
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
             </svg>
           </div>
-          <span style={{ color: currentTab === 'blocked' ? '#0084ff' : '#000' }}>Danh sách chặn</span>
+          <span>Danh sách chặn</span>
         </div>
       </div>
       
