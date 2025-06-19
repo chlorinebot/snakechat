@@ -12,6 +12,7 @@ interface UserProfileModalProps {
   onFriendRequestSent?: () => void; // Callback khi gửi lời mời kết bạn thành công
   fromFriendRequest?: boolean; // Đánh dấu modal được mở từ lời mời kết bạn
   friendshipId?: number; // ID của lời mời kết bạn nếu có
+  onStartConversation?: (userId: number) => void;  // Thêm prop mới
 }
 
 const UserProfileModal: React.FC<UserProfileModalProps> = ({ 
@@ -20,7 +21,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   userId, 
   onFriendRequestSent, 
   fromFriendRequest = false,
-  friendshipId: propFriendshipId
+  friendshipId: propFriendshipId,
+  onStartConversation
 }) => {
   const [userData, setUserData] = useState<User | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -682,43 +684,25 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             className="message-friend-button"
             onClick={async () => {
               try {
-                if (!userData?.user_id || !currentUser?.user_id) {
+                if (!userData?.user_id) {
                   console.error("Không tìm thấy ID người dùng");
                   return;
                 }
 
-                console.log(`Đang tạo/mở cuộc trò chuyện giữa ${currentUser.user_id} và ${userData.user_id}`);
-                
-                // Tạo hoặc lấy cuộc trò chuyện 1-1 với người dùng này
-                const result = await api.getOrCreateOneToOneConversation(
-                  currentUser.user_id, 
-                  userData.user_id
-                );
-                
-                if (result.success && result.data) {
-                  console.log("Đã tạo/mở cuộc trò chuyện:", result.data);
-                  
-                  // Lưu thông tin cuộc trò chuyện hiện tại vào localStorage
-                  localStorage.setItem('currentConversation', JSON.stringify({
-                    conversation_id: result.data.conversation_id,
-                    with_user_id: userData.user_id,
-                    with_username: userData.username
-                  }));
-
-                  // Hiển thị thông báo đang chuyển hướng
-                  setSuccessMessage("Đang chuyển đến khung chat...");
-                  
-                  // Đóng modal thông tin người dùng
+                if (onStartConversation) {
+                  // Gọi callback nếu có
+                  onStartConversation(userData.user_id);
                   onClose();
-                  
-                  // Chuyển đến tab messages sau 1 giây để đảm bảo thông báo được hiển thị
-                  setTimeout(() => {
-                    // Force reload trang với tham số tab=messages
-                    window.location.href = '/?tab=messages';
-                  }, 1000);
                 } else {
-                  console.error("Không thể tạo cuộc trò chuyện");
-                  setError("Không thể tạo cuộc trò chuyện. Vui lòng thử lại sau.");
+                  // Fallback cho trường hợp không có callback
+                  const result = await api.getOrCreateOneToOneConversation(
+                    currentUser?.user_id || 0, 
+                    userData.user_id
+                  );
+                  
+                  if (result.success && result.data) {
+                    window.location.href = '/?tab=messages';
+                  }
                 }
               } catch (error) {
                 console.error("Lỗi khi tạo cuộc trò chuyện:", error);

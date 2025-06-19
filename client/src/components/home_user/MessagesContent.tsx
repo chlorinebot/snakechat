@@ -1943,53 +1943,51 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           justifyContent: 'center',
           height: '100%',
           padding: '40px 20px',
-          backgroundColor: '#ffffff',
-          textAlign: 'center' as const,
+          background: 'var(--welcome-bg-gradient)',
+          textAlign: 'center',
         }}>
           <div className="empty-icon" style={{
             width: '120px',
             height: '120px',
             margin: '0 auto 30px',
-            backgroundColor: '#e0e4e8',
+            backgroundColor: 'var(--welcome-icon-bg)',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            boxShadow: 'var(--welcome-icon-shadow)',
           }}>
             <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H5.17L4 17.17V4H20V16Z" fill="#222222"/>
-              <path d="M12 11H14V13H12V11ZM12 7H14V9H12V7Z" fill="#222222"/>
+              <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H5.17L4 17.17V4H20V16Z" fill="var(--welcome-icon-color)"/>
+              <path d="M12 11H14V13H12V11ZM12 7H14V9H12V7Z" fill="var(--welcome-icon-color)"/>
             </svg>
           </div>
           
           <div style={{
-            backgroundColor: '#ffffff',
-            padding: '0 0 20px 0',
-            width: '100%',
+            color: 'var(--welcome-text)',
+            fontWeight: 900,
+            fontSize: '28px',
+            textAlign: 'center',
+            padding: '10px 0',
+            lineHeight: 1.4,
+            fontFamily: 'Arial, sans-serif',
+            textShadow: '0 2px 4px var(--welcome-text-shadow)',
+            transition: 'all 0.3s ease',
+            marginBottom: '20px'
           }}>
-            <div style={{
-              backgroundColor: '#ffffff',
-              color: '#000000',
-              fontWeight: 900,
-              fontSize: '28px',
-              textAlign: 'center',
-              padding: '10px 0',
-              lineHeight: 1.4,
-              fontFamily: 'Arial, sans-serif',
-            }}>
-              Chào mừng đến với SnakeChat
-            </div>
+            Chào mừng đến với SnakeChat
           </div>
 
           <p style={{
             fontSize: '18px',
-            color: '#000000',
+            color: 'var(--welcome-description-text)',
             maxWidth: '450px',
             lineHeight: '1.6',
             marginBottom: '30px',
             fontWeight: 500,
-          }}>Hãy chọn một cuộc trò chuyện từ danh sách bên trái để bắt đầu trò chuyện hoặc tạo cuộc trò chuyện mới với bạn bè</p>
+          }}>
+            Hãy chọn một cuộc trò chuyện từ danh sách bên trái để bắt đầu trò chuyện hoặc tạo cuộc trò chuyện mới với bạn bè
+          </p>
           
           <div style={{
             display: 'flex',
@@ -2115,6 +2113,18 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
                       styles={styles}
                     />
                   </div>
+                  {/* Hiển thị trạng thái Đã xem ngay dưới bubble đã xem gần nhất */}
+                  {isLastReadMessage(message) && (
+                    <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', margin: '2px 0 8px 0' }}>
+                      {renderMessageStatus(message)}
+                    </div>
+                  )}
+                  {/* Hiển thị trạng thái Đã gửi ngay dưới bubble tin nhắn mới nhất của mình (nếu chưa được xem) */}
+                  {isLastMessageFromUser(message) && !message.is_read && (
+                    <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', margin: '2px 0 8px 0' }}>
+                      {renderMessageStatus(message)}
+                    </div>
+                  )}
                 </React.Fragment>
               ))}
             </div>
@@ -2122,8 +2132,8 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
           
           {!isSystemAccount && (
             isBlocked ? (
-              <div className="blocked-chat-message" style={{ ...styles.inputArea, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#e74c3c' }}>
-                Không thể gửi tin nhắn. Hai người đã chặn nhau.
+              <div className="blocked-chat-message" style={{ ...styles.inputArea, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#e74c3c', backgroundColor: 'var(--blocked-message-bg)' }}>
+                Không thể gửi tin nhắn. Bạn hoặc người dùng này đã chặn nhau.
               </div>
             ) : (
               <div className="input-area" onClick={() => inputRef.current?.focus()}>
@@ -2218,10 +2228,10 @@ const MessagesContent: React.FC<MessagesContentProps> = ({ userId, currentConver
               display: 'flex', 
               justifyContent: 'center', 
               alignItems: 'center', 
-              color: '#666',
-              backgroundColor: '#f8f9fa',
+              color: 'var(--system-message-text)',
+              backgroundColor: 'var(--system-message-bg)',
               fontStyle: 'italic',
-              borderTop: '1px solid #eee'
+              borderTop: '1px solid var(--system-message-border)'
             }}>
               Đây là tin nhắn hệ thống. Bạn không thể trả lời trực tiếp.
             </div>

@@ -11,6 +11,8 @@ interface ContactsContentProps {
   activeTab?: 'friends' | 'requests' | 'explore' | 'blocked';
   onFriendRequestUpdate?: () => void; // Callback khi có thay đổi về lời mời kết bạn
   userId?: number; // ID của người dùng hiện tại
+  onConversationStarted?: (conversation: any) => void; // Callback khi có thay đổi về cuộc trò chuyện
+  setCurrentConversation?: (conversation: any) => void; // Thêm prop mới
 }
 
 interface BlockedUser {
@@ -23,7 +25,7 @@ interface BlockedUser {
   user: User;
 }
 
-const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends', onFriendRequestUpdate, userId }) => {
+const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends', onFriendRequestUpdate, userId, onConversationStarted, setCurrentConversation }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -1983,6 +1985,34 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
     );
   };
 
+  const handleStartConversation = async (userId: number) => {
+    try {
+      if (!currentUser?.user_id) return;
+      
+      const result = await api.getOrCreateOneToOneConversation(
+        currentUser.user_id, 
+        userId
+      );
+      
+      if (result.success && result.data) {
+        // Cập nhật cuộc trò chuyện hiện tại
+        if (setCurrentConversation) {
+          setCurrentConversation(result.data);
+        }
+        
+        // Kích hoạt sự kiện chuyển tab
+        window.dispatchEvent(new CustomEvent('switchToMessagesTab'));
+        
+        // Nếu có callback từ component cha, gọi nó
+        if (onConversationStarted) {
+          onConversationStarted(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('Lỗi khi tạo cuộc trò chuyện:', error);
+    }
+  };
+
   return (
     <div className="contacts-content">
       {renderTabContent()}
@@ -1994,6 +2024,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
           onClose={handleCloseUserProfileModal}
           userId={selectedUserId}
           onFriendRequestSent={handleProfileModalUpdate}
+          onStartConversation={handleStartConversation}
           fromFriendRequest={false}
         />
       )}

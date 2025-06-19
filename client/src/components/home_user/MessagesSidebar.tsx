@@ -331,6 +331,28 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     return `Nhóm (${conversation.members?.length || 0} thành viên)`;
   };
 
+  // Thêm hàm tính thời gian hoạt động cuối cùng
+  function getLastActiveText(lastActivity: string) {
+    try {
+      const date = new Date(lastActivity);
+      if (isNaN(date.getTime())) return '';
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      if (diffMins < 60) {
+        return `${diffMins} phút trước`;
+      } else if (diffHours < 24) {
+        return `${diffHours} giờ trước`;
+      } else {
+        return `${diffDays} ngày trước`;
+      }
+    } catch {
+      return '';
+    }
+  }
+
   // Định nghĩa styles
   const styles = {
     conversationList: {
@@ -461,20 +483,56 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     },
     sidebarHeader: {
       padding: '15px 15px 10px',
-    }
+    },
+    searchBar: {
+      padding: '10px 15px',
+      backgroundColor: isDarkMode ? '#1e1e1e' : '#f5f5f5',
+      borderRadius: '8px',
+      margin: '10px 15px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      border: isDarkMode ? '1px solid #444' : '1px solid #e0e0e0'
+    },
+    searchInput: {
+      flex: 1,
+      border: 'none',
+      outline: 'none',
+      backgroundColor: 'transparent',
+      color: isDarkMode ? '#e0e0e0' : '#000000', // Màu chữ xám nhạt trong dark mode
+      fontSize: '14px',
+      '::placeholder': {
+        color: isDarkMode ? '#7a7a7a' : '#888888', // Màu placeholder xám đậm hơn
+      },
+    },
+    searchIcon: {
+      color: isDarkMode ? '#7a7a7a' : '#888888',
+      fontSize: '16px',
+    },
   };
+
+  // Tự động cập nhật lại giao diện mỗi phút để hiển thị last active chính xác
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLocalConversations(convs => [...convs]); // Trigger re-render
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="messages-sidebar">
       <div className="messages-sidebar-header" style={styles.sidebarHeader}>
         <h3>Tất cả tin nhắn</h3>
       </div>
-      <div className="messages-search-bar">
-        <div className="search-icon"></div>
+      <div className="messages-search-bar" style={styles.searchBar}>
+        <div className="search-icon" style={styles.searchIcon}>
+          <i className="fas fa-search"></i>
+        </div>
         <input 
           type="text" 
           placeholder="Tìm kiếm tin nhắn..."
           className="messages-search-input"
+          style={styles.searchInput}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -560,6 +618,12 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
                         )}
                       </div>
                     </div>
+                    {/* Thêm trạng thái online/offline và last active */}
+                    {otherMember && canViewStatus && otherMember.status !== 'online' && (otherMember as any).last_activity && (
+                      <div style={{ fontSize: '12px', color: '#888', margin: '2px 0 0 0' }}>
+                        Ngoại tuyến · {getLastActiveText((otherMember as any).last_activity)}
+                      </div>
+                    )}
                     <div style={{
                       ...styles.conversationLastMessage,
                       ...(isActive ? styles.conversationLastMessageActive : {})

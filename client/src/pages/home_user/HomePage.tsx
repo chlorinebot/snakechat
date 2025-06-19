@@ -456,6 +456,18 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     };
   }, [user, currentConversation, activeTab]);
 
+  useEffect(() => {
+    const handleSwitchToMessagesTab = () => {
+      setActiveTab('messages');
+    };
+
+    window.addEventListener('switchToMessagesTab', handleSwitchToMessagesTab);
+    
+    return () => {
+      window.removeEventListener('switchToMessagesTab', handleSwitchToMessagesTab);
+    };
+  }, []);
+
   if (!user) {
     return <div className="loading">Đang tải...</div>;
   }
@@ -698,6 +710,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
               activeTab={contactsTab} 
               onFriendRequestUpdate={handleFriendRequestUpdate}
               userId={user.user_id}
+              setCurrentConversation={setCurrentConversation}
             />
           </div>
         )}
