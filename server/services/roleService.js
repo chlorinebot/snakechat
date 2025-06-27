@@ -1,4 +1,4 @@
-const pool = require('../db');
+const { pool, isConnected } = require('../db');
 
 const roleService = {
   getAllRoles: async () => {

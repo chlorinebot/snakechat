@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const blockController = require('../controllers/blockController');
-const db = require('../db');
+const { pool, isConnected } = require('../db');
 
 // Route lấy danh sách users
 router.get('/data', userController.getAllUsers);
@@ -53,7 +53,7 @@ router.get('/check-lock-status/:userId', async (req, res) => {
         
         // Truy vấn bảng user_lock để kiểm tra tài khoản có đang bị khóa không
         // Chỉ lấy bản ghi có status = 'locked' và thời gian mở khóa > thời gian hiện tại
-        const [lockInfo] = await db.query(
+        const [lockInfo] = await pool.query(
             `SELECT * FROM user_lock 
              WHERE user_id = ? AND status = 'locked' AND unlock_time > NOW() 
              ORDER BY lock_id DESC 

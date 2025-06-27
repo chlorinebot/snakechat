@@ -1,11 +1,11 @@
-const db = require('../db');
+const { pool, isConnected } = require('../db');
 const socketService = require('../socket');
 const messageController = require('./messageController');
 
 // Lấy tất cả thông báo chung
 exports.getAllAnnouncements = async (req, res) => {
   try {
-    const [announcements] = await db.query(`
+    const [announcements] = await pool.query(`
       SELECT * FROM GeneralAnnouncement
       ORDER BY CreatedAt DESC
     `);
@@ -36,7 +36,7 @@ exports.getAnnouncementById = async (req, res) => {
   }
   
   try {
-    const [announcements] = await db.query(`
+    const [announcements] = await pool.query(`
       SELECT * FROM GeneralAnnouncement
       WHERE AnnouncementID = ?
     `, [id]);
@@ -73,7 +73,7 @@ exports.createAnnouncement = async (req, res) => {
     });
   }
   
-  const connection = await db.getConnection();
+  const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
@@ -186,7 +186,7 @@ exports.updateAnnouncement = async (req, res) => {
     query += ' WHERE AnnouncementID = ?';
     params.push(id);
     
-    const [result] = await db.query(query, params);
+    const [result] = await pool.query(query, params);
     
     if (result.affectedRows === 0) {
       return res.status(404).json({
@@ -225,7 +225,7 @@ exports.deleteAnnouncement = async (req, res) => {
   }
   
   try {
-    const [result] = await db.query(`
+    const [result] = await pool.query(`
       DELETE FROM GeneralAnnouncement
       WHERE AnnouncementID = ?
     `, [id]);

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const db = require('../db');
+const { pool, isConnected } = require('../db');
 
 // Đăng ký
 router.post('/register', async (req, res) => {
@@ -9,7 +9,7 @@ router.post('/register', async (req, res) => {
         const { username, email, password, birthday } = req.body;
         
         // Kiểm tra email đã tồn tại
-        const [existingUsers] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        const [existingUsers] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
         if (existingUsers.length > 0) {
             return res.status(400).json({ 
                 success: false, 
@@ -18,7 +18,7 @@ router.post('/register', async (req, res) => {
         }
 
         // Kiểm tra username đã tồn tại
-        const [existingUsernames] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+        const [existingUsernames] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
         if (existingUsernames.length > 0) {
             return res.status(400).json({ 
                 success: false, 
@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         
         // Thêm người dùng mới với role_id = 2 (người dùng)
-        const [result] = await db.query(
+        const [result] = await pool.query(
             'INSERT INTO users (username, email, password, birthday, role_id) VALUES (?, ?, ?, ?, 2)',
             [username, email, hashedPassword, birthday]
         );
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
         const { identity, password } = req.body;
 
         // Tìm user theo email hoặc username
-        const [users] = await db.query('SELECT * FROM users WHERE email = ? OR username = ?', [identity, identity]);
+        const [users] = await pool.query('SELECT * FROM users WHERE email = ? OR username = ?', [identity, identity]);
         if (users.length === 0) {
             return res.status(401).json({ 
                 success: false, 
@@ -75,7 +75,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Cập nhật trạng thái online ngay khi đăng nhập thành công
-        await db.query('UPDATE users SET status = ? WHERE user_id = ?', ['online', user.user_id]);
+        await pool.query('UPDATE users SET status = ? WHERE user_id = ?', ['online', user.user_id]);
         console.log(`Đã cập nhật trạng thái online cho user ${user.user_id} khi đăng nhập`);
 
         // Tạo đối tượng user không chứa mật khẩu
