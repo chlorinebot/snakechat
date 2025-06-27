@@ -491,7 +491,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
       case 'requests':
         return 'Lời mời kết bạn';
       case 'explore':
-        return 'Khám phá người dùng';
+        return 'Thêm bạn bè';
       case 'blocked':
         return 'Người đã chặn';
       default:

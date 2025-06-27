@@ -35,6 +35,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   const [showUserProfileModal, setShowUserProfileModal] = useState<boolean>(false);
   const [friendsList, setFriendsList] = useState<User[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [sentFriendRequests, setSentFriendRequests] = useState<FriendRequest[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [processingRequest, setProcessingRequest] = useState<{ [key: number]: boolean }>({});
   
@@ -715,7 +716,10 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
 
   // Render danh sách lời mời kết bạn
   const renderFriendRequests = () => {
-    if (friendRequests.length === 0) {
+    const receivedEmpty = friendRequests.length === 0;
+    const sentEmpty = sentFriendRequests.length === 0;
+    
+    if (receivedEmpty && sentEmpty) {
       return (
         <div className="contacts-empty">
           <div className="contacts-empty-icon friend-request-icon"></div>
@@ -744,54 +748,160 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       transition: 'background-color 0.2s'
     };
 
+    const sectionStyle = {
+      marginBottom: '30px'
+    };
+
+    const sectionTitleStyle = {
+      fontSize: '18px',
+      fontWeight: 600,
+      marginBottom: '15px',
+      paddingBottom: '8px',
+      borderBottom: '1px solid #e0e0e0'
+    };
+
     return (
       <div className="friend-requests-container">
-        {friendRequests.map((request) => (
-          <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
-            <div 
-              className="user-info-container"
-              onClick={() => handleUserClick(request.user, request.friendship_id, true)}
-              style={userInfoStyle}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              {isUserLocked(request.user.user_id) ? (
-                <div className="friend-request-avatar banned-avatar">
-                  BAN
-                </div>
-              ) : (
-                <div className="friend-request-avatar" style={request.user.avatar ? {
-                  backgroundImage: `url(${request.user.avatar})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  color: 'transparent'
-                } : {}}>
-                  {!request.user.avatar && (request.user.username ? request.user.username.charAt(0).toUpperCase() : 'U')}
-                </div>
-              )}
-              <div className="friend-request-info">
-                <div className="friend-request-name">{request.user.username}</div>
-                <div className="friend-request-time">{formatTime(request.created_at)}</div>
-              </div>
+        {/* Lời mời kết bạn nhận được */}
+        <div style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>Lời mời kết bạn nhận được</h3>
+          {receivedEmpty ? (
+            <div className="empty-section-message" style={{ padding: '15px 0', color: '#666' }}>
+              Bạn không có lời mời kết bạn nào
             </div>
-            <div className="friend-request-actions">
-              <button 
-                className="accept-request-btn"
-                onClick={() => handleAcceptFriendRequest(request.friendship_id)}
-                disabled={!!processingRequest[request.friendship_id] || isUserLocked(request.user.user_id)}
-              >
-                {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Chấp nhận'}
-              </button>
-              <button 
-                className="reject-request-btn"
-                onClick={() => handleRejectFriendRequest(request.friendship_id)}
-                disabled={!!processingRequest[request.friendship_id]}
-              >
-                {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Từ chối'}
-              </button>
+          ) : (
+            <div className="friend-requests-list">
+              {friendRequests.map((request) => (
+                <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
+                  <div 
+                    className="user-info" 
+                    style={userInfoStyle}
+                    onClick={() => handleUserClick(request.user, request.friendship_id, true)}
+                  >
+                    <div 
+                      className="user-avatar" 
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        marginRight: '15px',
+                        backgroundColor: '#e3f2fd',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        color: '#0066ff',
+                        fontWeight: 'bold',
+                        ...(request.user.avatar ? {
+                          backgroundImage: `url(${request.user.avatar})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          color: 'transparent'
+                        } : {})
+                      }}
+                    >
+                      {!request.user.avatar && request.user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{request.user.username}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {formatTime(request.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="friend-request-actions">
+                    <button 
+                      className="accept-request-btn"
+                      onClick={() => handleAcceptFriendRequest(request.friendship_id)}
+                      disabled={!!processingRequest[request.friendship_id] || isUserLocked(request.user.user_id)}
+                    >
+                      {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Chấp nhận'}
+                    </button>
+                    <button 
+                      className="reject-request-btn"
+                      onClick={() => handleRejectFriendRequest(request.friendship_id)}
+                      disabled={!!processingRequest[request.friendship_id]}
+                    >
+                      {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Từ chối'}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        ))}
+          )}
+        </div>
+
+        {/* Lời mời kết bạn đã gửi */}
+        <div style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>Lời mời kết bạn đã gửi</h3>
+          {sentEmpty ? (
+            <div className="empty-section-message" style={{ padding: '15px 0', color: '#666' }}>
+              Bạn chưa gửi lời mời kết bạn nào
+            </div>
+          ) : (
+            <div className="friend-requests-list">
+              {sentFriendRequests.map((request) => (
+                <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
+                  <div 
+                    className="user-info" 
+                    style={userInfoStyle}
+                    onClick={() => handleUserClick(request.user, request.friendship_id, false)}
+                  >
+                    <div 
+                      className="user-avatar" 
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        marginRight: '15px',
+                        backgroundColor: '#e3f2fd',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        color: '#0066ff',
+                        fontWeight: 'bold',
+                        ...(request.user.avatar ? {
+                          backgroundImage: `url(${request.user.avatar})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          color: 'transparent'
+                        } : {})
+                      }}
+                    >
+                      {!request.user.avatar && request.user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{request.user.username}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {formatTime(request.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="friend-request-actions">
+                    <button 
+                      className="cancel-request-btn"
+                      onClick={() => handleRejectFriendRequest(request.friendship_id)}
+                      disabled={!!processingRequest[request.friendship_id]}
+                      style={{
+                        backgroundColor: '#f0f0f0',
+                        color: '#333',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Hủy lời mời'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -815,10 +925,23 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       setLoading(false);
     }
   };
+
+  // Hàm lấy danh sách lời mời kết bạn đã gửi
+  const fetchSentFriendRequests = async () => {
+    if (!userId) return;
+    
+    try {
+      const sentRequests = await api.getSentFriendRequests(userId);
+      setSentFriendRequests(sentRequests || []);
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách lời mời kết bạn đã gửi:', error);
+    }
+  };
   
   useEffect(() => {
     if (activeTab === 'requests' && userId) {
       fetchFriendRequests();
+      fetchSentFriendRequests();
     }
   }, [activeTab, userId]);
 
@@ -1270,7 +1393,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
               return (
                 <div className="contacts-empty">
                   <div className="contacts-empty-icon explore-icon"></div>
-                  <h3>Khám phá người dùng</h3>
+                  <h3>Thêm bạn bè</h3>
                   <p>Nhập tên để tìm kiếm và kết bạn với người dùng mới</p>
                 </div>
               );
@@ -1496,7 +1619,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
             }
             
             .explore-icon:before {
-              content: "\\f002";
+              content: "\f234";
               font-family: "Font Awesome 5 Free";
               font-weight: 900;
               font-size: 24px;
@@ -1929,7 +2052,7 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
             }
             
             .explore-icon:before {
-              content: "\\f002";
+              content: "\f234";
               font-family: "Font Awesome 5 Free";
               font-weight: 900;
               font-size: 24px;
@@ -2025,7 +2148,6 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
           userId={selectedUserId}
           onFriendRequestSent={handleProfileModalUpdate}
           onStartConversation={handleStartConversation}
-          fromFriendRequest={false}
         />
       )}
       
