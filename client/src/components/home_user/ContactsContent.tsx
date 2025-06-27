@@ -64,6 +64,10 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
   const [unblockingUser, setUnblockingUser] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   
+  // Thêm state cho việc điều khiển trạng thái mở/đóng của dropdown
+  const [receivedDropdownOpen, setReceivedDropdownOpen] = useState<boolean>(false);
+  const [sentDropdownOpen, setSentDropdownOpen] = useState<boolean>(false);
+  
   // Các style chung cho các thành phần
   const itemContainerStyle = {
     display: 'flex',
@@ -757,151 +761,231 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       fontWeight: 600,
       marginBottom: '15px',
       paddingBottom: '8px',
-      borderBottom: '1px solid #e0e0e0'
+      borderBottom: '1px solid #e0e0e0',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      cursor: 'pointer'
+    };
+
+    const dropdownIconStyle = {
+      transition: 'transform 0.3s ease'
     };
 
     return (
       <div className="friend-requests-container">
         {/* Lời mời kết bạn nhận được */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitleStyle}>Lời mời kết bạn nhận được</h3>
-          {receivedEmpty ? (
-            <div className="empty-section-message" style={{ padding: '15px 0', color: '#666' }}>
-              Bạn không có lời mời kết bạn nào
-            </div>
-          ) : (
-            <div className="friend-requests-list">
-              {friendRequests.map((request) => (
-                <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
-                  <div 
-                    className="user-info" 
-                    style={userInfoStyle}
-                    onClick={() => handleUserClick(request.user, request.friendship_id, true)}
-                  >
+          <h3 
+            style={sectionTitleStyle} 
+            onClick={() => setReceivedDropdownOpen(!receivedDropdownOpen)}
+          >
+            <span>Lời mời kết bạn nhận được {!receivedEmpty && `(${friendRequests.length})`}</span>
+            <i 
+              className={`fas fa-chevron-${receivedDropdownOpen ? 'up' : 'down'}`} 
+              style={{
+                ...dropdownIconStyle,
+                transform: receivedDropdownOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
+              }}
+            ></i>
+          </h3>
+          
+          {receivedDropdownOpen && (
+            receivedEmpty ? (
+              <div className="empty-section-message" style={{ padding: '15px 0', color: '#666' }}>
+                Bạn không có lời mời kết bạn nào
+              </div>
+            ) : (
+              <div className="friend-requests-list">
+                {friendRequests.map((request) => (
+                  <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
                     <div 
-                      className="user-avatar" 
-                      style={{
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '50%',
-                        marginRight: '15px',
-                        backgroundColor: '#e3f2fd',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '20px',
-                        color: '#0066ff',
-                        fontWeight: 'bold',
-                        ...(request.user.avatar ? {
-                          backgroundImage: `url(${request.user.avatar})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          color: 'transparent'
-                        } : {})
-                      }}
+                      className="user-info" 
+                      style={userInfoStyle}
+                      onClick={() => handleUserClick(request.user, request.friendship_id, true)}
                     >
-                      {!request.user.avatar && request.user.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 'bold' }}>{request.user.username}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        {formatTime(request.created_at)}
+                      <div 
+                        className="user-avatar" 
+                        style={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '50%',
+                          marginRight: '15px',
+                          backgroundColor: '#e3f2fd',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                          color: '#0066ff',
+                          fontWeight: 'bold',
+                          ...(request.user.avatar ? {
+                            backgroundImage: `url(${request.user.avatar})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            color: 'transparent'
+                          } : {})
+                        }}
+                      >
+                        {!request.user.avatar && request.user.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 'bold' }}>{request.user.username}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {formatTime(request.created_at)}
+                        </div>
                       </div>
                     </div>
+                    <div className="friend-request-actions">
+                      <button 
+                        className="accept-request-btn"
+                        onClick={() => handleAcceptFriendRequest(request.friendship_id)}
+                        disabled={!!processingRequest[request.friendship_id] || isUserLocked(request.user.user_id)}
+                      >
+                        {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Chấp nhận'}
+                      </button>
+                      <button 
+                        className="reject-request-btn"
+                        onClick={() => handleRejectFriendRequest(request.friendship_id)}
+                        disabled={!!processingRequest[request.friendship_id]}
+                      >
+                        {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Từ chối'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="friend-request-actions">
-                    <button 
-                      className="accept-request-btn"
-                      onClick={() => handleAcceptFriendRequest(request.friendship_id)}
-                      disabled={!!processingRequest[request.friendship_id] || isUserLocked(request.user.user_id)}
-                    >
-                      {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Chấp nhận'}
-                    </button>
-                    <button 
-                      className="reject-request-btn"
-                      onClick={() => handleRejectFriendRequest(request.friendship_id)}
-                      disabled={!!processingRequest[request.friendship_id]}
-                    >
-                      {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Từ chối'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           )}
         </div>
 
         {/* Lời mời kết bạn đã gửi */}
         <div style={sectionStyle}>
-          <h3 style={sectionTitleStyle}>Lời mời kết bạn đã gửi</h3>
-          {sentEmpty ? (
-            <div className="empty-section-message" style={{ padding: '15px 0', color: '#666' }}>
-              Bạn chưa gửi lời mời kết bạn nào
-            </div>
-          ) : (
-            <div className="friend-requests-list">
-              {sentFriendRequests.map((request) => (
-                <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
-                  <div 
-                    className="user-info" 
-                    style={userInfoStyle}
-                    onClick={() => handleUserClick(request.user, request.friendship_id, false)}
-                  >
+          <h3 
+            style={sectionTitleStyle} 
+            onClick={() => setSentDropdownOpen(!sentDropdownOpen)}
+          >
+            <span>Lời mời kết bạn đã gửi {!sentEmpty && `(${sentFriendRequests.length})`}</span>
+            <i 
+              className={`fas fa-chevron-${sentDropdownOpen ? 'up' : 'down'}`} 
+              style={{
+                ...dropdownIconStyle,
+                transform: sentDropdownOpen ? 'rotate(0deg)' : 'rotate(-90deg)'
+              }}
+            ></i>
+          </h3>
+          
+          {sentDropdownOpen && (
+            sentEmpty ? (
+              <div className="empty-section-message" style={{ padding: '15px 0', color: '#666' }}>
+                Bạn chưa gửi lời mời kết bạn nào
+              </div>
+            ) : (
+              <div className="friend-requests-list">
+                {sentFriendRequests.map((request) => (
+                  <div key={request.friendship_id} className="friend-request-item" style={friendRequestItemStyle}>
                     <div 
-                      className="user-avatar" 
-                      style={{
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '50%',
-                        marginRight: '15px',
-                        backgroundColor: '#e3f2fd',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '20px',
-                        color: '#0066ff',
-                        fontWeight: 'bold',
-                        ...(request.user.avatar ? {
-                          backgroundImage: `url(${request.user.avatar})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          color: 'transparent'
-                        } : {})
-                      }}
+                      className="user-info" 
+                      style={userInfoStyle}
+                      onClick={() => handleUserClick(request.user, request.friendship_id, false)}
                     >
-                      {!request.user.avatar && request.user.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 'bold' }}>{request.user.username}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        {formatTime(request.created_at)}
+                      <div 
+                        className="user-avatar" 
+                        style={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '50%',
+                          marginRight: '15px',
+                          backgroundColor: '#e3f2fd',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                          color: '#0066ff',
+                          fontWeight: 'bold',
+                          ...(request.user.avatar ? {
+                            backgroundImage: `url(${request.user.avatar})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            color: 'transparent'
+                          } : {})
+                        }}
+                      >
+                        {!request.user.avatar && request.user.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 'bold' }}>{request.user.username}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {formatTime(request.created_at)}
+                        </div>
                       </div>
                     </div>
+                    <div className="friend-request-actions">
+                      <button 
+                        className="cancel-request-btn"
+                        onClick={() => handleRejectFriendRequest(request.friendship_id)}
+                        disabled={!!processingRequest[request.friendship_id]}
+                        style={{
+                          backgroundColor: '#f0f0f0',
+                          color: '#333',
+                          border: 'none',
+                          padding: '8px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Hủy lời mời'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="friend-request-actions">
-                    <button 
-                      className="cancel-request-btn"
-                      onClick={() => handleRejectFriendRequest(request.friendship_id)}
-                      disabled={!!processingRequest[request.friendship_id]}
-                      style={{
-                        backgroundColor: '#f0f0f0',
-                        color: '#333',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {processingRequest[request.friendship_id] ? 'Đang xử lý...' : 'Hủy lời mời'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           )}
         </div>
+
+        <style>
+          {`
+            .friend-requests-container {
+              padding: 10px;
+            }
+            
+            .section-title {
+              font-size: 18px;
+              font-weight: 600;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              transition: all 0.3s ease;
+            }
+            
+            .section-title:hover {
+              color: #0066ff;
+            }
+            
+            .dropdown-icon {
+              transition: transform 0.3s ease;
+            }
+            
+            .friend-requests-list {
+              animation: fadeIn 0.3s ease;
+              overflow: hidden;
+            }
+            
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+                transform: translateY(-10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+          `}
+        </style>
       </div>
     );
   };
@@ -1729,6 +1813,22 @@ const ContactsContent: React.FC<ContactsContentProps> = ({ activeTab = 'friends'
       clearInterval(intervalId);
     };
   }, [activeTab, userId]);
+
+  // Thêm useEffect để tự động mở dropdown khi số lượng lời mời kết bạn ít
+  useEffect(() => {
+    // Tự động mở dropdown khi số lượng lời mời kết bạn từ 1-4
+    if (friendRequests.length > 0 && friendRequests.length <= 4) {
+      setReceivedDropdownOpen(true);
+    } else {
+      setReceivedDropdownOpen(false);
+    }
+    
+    if (sentFriendRequests.length > 0 && sentFriendRequests.length <= 4) {
+      setSentDropdownOpen(true);
+    } else {
+      setSentDropdownOpen(false);
+    }
+  }, [friendRequests.length, sentFriendRequests.length]);
 
   // Render nội dung của tab hiện tại
   const renderTabContent = () => {
