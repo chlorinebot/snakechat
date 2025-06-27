@@ -1,4 +1,4 @@
-const db = require('../db');
+const { pool, isConnected } = require('../db');
 
 // Lấy danh sách cuộc trò chuyện của một người dùng
 exports.getUserConversations = async (req, res) => {
@@ -30,11 +30,11 @@ exports.getUserConversations = async (req, res) => {
       ORDER BY c.updated_at DESC
     `;
     
-    const [conversations] = await db.query(conversationsQuery, [userId, userId]);
+    const [conversations] = await pool.query(conversationsQuery, [userId, userId]);
     
     // Lấy danh sách thành viên cho mỗi cuộc trò chuyện
     const enrichedConversations = await Promise.all(conversations.map(async (conv) => {
-      const [members] = await db.query(`
+      const [members] = await pool.query(`
         SELECT cm.user_id, u.username, u.status, u.avatar, cm.joined_at, cm.left_at
         FROM conversation_members cm
         LEFT JOIN users u ON cm.user_id = u.user_id
@@ -66,7 +66,7 @@ exports.getConversationDetails = async (req, res) => {
   
   try {
     // Lấy thông tin cơ bản của cuộc trò chuyện
-    const [conversationResults] = await db.query(`
+    const [conversationResults] = await pool.query(`
       SELECT conversation_id, conversation_type, created_at, updated_at
       FROM conversations
       WHERE conversation_id = ?
@@ -79,7 +79,7 @@ exports.getConversationDetails = async (req, res) => {
     const conversation = conversationResults[0];
     
     // Lấy tin nhắn cuối cùng
-    const [lastMessageResults] = await db.query(`
+    const [lastMessageResults] = await pool.query(`
       SELECT message_id, content, created_at
       FROM messages
       WHERE conversation_id = ?
@@ -94,7 +94,7 @@ exports.getConversationDetails = async (req, res) => {
     }
     
     // Lấy danh sách thành viên
-    const [members] = await db.query(`
+    const [members] = await pool.query(`
       SELECT cm.user_id, u.username, u.status, u.avatar, cm.joined_at, cm.left_at
       FROM conversation_members cm
       LEFT JOIN users u ON cm.user_id = u.user_id
@@ -119,7 +119,7 @@ exports.createConversation = async (req, res) => {
     return res.status(400).json({ error: 'Cần ít nhất 2 người dùng để tạo cuộc trò chuyện' });
   }
   
-  const connection = await db.getConnection();
+  const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
@@ -187,7 +187,7 @@ exports.getOrCreateOneToOneConversation = async (req, res) => {
     return res.status(400).json({ error: 'Thiếu thông tin người dùng' });
   }
   
-  const connection = await db.getConnection();
+  const connection = await pool.getConnection();
   
   try {
     // Kiểm tra xem đã có cuộc trò chuyện 1-1 giữa hai người dùng chưa

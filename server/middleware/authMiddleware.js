@@ -1,4 +1,4 @@
-const db = require('../db');
+const { pool, isConnected } = require('../db');
 
 // Middleware kiểm tra xác thực
 const isAuthenticated = (req, res, next) => {
@@ -41,7 +41,7 @@ const checkAccountLockStatus = async (req, res, next) => {
         }
         
         // Kiểm tra tài khoản có bị khóa không
-        const [lockInfo] = await db.query(
+        const [lockInfo] = await pool.query(
             `SELECT * FROM user_lock 
              WHERE user_id = ? AND unlock_time > NOW() 
              ORDER BY lock_id DESC 

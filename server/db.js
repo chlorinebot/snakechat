@@ -15,6 +15,10 @@ const pool = mysql.createPool({
   timezone: '+07:00', // Thiết lập múi giờ Việt Nam
 });
 
+// Biến theo dõi trạng thái kết nối
+let connected = false;
+let retryCount = 0;
+
 // Kiểm tra kết nối
 const connectToDatabase = async () => {
   try {
@@ -26,14 +30,43 @@ const connectToDatabase = async () => {
     console.log('✅ Đã thiết lập múi giờ cho MySQL: UTC+7 (Việt Nam) ✅');
     
     connection.release();
+    connected = true; // Cập nhật trạng thái kết nối
+    retryCount = 0; // Reset số lần thử kết nối
     return pool;
   } catch (error) {
     console.error('❌ Lỗi kết nối MySQL: ', error.message, '❌');
-    throw error;
+    connected = false; // Cập nhật trạng thái kết nối
+    
+    // Tăng số lần thử kết nối
+    retryCount++;
+    
+    console.log(`🔄 Thử kết nối lại sau 5 giây... (Lần thử ${retryCount}) 🔄`);
+    // Thử kết nối lại sau 5 giây
+    setTimeout(() => {
+      connectToDatabase();
+    }, 5000);
+    
+    // Không throw error để tránh crash ứng dụng
+    return null;
   }
+};
+
+// Hàm kiểm tra trạng thái kết nối, có thể sử dụng ở các module khác
+const isConnected = () => {
+  return connected;
+};
+
+// Hàm lấy số lần đã thử kết nối
+const getRetryCount = () => {
+  return retryCount;
 };
 
 // Khởi tạo kết nối
 connectToDatabase();
 
-module.exports = pool;
+module.exports = {
+  pool,
+  isConnected,
+  connectToDatabase,
+  getRetryCount
+};

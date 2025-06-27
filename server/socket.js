@@ -1,5 +1,5 @@
 const socketIo = require('socket.io');
-const db = require('./db');
+const { pool, isConnected } = require('./db');
 
 // Lưu trữ các kết nối socket theo user ID
 const userSockets = new Map();
@@ -39,7 +39,7 @@ const setupSocket = (server) => {
         if (data.conversation_id && data.reader_id) {
           try {
             // Tìm người gửi tin nhắn trong cuộc trò chuyện để gửi thông báo
-            const [senders] = await db.query(`
+            const [senders] = await pool.query(`
               SELECT DISTINCT m.sender_id 
               FROM messages m
               JOIN conversation_members cm ON m.conversation_id = cm.conversation_id
@@ -57,7 +57,7 @@ const setupSocket = (server) => {
                 // Nếu có danh sách message_ids, truyền trực tiếp
                 if (data.message_ids && Array.isArray(data.message_ids)) {
                   // Lọc các tin nhắn thuộc về người gửi cụ thể này
-                  const [senderMessages] = await db.query(`
+                  const [senderMessages] = await pool.query(`
                     SELECT message_id FROM messages 
                     WHERE conversation_id = ? 
                     AND sender_id = ? 
@@ -149,7 +149,7 @@ const sendNotificationToUser = (userId, eventName, data) => {
 const sendUnreadCountUpdate = async (userId) => {
   try {
     // Lấy tổng số tin nhắn chưa đọc
-    const [unreadCountResult] = await db.query(`
+    const [unreadCountResult] = await pool.query(`
       SELECT COUNT(*) as total_unread
       FROM messages m
       JOIN conversation_members cm ON m.conversation_id = cm.conversation_id
@@ -159,7 +159,7 @@ const sendUnreadCountUpdate = async (userId) => {
     const totalUnread = unreadCountResult[0]?.total_unread || 0;
 
     // Lấy thông tin các cuộc trò chuyện có tin nhắn mới
-    const [conversations] = await db.query(`
+    const [conversations] = await pool.query(`
       SELECT c.conversation_id, c.conversation_type,
              c.created_at, c.updated_at,
              (SELECT COUNT(*) FROM messages m 

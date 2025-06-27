@@ -428,8 +428,8 @@ const userController = {
       const reportController = require('./reportController');
       
       // Gọi trực tiếp DB query để lưu báo cáo
-      const db = require('../db');
-      const [result] = await db.query(
+      const { pool } = require('../db');
+      const [result] = await pool.query(
         'INSERT INTO reports (id_user, title, content, report_type, status, submission_time) VALUES (?, ?, ?, ?, ?, NOW())',
         [userId, reportData.title, reportData.content, 'complaint', 'unresolved']
       );

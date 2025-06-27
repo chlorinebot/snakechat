@@ -1,4 +1,4 @@
-const db = require('../db');
+const { pool, isConnected } = require('../db');
 const socketService = require('../socket');
 
 // Lấy tất cả tin nhắn trong một cuộc trò chuyện
@@ -11,7 +11,7 @@ exports.getConversationMessages = async (req, res) => {
   
   try {
     // Lấy tin nhắn từ database với thông tin người gửi
-    const [messages] = await db.query(`
+    const [messages] = await pool.query(`
       SELECT m.message_id, m.conversation_id, m.sender_id, 
              u.username as sender_name, u.avatar as sender_avatar, m.content, 
              m.message_type, m.created_at, m.is_read
@@ -37,7 +37,7 @@ exports.sendMessage = async (req, res) => {
     return res.status(400).json({ error: 'Thiếu thông tin tin nhắn' });
   }
   
-  const connection = await db.getConnection();
+  const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
@@ -60,7 +60,7 @@ exports.sendMessage = async (req, res) => {
     await connection.commit();
     
     // Lấy thông tin người gửi
-    const [senderResults] = await db.query(`
+    const [senderResults] = await pool.query(`
       SELECT username, avatar FROM users WHERE user_id = ?
     `, [sender_id]);
     
@@ -68,7 +68,7 @@ exports.sendMessage = async (req, res) => {
     const senderAvatar = senderResults.length > 0 ? senderResults[0].avatar : null;
     
     // Lấy thông tin chi tiết tin nhắn vừa gửi
-    const [messageDetails] = await db.query(`
+    const [messageDetails] = await pool.query(`
       SELECT message_id, conversation_id, sender_id, content, 
              message_type, created_at, is_read
       FROM messages
@@ -82,7 +82,7 @@ exports.sendMessage = async (req, res) => {
     };
     
     // Lấy danh sách TẤT CẢ thành viên trong cuộc trò chuyện để gửi thông báo (bao gồm cả người gửi)
-    const [members] = await db.query(`
+    const [members] = await pool.query(`
       SELECT user_id
       FROM conversation_members
       WHERE conversation_id = ? AND left_at IS NULL
@@ -124,7 +124,7 @@ exports.markMessageAsRead = async (req, res) => {
   
   try {
     // Cập nhật trạng thái đã đọc cho tin nhắn
-    await db.query(`
+    await pool.query(`
       UPDATE messages
       SET is_read = 1
       WHERE message_id = ?
@@ -148,7 +148,7 @@ exports.markAllMessagesAsRead = async (req, res) => {
   
   try {
     // Lấy tất cả tin nhắn chưa đọc từ người khác (không phải người dùng hiện tại)
-    const [unreadMessages] = await db.query(`
+    const [unreadMessages] = await pool.query(`
       SELECT message_id, sender_id
       FROM messages
       WHERE conversation_id = ? AND sender_id != ? AND is_read = 0
@@ -159,7 +159,7 @@ exports.markAllMessagesAsRead = async (req, res) => {
     }
     
     // Đánh dấu tất cả tin nhắn trong cuộc trò chuyện là đã đọc, trừ tin nhắn của chính mình
-    await db.query(`
+    await pool.query(`
       UPDATE messages
       SET is_read = 1, read_at = ?
       WHERE conversation_id = ? AND sender_id != ? AND is_read = 0
@@ -209,7 +209,7 @@ exports.getMessageReadStatus = async (req, res) => {
   
   try {
     // Lấy thông tin trạng thái đã đọc của tất cả tin nhắn trong cuộc trò chuyện
-    const [messages] = await db.query(`
+    const [messages] = await pool.query(`
       SELECT message_id, sender_id, is_read, read_at
       FROM messages
       WHERE conversation_id = ? AND sender_id = ?
@@ -235,7 +235,7 @@ exports.sendSystemMessage = async (req, res) => {
     return res.status(400).json({ error: 'Thiếu thông tin cần thiết' });
   }
   
-  const connection = await db.getConnection();
+  const connection = await pool.getConnection();
   
   try {
     await connection.beginTransaction();
