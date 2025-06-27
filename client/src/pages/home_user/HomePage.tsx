@@ -280,6 +280,18 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     }
   };
 
+  // Thêm hàm kiểm tra và phát âm thanh
+  const playSound = (type: 'message' | 'notification') => {
+    const messageSoundEnabled = localStorage.getItem('messageSoundEnabled') === 'true';
+    const notificationSoundEnabled = localStorage.getItem('notificationSoundEnabled') === 'true';
+
+    if (type === 'message' && messageSoundEnabled) {
+      playMessageSound();
+    } else if (type === 'notification' && notificationSoundEnabled) {
+      playNotificationSound();
+    }
+  };
+
   // Khởi tạo socket và đăng ký các sự kiện
   useEffect(() => {
     if (!user || !user.user_id) return;
@@ -302,7 +314,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
           setShowToast(false);
         }, 5000);
         
-        playNotificationSound();
+        playSound('notification');
       }
     };
     
@@ -440,7 +452,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         }, 5000);
         
         if (data.sender_id !== user?.user_id) {
-          playMessageSound();
+          playSound('message');
         }
       }
     };

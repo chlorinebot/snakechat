@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SettingsModal.css';
+import { playNotificationSound, playMessageSound } from '../../utils/sound';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,13 +11,42 @@ type SettingsTab = 'general' | 'privacy' | 'interface' | 'notifications' | 'mess
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('notifications');
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('notificationsEnabled');
+    return saved === null ? true : saved === 'true';
+  });
+  
+  // Tách riêng state cho âm thanh thông báo và tin nhắn
+  const [notificationSoundEnabled, setNotificationSoundEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('notificationSoundEnabled');
+    return saved === null ? true : saved === 'true';
+  });
+  
+  const [messageSoundEnabled, setMessageSoundEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('messageSoundEnabled');
+    return saved === null ? true : saved === 'true';
+  });
+
   const [theme, setTheme] = useState<string>(() => {
     const saved = localStorage.getItem('darkMode');
     if (saved === 'true') return 'dark';
     return 'light';
   });
+
+  // Lưu cài đặt thông báo vào localStorage
+  useEffect(() => {
+    localStorage.setItem('notificationsEnabled', notificationsEnabled.toString());
+  }, [notificationsEnabled]);
+
+  // Lưu cài đặt âm thanh thông báo vào localStorage
+  useEffect(() => {
+    localStorage.setItem('notificationSoundEnabled', notificationSoundEnabled.toString());
+  }, [notificationSoundEnabled]);
+
+  // Lưu cài đặt âm thanh tin nhắn vào localStorage
+  useEffect(() => {
+    localStorage.setItem('messageSoundEnabled', messageSoundEnabled.toString());
+  }, [messageSoundEnabled]);
 
   const handleThemeChange = (value: string) => {
     setTheme(value);
@@ -26,6 +56,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     } else {
       document.documentElement.removeAttribute('data-theme');
       localStorage.setItem('darkMode', 'false');
+    }
+  };
+
+  // Hàm test âm thanh thông báo
+  const handleTestNotificationSound = () => {
+    if (notificationSoundEnabled) {
+      playNotificationSound();
+    }
+  };
+
+  // Hàm test âm thanh tin nhắn
+  const handleTestMessageSound = () => {
+    if (messageSoundEnabled) {
+      playMessageSound();
     }
   };
 
@@ -167,17 +211,99 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                 <div className="notification-sound-section">
                   <h3>Âm thanh thông báo</h3>
-                  <div className="sound-toggle">
-                    <span style={{ color: "#000000", fontWeight: 600 }}>Phát âm thanh khi có tin nhắn & thông báo mới</span>
+                  
+                  {/* Điều khiển âm thanh thông báo */}
+                  <div className="sound-toggle" style={{ marginBottom: '16px' }}>
+                    <span style={{ color: "#000000", fontWeight: 600 }}>
+                      <i className="fas fa-bell" style={{ marginRight: '8px', color: '#0084ff' }}></i>
+                      Âm thanh thông báo hệ thống
+                    </span>
                     <label className="toggle-switch">
                       <input 
                         type="checkbox"
-                        checked={soundEnabled}
-                        onChange={() => setSoundEnabled(!soundEnabled)}
+                        checked={notificationSoundEnabled}
+                        onChange={() => setNotificationSoundEnabled(!notificationSoundEnabled)}
                       />
                       <span className="toggle-slider"></span>
                     </label>
                   </div>
+
+                  {/* Điều khiển âm thanh tin nhắn */}
+                  <div className="sound-toggle" style={{ marginBottom: '24px' }}>
+                    <span style={{ color: "#000000", fontWeight: 600 }}>
+                      <i className="fas fa-comment" style={{ marginRight: '8px', color: '#0084ff' }}></i>
+                      Âm thanh tin nhắn mới
+                    </span>
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox"
+                        checked={messageSoundEnabled}
+                        onChange={() => setMessageSoundEnabled(!messageSoundEnabled)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                  
+                  {/* Nút test âm thanh */}
+                  <div style={{ 
+                    display: 'flex',
+                    gap: '12px'
+                  }}>
+                    <button 
+                      onClick={handleTestNotificationSound}
+                      style={{
+                        backgroundColor: notificationSoundEnabled ? '#0084ff' : '#ccc',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        cursor: notificationSoundEnabled ? 'pointer' : 'not-allowed',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s ease',
+                        flex: 1,
+                        opacity: notificationSoundEnabled ? 1 : 0.6
+                      }}
+                      disabled={!notificationSoundEnabled}
+                    >
+                      <i className="fas fa-bell"></i>
+                      Thử âm thanh thông báo
+                    </button>
+                    <button 
+                      onClick={handleTestMessageSound}
+                      style={{
+                        backgroundColor: messageSoundEnabled ? '#0084ff' : '#ccc',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        cursor: messageSoundEnabled ? 'pointer' : 'not-allowed',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s ease',
+                        flex: 1,
+                        opacity: messageSoundEnabled ? 1 : 0.6
+                      }}
+                      disabled={!messageSoundEnabled}
+                    >
+                      <i className="fas fa-comment"></i>
+                      Thử âm thanh tin nhắn
+                    </button>
+                  </div>
+                  <p style={{
+                    marginTop: '12px',
+                    fontSize: '13px',
+                    color: '#666',
+                    fontStyle: 'italic'
+                  }}>
+                    Bấm vào các nút trên để nghe thử âm thanh tương ứng
+                  </p>
                 </div>
               </div>
             )}

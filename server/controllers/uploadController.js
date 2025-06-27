@@ -1,5 +1,5 @@
 const cloudinary = require('../config/cloudinary');
-const db = require('../db');
+const { pool } = require('../db');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -154,8 +154,17 @@ const uploadController = {
     try {
       console.log('Cập nhật avatar trong database:', { user_id, avatar_url });
       
+      // Kiểm tra user có tồn tại không
+      const [rows] = await pool.query('SELECT user_id FROM users WHERE user_id = ?', [user_id]);
+      if (!rows || rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Không tìm thấy người dùng'
+        });
+      }
+
       // Cập nhật URL avatar vào database
-      const [result] = await db.query(
+      const [result] = await pool.query(
         'UPDATE users SET avatar = ? WHERE user_id = ?',
         [avatar_url, user_id]
       );
@@ -163,7 +172,7 @@ const uploadController = {
       if (result.affectedRows === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Không tìm thấy người dùng'
+          message: 'Không thể cập nhật avatar'
         });
       }
 
@@ -176,11 +185,11 @@ const uploadController = {
         }
       });
     } catch (error) {
-      console.error('Lỗi khi cập nhật avatar:', error);
+      console.error('Lỗi chi tiết khi cập nhật avatar:', error);
       res.status(500).json({
         success: false,
         message: 'Lỗi khi cập nhật avatar vào database',
-        error: error.toString()
+        error: error.message || error.toString()
       });
     }
   },
@@ -197,10 +206,24 @@ const uploadController = {
     }
 
     try {
-      console.log('Xóa avatar cũ với public_id:', public_id);
+      console.log('Bắt đầu xóa avatar cũ với public_id:', public_id);
       
+      // Kiểm tra public_id có hợp lệ không
+      if (typeof public_id !== 'string' || !public_id.trim()) {
+        throw new Error('public_id không hợp lệ');
+      }
+
       // Xóa ảnh trên Cloudinary
-      const result = await cloudinary.uploader.destroy(public_id);
+      console.log('Gọi Cloudinary API để xóa ảnh...');
+      const result = await cloudinary.uploader.destroy(public_id, {
+        invalidate: true
+      });
+      console.log('Kết quả xóa ảnh từ Cloudinary:', result);
+
+      // Kiểm tra kết quả xóa
+      if (result.result !== 'ok') {
+        throw new Error(`Không thể xóa ảnh: ${result.result}`);
+      }
 
       res.json({
         success: true,
@@ -208,11 +231,24 @@ const uploadController = {
         data: result
       });
     } catch (error) {
-      console.error('Lỗi khi xóa ảnh cũ:', error);
-      res.status(500).json({
+      console.error('Lỗi chi tiết khi xóa avatar cũ:', error);
+      
+      // Kiểm tra loại lỗi để trả về thông báo phù hợp
+      let statusCode = 500;
+      let errorMessage = 'Lỗi khi xóa ảnh cũ trên Cloudinary';
+
+      if (error.http_code === 404) {
+        statusCode = 404;
+        errorMessage = 'Không tìm thấy ảnh cần xóa';
+      } else if (error.http_code === 401) {
+        statusCode = 401;
+        errorMessage = 'Không có quyền xóa ảnh';
+      }
+
+      res.status(statusCode).json({
         success: false,
-        message: 'Lỗi khi xóa ảnh cũ trên Cloudinary',
-        error: error.toString()
+        message: errorMessage,
+        error: error.message || error.toString()
       });
     }
   }

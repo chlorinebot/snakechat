@@ -71,8 +71,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         const users = await api.getUsers();
         const userFromAPI = users.find(u => u.user_id === userId);
         
-        console.log("Tất cả người dùng từ API:", users);
-        
         if (!userFromAPI) {
           console.error("Không tìm thấy người dùng với ID:", userId);
           setError('Không tìm thấy thông tin người dùng');
@@ -86,12 +84,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         }
         
         if (!userFromAPI.status) {
-          console.warn("Không có thông tin trạng thái hoạt động cho người dùng:", userFromAPI);
           // Mặc định trạng thái là offline nếu không có
           userFromAPI.status = 'offline';
         }
         
-        console.log("Thông tin người dùng từ API:", userFromAPI);
         setUserData(userFromAPI);
 
         try {
@@ -101,14 +97,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           
           // Kiểm tra trạng thái khóa từ trường lock_status trong bảng
           const isLocked = userWithLockInfo?.lock_status === 'locked';
-          
-          console.log("Trạng thái khóa của tài khoản:", {
-            userId: userId,
-            username: userFromAPI.username,
-            lockStatus: userWithLockInfo?.lock_status,
-            isLocked: isLocked,
-            hasLockID: !!userWithLockInfo?.lock_id
-          });
           
           if (isLocked) {
             setIsUserLocked(true);
@@ -136,7 +124,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
           
           // Kiểm tra trạng thái kết bạn
           const status = await api.checkFriendshipStatus(currentUserData.user_id, userId);
-          console.log("Trạng thái kết bạn:", status);
           setFriendshipStatus(status.status);
           setFriendshipId(status.friendship_id);
           
@@ -154,11 +141,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             // Kiểm tra xem người dùng này có đang chặn người dùng hiện tại không
             const reverseBlockStatus = await api.checkBlockStatus(userId, currentUserData.user_id);
             setIsBlockingMe(reverseBlockStatus.isBlocking);
-            
-            console.log("Trạng thái chặn:", { 
-              isBlockedByMe: blockStatus.isBlocking, 
-              isBlockingMe: reverseBlockStatus.isBlocking 
-            });
           } catch (error) {
             console.error("Lỗi khi kiểm tra trạng thái chặn:", error);
           }
@@ -576,7 +558,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   // Kiểm tra trạng thái online
   const isOnline = (status?: string) => {
-    console.log('Kiểm tra trạng thái profile modal:', status);
     if (status === undefined || status === null) {
       return false;
     }
@@ -677,102 +658,115 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
       return null; 
     }
 
-    if (friendshipStatus === 'accepted') {
-      return (
-        <>
-          <button 
-            className="message-friend-button"
-            onClick={async () => {
-              try {
-                if (!userData?.user_id) {
-                  console.error("Không tìm thấy ID người dùng");
-                  return;
-                }
+    const handleStartChat = async () => {
+      try {
+        if (!userData?.user_id) {
+          console.error("Không tìm thấy ID người dùng");
+          return;
+        }
 
-                if (onStartConversation) {
-                  // Gọi callback nếu có
-                  onStartConversation(userData.user_id);
-                  onClose();
-                } else {
-                  // Fallback cho trường hợp không có callback
-                  const result = await api.getOrCreateOneToOneConversation(
-                    currentUser?.user_id || 0, 
-                    userData.user_id
-                  );
-                  
-                  if (result.success && result.data) {
-                    window.location.href = '/?tab=messages';
-                  }
-                }
-              } catch (error) {
-                console.error("Lỗi khi tạo cuộc trò chuyện:", error);
-                setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
-              }
-            }}
-          >
-            <i className="fas fa-comment"></i>
-            Nhắn tin
-          </button>
+        if (onStartConversation) {
+          // Gọi callback nếu có
+          onStartConversation(userData.user_id);
+          onClose();
+        } else {
+          // Fallback cho trường hợp không có callback
+          const result = await api.getOrCreateOneToOneConversation(
+            currentUser?.user_id || 0, 
+            userData.user_id
+          );
           
-          <span className="friend-status">
-            <i className="fas fa-user-check"></i>
-            Đã là bạn bè
-          </span>
-          
-          <button 
-            className="remove-friend-button" 
-            onClick={handleRemoveFriendClick}
-          >
-            <i className="fas fa-user-minus"></i>
-            Hủy kết bạn
-          </button>
-        </>
-      );
-    } else if (friendshipStatus === 'pending' && friendRequestSent) {
-      return (
+          if (result.success && result.data) {
+            window.location.href = '/?tab=messages';
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi tạo cuộc trò chuyện:", error);
+        setError("Đã xảy ra lỗi. Vui lòng thử lại sau.");
+      }
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* Nút nhắn tin luôn hiển thị đầu tiên */}
         <button 
-          className="cancel-friend-button" 
-          onClick={handleCancelFriendRequest}
-          disabled={addingFriend}
+          className="message-friend-button"
+          onClick={handleStartChat}
+          style={{
+            backgroundColor: friendshipStatus === 'accepted' ? '#0066ff' : '#f0f2f5',
+            color: friendshipStatus === 'accepted' ? '#ffffff' : '#000000',
+            border: friendshipStatus === 'accepted' ? 'none' : '1px solid #ddd'
+          }}
         >
-          <i className="fas fa-user-times"></i>
-          {addingFriend ? 'Đang hủy...' : 'Hủy lời mời kết bạn'}
+          <i className="fas fa-comment"></i>
+          Nhắn tin
         </button>
-      );
-    } else if (friendshipStatus === 'pending' && fromFriendRequest) {
-      // Thêm UI cho trường hợp nhận được lời mời kết bạn
-      return (
-        <>
-          <button 
-            className="accept-friend-button" 
-            onClick={handleAcceptFriendRequest}
-            disabled={processingRequest}
-          >
-            <i className="fas fa-user-check"></i>
-            {processingRequest ? 'Đang xử lý...' : 'Chấp nhận'}
-          </button>
-          <button 
-            className="reject-friend-button" 
-            onClick={handleRejectFriendRequest}
-            disabled={processingRequest}
-          >
-            <i className="fas fa-user-times"></i>
-            {processingRequest ? 'Đang xử lý...' : 'Từ chối'}
-          </button>
-        </>
-      );
-    } else {
-      return (
-        <button 
-          className="add-friend-button" 
-          onClick={handleAddFriend}
-          disabled={addingFriend || friendRequestSent}
-        >
-          <i className="fas fa-user-plus"></i>
-          {addingFriend ? 'Đang gửi...' : friendRequestSent ? 'Đã gửi lời mời' : 'Kết bạn'}
-        </button>
-      );
-    }
+
+        {/* Các nút quản lý kết bạn */}
+        {(() => {
+          if (friendshipStatus === 'accepted') {
+            return (
+              <>
+                <span className="friend-status">
+                  <i className="fas fa-user-check"></i>
+                  Đã là bạn bè
+                </span>
+                <button 
+                  className="remove-friend-button" 
+                  onClick={handleRemoveFriendClick}
+                >
+                  <i className="fas fa-user-minus"></i>
+                  Hủy kết bạn
+                </button>
+              </>
+            );
+          } else if (friendshipStatus === 'pending' && friendRequestSent) {
+            return (
+              <button 
+                className="cancel-friend-button" 
+                onClick={handleCancelFriendRequest}
+                disabled={addingFriend}
+              >
+                <i className="fas fa-user-times"></i>
+                {addingFriend ? 'Đang hủy...' : 'Hủy lời mời kết bạn'}
+              </button>
+            );
+          } else if (friendshipStatus === 'pending' && fromFriendRequest) {
+            return (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  className="accept-friend-button" 
+                  onClick={handleAcceptFriendRequest}
+                  disabled={processingRequest}
+                >
+                  <i className="fas fa-user-check"></i>
+                  {processingRequest ? 'Đang xử lý...' : 'Chấp nhận'}
+                </button>
+                <button 
+                  className="reject-friend-button" 
+                  onClick={handleRejectFriendRequest}
+                  disabled={processingRequest}
+                >
+                  <i className="fas fa-user-times"></i>
+                  {processingRequest ? 'Đang xử lý...' : 'Từ chối'}
+                </button>
+              </div>
+            );
+          } else {
+            return (
+              <button 
+                className="add-friend-button" 
+                onClick={handleAddFriend}
+                disabled={addingFriend || friendRequestSent}
+              >
+                <i className="fas fa-user-plus"></i>
+                {addingFriend ? 'Đang gửi...' : friendRequestSent ? 'Đã gửi lời mời' : 'Kết bạn'}
+              </button>
+            );
+          }
+        })()}
+      </div>
+    );
   };
 
   return (
@@ -787,17 +781,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="profile-loading">Đang tải thông tin...</div>
           ) : userData ? (
             (() => {
-              // Ghi log cho việc gỡ lỗi
-              console.log("Render UserProfileModal với thông tin:", {
-                email: userData.email,
-                status: userData.status,
-                join_date: userData.join_date,
-                friendshipStatus,
-                isUserLocked,
-                isBlockedByMe,
-                isBlockingMe
-              });
-              
               return (
                 <div className="profile-content">
                   <div className="profile-avatar-section">

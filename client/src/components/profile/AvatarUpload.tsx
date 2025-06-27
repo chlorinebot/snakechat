@@ -78,22 +78,33 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ userId, currentAvatar, onAv
       }
 
       const { url, public_id } = uploadResponse.data;
-      setPublicId(public_id);
 
       // 2. Cập nhật URL avatar vào database
       const updateResponse = await api.updateAvatarUrl(userId, url);
       
       if (!updateResponse.success) {
+        // Nếu cập nhật database thất bại, xóa ảnh vừa upload
+        try {
+          await api.deleteOldAvatar(public_id);
+        } catch (deleteError) {
+          console.error('Không thể xóa ảnh sau khi cập nhật thất bại:', deleteError);
+        }
         throw new Error(updateResponse.message || 'Lỗi khi cập nhật avatar');
       }
 
       // 3. Xóa avatar cũ nếu có public_id
       if (publicId) {
-        await api.deleteOldAvatar(publicId);
+        try {
+          await api.deleteOldAvatar(publicId);
+        } catch (deleteError) {
+          console.error('Lỗi khi xóa avatar cũ:', deleteError);
+          // Không throw error vì việc xóa avatar cũ thất bại không ảnh hưởng đến luồng chính
+        }
       }
 
       // 4. Cập nhật state và thông báo thành công
       setAvatar(url);
+      setPublicId(public_id);
       setSuccess('Cập nhật avatar thành công');
       onAvatarUpdate(url);
       
@@ -107,6 +118,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ userId, currentAvatar, onAv
       setFile(null);
     } catch (err: any) {
       setError(err.message || 'Đã xảy ra lỗi khi cập nhật avatar');
+      console.error('Lỗi chi tiết:', err);
     } finally {
       setLoading(false);
     }

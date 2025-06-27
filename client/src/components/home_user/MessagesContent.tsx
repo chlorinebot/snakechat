@@ -5,6 +5,7 @@ import socketService from '../../services/socketService';
 import EmojiPicker from 'emoji-picker-react';
 import type { EmojiClickData } from 'emoji-picker-react';
 import throttle from 'lodash/throttle';
+import { playMessageSound } from '../../utils/sound';
 
 interface MessagesContentProps {
   userId: number;
