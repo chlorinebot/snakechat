@@ -47,7 +47,10 @@ const MainSidebar: React.FC<MainSidebarProps> = ({
             cursor: 'pointer',
             boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
             transition: 'all 0.3s ease',
-            backgroundColor: userAvatar ? 'transparent' : '#0084ff',
+            backgroundColor: (() => {
+              console.log('Rendering avatar với URL:', userAvatar);
+              return userAvatar ? 'transparent' : '#0084ff';
+            })(),
             backgroundImage: userAvatar ? `url(${userAvatar})` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',

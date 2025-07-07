@@ -8,6 +8,7 @@ import { playNotificationSound, playMessageSound } from '../../utils/sound';
 
 // Import các components
 import MainSidebar from '../../components/home_user/MainSidebar';
+import MobileNavbar from '../../components/home_user/MobileNavbar';
 import UserDropdown from '../../components/home_user/UserDropdown';
 import MessagesSidebar from '../../components/home_user/MessagesSidebar';
 import MessagesContent from '../../components/home_user/MessagesContent';
@@ -30,25 +31,66 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   // Đảm bảo cập nhật trạng thái user khi có thay đổi từ server
   useEffect(() => {
     if (user?.user_id) {
-      // Cập nhật thông tin người dùng mỗi 30 giây
-      const userRefreshInterval = setInterval(async () => {
+      // Hàm fetch thông tin người dùng (status, last_activity, avatar)
+      const fetchUserInfo = async () => {
         try {
+          console.log('Đang lấy thông tin user với ID:', user.user_id);
           const userData = await api.getUserById(user.user_id);
+          console.log('Thông tin user từ API:', userData);
+          
           if (userData) {
-            setUser((prevUser: any) => ({
-              ...prevUser,
-              status: userData.status || prevUser.status,
-              last_activity: userData.last_activity || prevUser.last_activity
-            }));
+            // Cập nhật state user
+            setUser((prevUser: any) => {
+              const updatedUser = {
+                ...prevUser,
+                status: userData.status || prevUser.status,
+                last_activity: userData.last_activity || prevUser.last_activity,
+                avatar: userData.avatar
+              };
+              console.log('User state sau khi cập nhật:', updatedUser);
+              return updatedUser;
+            });
+
+            // Cập nhật localStorage
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const updatedStoredUser = {
+              ...storedUser,
+              status: userData.status || storedUser.status,
+              last_activity: userData.last_activity || storedUser.last_activity,
+              avatar: userData.avatar
+            };
+            localStorage.setItem('user', JSON.stringify(updatedStoredUser));
+            console.log('Đã cập nhật localStorage:', updatedStoredUser);
+          } else {
+            console.log('Không lấy được thông tin user từ API');
           }
         } catch (error) {
           console.error('Lỗi khi cập nhật thông tin người dùng:', error);
         }
-      }, 30000);
-      
+      };
+
+      fetchUserInfo();
+      const userRefreshInterval = setInterval(fetchUserInfo, 30000);
       return () => clearInterval(userRefreshInterval);
+    } else {
+      console.log('Không có user_id để fetch thông tin');
     }
   }, [user?.user_id]);
+
+  // Khởi tạo user từ localStorage khi component mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        console.log('Khởi tạo user từ localStorage:', parsedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Lỗi khi parse user từ localStorage:', error);
+      }
+    }
+  }, []);
+
   const [showProfileDropdown, setShowProfileDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('messages');
   const [contactsTab, setContactsTab] = useState<ContactTab>('friends');
@@ -69,6 +111,10 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   const [toastMessage, setToastMessage] = useState('');
   const [lastToastId, setLastToastId] = useState<number | null>(null);
   const [friendIds, setFriendIds] = useState<number[]>([]);
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth <= 768);
+  
+  // State cho mobile messages view
+  const [showMobileMessagesContent, setShowMobileMessagesContent] = useState<boolean>(false);
   
   // Tự động cập nhật tổng số tin nhắn chưa đọc khi danh sách conversations thay đổi
   useEffect(() => {
@@ -480,6 +526,23 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     };
   }, []);
 
+  // Lắng nghe sự thay đổi kích thước màn hình
+  useEffect(() => {
+    const handleResize = () => {
+      const newIsMobile = window.innerWidth <= 768;
+      setIsMobile(newIsMobile);
+      
+      // Reset mobile messages content khi chuyển sang desktop
+      if (!newIsMobile) {
+        setShowMobileMessagesContent(false);
+        setCurrentConversation(null);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (!user) {
     return <div className="loading">Đang tải...</div>;
   }
@@ -587,10 +650,9 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
   
   // Xử lý khi có cập nhật từ UserProfileModal (ví dụ: gửi lời mời kết bạn, chấp nhận lời mời...)
   const handleUserProfileUpdate = () => {
-    if (user?.user_id) {
+    if (friendIds.length > 0) {
       api.getFriends(user.user_id).then(friends => {
-        const ids = friends.map(friend => friend.user_id);
-        setFriendIds(ids);
+        setFriendIds(friends.map(friend => friend.user_id));
       }).catch(error => {
         console.error('Lỗi khi làm mới danh sách bạn bè:', error);
       });
@@ -599,12 +661,45 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
     handleFriendRequestUpdate();
   };
 
+  // Handler cho mobile messages view
+  const handleMobileMessagesBack = () => {
+    if (isMobile) {
+      setShowMobileMessagesContent(false);
+      setCurrentConversation(null);
+    }
+  };
+
+  const handleMobileMessagesToggle = () => {
+    if (isMobile) {
+      // Không cần toggle nữa vì sidebar hiển thị trực tiếp
+      setActiveTab('messages');
+    }
+  };
+
+  const handleConversationSelect = (conversation: Conversation) => {
+    handleConversationUpdate(conversation);
+    if (isMobile) {
+      // Trên mobile, chuyển sang view messages content
+      setShowMobileMessagesContent(true);
+    }
+  };
+
+  // Xử lý click vào overlay để đóng sidebar
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleMobileMessagesBack();
+    }
+  };
+
   return (
     <div className="user-home-container">
       <MainSidebar 
         activeTab={activeTab} 
         userInitial={userInitial} 
-        userAvatar={user.avatar}
+        userAvatar={(() => {
+          console.log('userAvatar được truyền vào MainSidebar:', user.avatar);
+          return user.avatar;
+        })()}
         onTabChange={handleTabChange} 
         onAvatarClick={handleAvatarClick}
         avatarRef={avatarRef}
@@ -613,12 +708,32 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
         unreadMessageCount={unreadMessageCount}
       />
       
+      <MobileNavbar
+        activeTab={activeTab}
+        userInitial={userInitial}
+        userAvatar={user.avatar}
+        onTabChange={handleTabChange}
+        onAvatarClick={handleAvatarClick}
+        avatarRef={avatarRef}
+        friendRequestCount={friendRequestCount}
+        unreadMessageCount={unreadMessageCount}
+        onMessagesClick={handleMobileMessagesToggle}
+      />
+      
       <div className="main-content">
         {activeTab === 'messages' ? (
-          <div className="messages-container">
+          <div className={`messages-container ${isMobile && currentConversation ? 'has-conversation' : ''}`}>
             <div className="content-header">
               {currentConversation ? (
                 <>
+                  {isMobile && (
+                    <button
+                      className="mobile-back-to-list"
+                      onClick={handleMobileMessagesBack}
+                    >
+                      <i className="fas fa-arrow-left"></i>
+                    </button>
+                  )}
                   <div
                     style={{
                       width: '60px',
@@ -696,13 +811,29 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
                 <h2>Tin nhắn</h2>
               )}
             </div>
-            <MessagesSidebar 
-              userId={user.user_id} 
-              currentConversation={currentConversation}
-              setCurrentConversation={handleConversationUpdate}
-              conversations={conversations}
-              setConversations={setConversations}
-            />
+            
+            {/* Desktop view - hiển thị sidebar bình thường */}
+            {!isMobile && (
+              <MessagesSidebar 
+                userId={user.user_id} 
+                currentConversation={currentConversation}
+                setCurrentConversation={handleConversationUpdate}
+                conversations={conversations}
+                setConversations={setConversations}
+              />
+            )}
+
+            {/* Mobile view - hiển thị sidebar trực tiếp */}
+            {isMobile && !currentConversation && (
+              <MessagesSidebar 
+                userId={user.user_id} 
+                currentConversation={currentConversation}
+                setCurrentConversation={handleConversationSelect}
+                conversations={conversations}
+                setConversations={setConversations}
+              />
+            )}
+            
             <MessagesContent 
               userId={user.user_id}
               currentConversation={currentConversation}
@@ -739,6 +870,7 @@ const HomePage: React.FC<UserProps> = ({ onLogout }) => {
           onSupportClick={handleSupportClick}
           userStatus={user.status}
           lastActivity={user.last_activity}
+          isMobile={isMobile}
         />
       )}
 

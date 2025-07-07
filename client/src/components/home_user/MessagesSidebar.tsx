@@ -505,18 +505,27 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     
     // Cập nhật unread_count khi nhận được sự kiện tin nhắn đã đọc
     const handleMessageRead = (data: any) => {
-      if (data.conversation_id && data.reader_id) {
+      if (data.conversation_id) {
+        // Cập nhật state ngay lập tức để UI phản hồi nhanh
         setConversations(prevConversations => {
           return prevConversations.map(conv => {
             if (conv.conversation_id === data.conversation_id) {
-              // Đặt unread_count về 0 nếu người đọc là người dùng hiện tại
-              if (data.reader_id === userId) {
+              // Đặt unread_count về 0 trong các trường hợp:
+              // 1. Người đọc là người dùng hiện tại
+              // 2. Tin nhắn được đánh dấu là đã đọc
+              // 3. Có danh sách message_ids và tất cả tin nhắn đều đã được đọc
+              if (data.reader_id === userId || 
+                  data.is_read || 
+                  (data.message_ids && data.message_ids.length > 0)) {
                 return { ...conv, unread_count: 0 };
               }
             }
             return conv;
           });
         });
+
+        // Gọi API để đồng bộ trạng thái với server
+        fetchConversations();
       }
     };
 
@@ -617,6 +626,24 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
     setHasNewStrangerMessage(hasUnread);
   }, [categorizedConversations.strangers]);
 
+  // Xử lý cập nhật trạng thái khi người dùng truy cập lại tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Làm mới danh sách cuộc trò chuyện khi quay lại tab
+        fetchConversations();
+      }
+    };
+
+    // Thêm event listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchConversations]);
+
   // Lọc cuộc trò chuyện theo từ khóa tìm kiếm
   const filteredConversations = useMemo(() => {
     if (!searchTerm) {
@@ -644,12 +671,41 @@ const MessagesSidebar: React.FC<MessagesSidebarProps> = ({
   }, [searchTerm, categorizedConversations]);
 
   // Xử lý chọn cuộc trò chuyện
-  const handleSelectConversation = (conversation: Conversation) => {
+  const handleSelectConversation = async (conversation: Conversation) => {
     // Không lưu vào localStorage nữa để không tự động tải khi khởi động
     // Chỉ cập nhật state hiện tại
     
     // Gọi callback để cập nhật cuộc trò chuyện hiện tại
     setCurrentConversation(conversation);
+
+    // Đánh dấu tin nhắn đã đọc khi chọn cuộc trò chuyện
+    if (conversation.unread_count && conversation.unread_count > 0) {
+      try {
+        // Đánh dấu tất cả tin nhắn trong cuộc trò chuyện là đã đọc
+        await api.markAllMessagesAsRead(conversation.conversation_id, userId);
+        
+        // Cập nhật state local
+        setConversations(prevConversations => 
+          prevConversations.map(conv => 
+            conv.conversation_id === conversation.conversation_id
+              ? { ...conv, unread_count: 0 }
+              : conv
+          )
+        );
+
+        // Thông báo cho server về việc đọc tin nhắn
+        socketService.emit('message_read', {
+          conversation_id: conversation.conversation_id,
+          reader_id: userId,
+          is_read: true
+        });
+
+        // Làm mới danh sách cuộc trò chuyện
+        fetchConversations();
+      } catch (error) {
+        console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error);
+      }
+    }
   };
 
   // Định dạng thời gian

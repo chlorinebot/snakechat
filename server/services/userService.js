@@ -114,6 +114,21 @@ const userService = {
     console.log('Thời gian khóa từ client (UTC ISO):', lock_time);
     console.log('Thời gian mở khóa từ client (UTC ISO):', unlock_time);
     
+    // Chuyển đổi thời gian từ UTC sang múi giờ Việt Nam (UTC+7) 
+    // Sử dụng DATE_ADD thay vì CONVERT_TZ vì một số cài đặt MySQL không hỗ trợ đầy đủ CONVERT_TZ
+    const [convertedTimes] = await pool.query(
+      `SELECT 
+        DATE_ADD(?, INTERVAL 7 HOUR) as lock_time_vn,
+        DATE_ADD(?, INTERVAL 7 HOUR) as unlock_time_vn
+      `,
+      [lock_time, unlock_time]
+    );
+    
+    console.log('Thời gian đã chuyển đổi sang múi giờ VN:', convertedTimes[0]);
+    
+    const lock_time_vn = convertedTimes[0].lock_time_vn;
+    const unlock_time_vn = convertedTimes[0].unlock_time_vn;
+    
     // Kiểm tra xem đã có bản ghi lock cho user này chưa
     const [existingLock] = await pool.query('SELECT * FROM user_lock WHERE user_id = ?', [user_id]);
     
@@ -123,7 +138,7 @@ const userService = {
       // Nếu đã có, cập nhật thông tin khóa
       const [result] = await pool.query(
         'UPDATE user_lock SET reason = ?, lock_time = ?, unlock_time = ?, status = ? WHERE user_id = ?',
-        [reason, lock_time, unlock_time, status, user_id]
+        [reason, lock_time_vn, unlock_time_vn, status, user_id]
       );
       
       if (result.affectedRows === 0) {
@@ -135,7 +150,7 @@ const userService = {
       // Nếu chưa có, tạo mới
       const [result] = await pool.query(
         'INSERT INTO user_lock (user_id, reason, lock_time, unlock_time, status) VALUES (?, ?, ?, ?, ?)',
-        [user_id, reason, lock_time, unlock_time, status]
+        [user_id, reason, lock_time_vn, unlock_time_vn, status]
       );
       
       if (result.affectedRows === 0) {

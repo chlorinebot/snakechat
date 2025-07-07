@@ -46,6 +46,12 @@ const App: React.FC = () => {
     return savedTheme === 'true' ? 'dark' : 'light';
   });
 
+  // Thêm state và ref để theo dõi refresh
+  const [refreshCount, setRefreshCount] = useState<number>(0);
+  const refreshTimestampsRef = useRef<number[]>([]);
+  const refreshThreshold = 20; // Số lần refresh tối đa trong khoảng thời gian
+  const refreshTimeWindow = 5000; // Khoảng thời gian 5 giây
+
   // Hàm thay đổi theme
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -572,6 +578,105 @@ const App: React.FC = () => {
       // Cập nhật trạng thái offline khi unmount
       handleUserOffline();
     };
+  }, []);
+
+  // Thêm useEffect để phát hiện refresh liên tục
+  useEffect(() => {
+    // Lấy danh sách timestamps từ localStorage
+    const savedTimestamps = localStorage.getItem('refreshTimestamps');
+    let timestamps: number[] = [];
+    
+    if (savedTimestamps) {
+      try {
+        timestamps = JSON.parse(savedTimestamps);
+      } catch (error) {
+        console.error('Lỗi khi parse timestamps:', error);
+        timestamps = [];
+      }
+    }
+    
+    const now = Date.now();
+    
+    // Thêm timestamp hiện tại vào mảng
+    timestamps.push(now);
+    
+    // Chỉ giữ lại các timestamps trong khoảng thời gian quy định
+    timestamps = timestamps.filter(timestamp => now - timestamp <= refreshTimeWindow);
+    
+    // Lưu lại timestamps vào localStorage
+    localStorage.setItem('refreshTimestamps', JSON.stringify(timestamps));
+    
+    console.log(`Số lần refresh trong ${refreshTimeWindow/1000} giây: ${timestamps.length}/${refreshThreshold}`);
+    
+    // Kiểm tra số lần refresh trong khoảng thời gian
+    if (timestamps.length >= refreshThreshold) {
+      console.log(`Phát hiện ${refreshThreshold} lần refresh trong ${refreshTimeWindow/1000} giây!`);
+      
+      // Lấy thông tin người dùng
+      const userJson = localStorage.getItem('user');
+      if (userJson) {
+        try {
+          const user = JSON.parse(userJson);
+          const userId = user.user_id || user.id;
+          
+          if (userId) {
+            // Khóa tài khoản tạm thời
+            const lockTime = new Date();
+            const unlockTime = new Date(lockTime.getTime() + 10 * 60000); // Thêm 10 phút
+            
+            // Sử dụng ISO string để đảm bảo định dạng chuẩn
+            const lockTimeISO = lockTime.toISOString();
+            const unlockTimeISO = unlockTime.toISOString();
+            
+            console.log('Thời gian khóa (local):', lockTime.toLocaleString());
+            console.log('Thời gian mở khóa (local):', unlockTime.toLocaleString());
+            console.log('Thời gian khóa (ISO):', lockTimeISO);
+            console.log('Thời gian mở khóa (ISO):', unlockTimeISO);
+            
+            api.lockUser({
+              user_id: userId,
+              reason: 'Phát hiện refresh trang liên tục (F5 spam)',
+              lock_time: lockTimeISO,
+              unlock_time: unlockTimeISO
+            }).then(response => {
+              console.log('Đã khóa tài khoản tạm thời:', response);
+              
+              // Hiển thị thông báo
+              toast.error('Tài khoản của bạn đã bị khóa tạm thời 10 phút do refresh trang liên tục', {
+                position: "top-center",
+                autoClose: 1000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+              });
+              
+              // Xóa dữ liệu người dùng
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              localStorage.removeItem('lastActivity');
+              localStorage.removeItem('tabHiddenTime');
+              localStorage.removeItem('userStatus');
+              localStorage.removeItem('offlineTimestamp');
+              localStorage.removeItem('offlineTimerId');
+              localStorage.removeItem('lastOfflineAction');
+              localStorage.removeItem('refreshTimestamps');
+              sessionStorage.clear();
+              
+              // Chuyển hướng đến trang đăng nhập
+              window.location.href = '/login?locked=true';
+            }).catch(error => {
+              console.error('Lỗi khi khóa tài khoản:', error);
+            });
+          }
+        } catch (error) {
+          console.error('Lỗi khi xử lý thông tin người dùng:', error);
+        }
+      }
+      
+      // Reset mảng timestamp
+      localStorage.setItem('refreshTimestamps', '[]');
+    }
   }, []);
 
   // Xử lý đăng xuất

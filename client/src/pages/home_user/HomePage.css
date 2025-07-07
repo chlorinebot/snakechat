@@ -1014,6 +1014,7 @@ body, html {
   color: #adb5bd;
 }
 
+/* Mobile styles */
 @media (max-width: 768px) {
   .user-home-dashboard {
     grid-template-columns: 1fr;
@@ -1028,21 +1029,246 @@ body, html {
   }
 
   .sidebar {
-    width: 60px;
+    display: none; /* Ẩn sidebar trên mobile */
   }
 
-  .sidebar-item {
-    width: 46px;
-    height: 46px;
+  .main-content {
+    margin-left: 0;
+    padding-bottom: 80px; /* Thêm padding để không bị che bởi mobile navbar */
+  }
+
+  .content-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .messages-container,
+  .contacts-container {
+    height: calc(100vh - 80px); /* Điều chỉnh chiều cao để không bị che bởi mobile navbar */
+  }
+
+  /* Ẩn phần welcome message trên mobile */
+  .empty-state {
+    display: none !important;
+  }
+
+  /* Mobile Messages Layout - Hiển thị sidebar trực tiếp */
+  .messages-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px);
+  }
+
+  .messages-container .content-header {
+    position: static;
+    width: 100%;
+    order: 1;
+    padding: 12px 16px;
+    min-height: 56px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #fff;
+  }
+
+  [data-theme="dark"] .messages-container .content-header {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  .messages-container .content-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  /* Messages sidebar trên mobile - hiển thị trực tiếp */
+  .messages-sidebar {
+    display: flex !important;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+    order: 2;
+    flex: 0 0 auto;
+    max-height: 40vh; /* Giới hạn chiều cao để còn chỗ cho messages content */
+    overflow-y: auto;
+  }
+
+  [data-theme="dark"] .messages-sidebar {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  .messages-sidebar-header {
+    padding: 16px 16px 12px 16px;
+  }
+
+  .messages-sidebar-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .messages-search-bar {
+    margin: 0 16px 12px 16px;
+    padding: 8px 12px;
+  }
+
+  .messages-sidebar-content {
+    padding: 8px 0;
+  }
+
+  /* Messages content trên mobile */
+  .messages-content {
+    order: 3;
+    flex: 1;
+    border-left: none;
+    border-top: 1px solid #e0e0e0;
+    min-height: 0;
+  }
+
+  [data-theme="dark"] .messages-content {
+    border-top: 1px solid #333;
+  }
+
+  /* Ẩn mobile messages overlay trên mobile khi hiển thị trực tiếp */
+  .mobile-messages-overlay {
+    display: none !important;
+  }
+
+  /* Khi có conversation được chọn, ẩn sidebar và hiển thị full messages content */
+  .messages-container.has-conversation .messages-sidebar {
+    display: none !important;
+  }
+
+  .messages-container.has-conversation .messages-content {
+    flex: 1;
+    border-top: none;
+  }
+
+  .messages-container.has-conversation .content-header {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Nút back để quay lại danh sách tin nhắn */
+  .mobile-back-to-list {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #1877f2;
+    cursor: pointer;
+    margin-right: 12px;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+  }
+
+  .mobile-back-to-list:hover {
+    background-color: rgba(24, 119, 242, 0.1);
+  }
+
+  .mobile-back-to-list:active {
+    transform: scale(0.95);
+  }
+
+  /* Responsive cho contacts */
+  .contacts-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px);
+  }
+
+  .contacts-container .content-header {
+    position: static;
+    width: 100%;
+    order: 1;
+    padding: 12px 16px;
+    min-height: 56px;
+  }
+
+  .contacts-sidebar {
+    display: flex !important;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+    order: 2;
+    flex: 0 0 auto;
+    max-height: 25vh;
+    overflow-y: auto;
+  }
+
+  [data-theme="dark"] .contacts-sidebar {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  .contacts-content {
+    order: 3;
+    flex: 1;
+    margin-top: 0;
+    padding: 16px;
+    overflow-y: auto;
   }
 
   .profile-dropdown {
-    left: 65px;
-    width: 250px;
+    position: fixed;
+    bottom: 80px; /* Hiển thị phía trên mobile navbar */
+    left: 0;
+    right: 0;
+    width: 100%;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    /* Thêm animation cho bottom sheet */
+    animation: slideUp 0.3s ease-out forwards;
+    transform-origin: bottom center;
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
-  .sidebar-tooltip {
-    left: 60px;
+  [data-theme="dark"] .profile-dropdown {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Thêm overlay khi dropdown hiển thị */
+  .profile-dropdown::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+  }
+  
+  [data-theme="dark"] .profile-dropdown::before {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+
+  .dropdown-item {
+    padding: 15px 20px;
+  }
+
+  .dropdown-item i {
+    font-size: 18px;
   }
 }
 
@@ -1666,4 +1892,285 @@ body, html {
   background: #18191a !important;
   color: #fff !important;
   border-top: 1px solid #444 !important;
+}
+
+/* Mobile Messages Overlay - Hiệu ứng giống Facebook Messenger */
+.mobile-messages-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  animation: overlayFadeIn 0.25s ease-out;
+  backdrop-filter: blur(1px);
+}
+
+.mobile-messages-sidebar {
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  transform-origin: left center;
+  animation: messengerSlideIn 0.35s cubic-bezier(0.4, 0.0, 0.2, 1);
+  box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .mobile-messages-sidebar {
+  background-color: #1a1a1a;
+}
+
+.mobile-messages-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e4e6ea;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  z-index: 10;
+  position: sticky;
+  top: 0;
+  min-height: 60px;
+}
+
+/* Animation keyframes - giống Facebook Messenger */
+@keyframes messengerSlideIn {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes messengerSlideOut {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlayFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Thêm hiệu ứng cho việc đóng sidebar */
+.mobile-messages-overlay.closing {
+  animation: overlayFadeOut 0.25s ease-out forwards;
+}
+
+.mobile-messages-sidebar.closing {
+  animation: messengerSlideOut 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+/* Nút back giống Facebook Messenger */
+.mobile-back-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #1877f2;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+}
+
+.mobile-back-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(24, 119, 242, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s;
+}
+
+.mobile-back-button:active::before {
+  width: 40px;
+  height: 40px;
+}
+
+.mobile-back-button:hover {
+  background-color: rgba(24, 119, 242, 0.1);
+}
+
+.mobile-back-button:active {
+  transform: scale(0.95);
+}
+
+/* Header title giống Facebook Messenger */
+.mobile-messages-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #050505;
+  letter-spacing: -0.2px;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .mobile-messages-sidebar {
+  background-color: #1a1a1a;
+}
+
+[data-theme="dark"] .mobile-messages-header {
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+[data-theme="dark"] .mobile-messages-header h3 {
+  color: #e9ecef;
+}
+
+[data-theme="dark"] .mobile-back-button {
+  color: #1877f2;
+}
+
+/* Cải thiện hiệu ứng chuyển đổi */
+.messages-container {
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.mobile-messages-overlay {
+  transition: all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Thêm hiệu ứng cho nút back trong header chính */
+.content-header .mobile-back-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #1877f2;
+  cursor: pointer;
+  margin-right: 12px;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.content-header .mobile-back-button:hover {
+  background-color: rgba(24, 119, 242, 0.1);
+}
+
+.content-header .mobile-back-button:active {
+  transform: scale(0.95);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .messages-container {
+    position: relative;
+  }
+  
+  .messages-sidebar {
+    display: none; /* Ẩn sidebar mặc định trên mobile */
+  }
+  
+  .content-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    min-height: 60px;
+  }
+  
+  .content-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #050505;
+    letter-spacing: -0.2px;
+  }
+  
+  [data-theme="dark"] .content-header h2 {
+    color: #e9ecef;
+  }
+  
+  /* Đảm bảo mobile messages sidebar chiếm toàn bộ không gian */
+  .mobile-messages-sidebar .messages-sidebar {
+    display: flex !important;
+    flex: 1;
+    height: auto;
+    border-right: none;
+  }
+  
+  .mobile-messages-sidebar .messages-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+  }
+}
+
+/* Thêm hiệu ứng mượt mà cho việc click vào overlay */
+.mobile-messages-overlay {
+  cursor: pointer;
+}
+
+.mobile-messages-sidebar {
+  cursor: default;
+}
+
+/* Cải thiện shadow và border */
+.mobile-messages-sidebar {
+  box-shadow: 
+    -2px 0 8px rgba(0, 0, 0, 0.1),
+    -1px 0 2px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .mobile-messages-sidebar {
+  box-shadow: 
+    -2px 0 8px rgba(0, 0, 0, 0.3),
+    -1px 0 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Thêm hiệu ứng cho việc scroll */
+.mobile-messages-sidebar .messages-sidebar-content {
+  scroll-behavior: smooth;
+}
+
+/* Animation cho việc hiển thị/ẩn sidebar */
+.mobile-messages-overlay {
+  will-change: opacity;
+}
+
+.mobile-messages-sidebar {
+  will-change: transform, opacity;
 } 

@@ -167,11 +167,23 @@ export const api = {
   // Lấy thông tin người dùng theo id
   getUserById: async (userId: number) => {
     try {
+      console.log('Gọi API getUserById với userId:', userId);
       const response = await axios.get<{ data: User }>(`${API_URL}/user/get/${userId}`);
+      console.log('Response từ API:', response.data);
       return response.data.data;
     } catch (error) {
       console.error('Lỗi khi lấy thông tin người dùng:', error);
-      return null;
+      // Thử lấy từ /user/data nếu /user/get không hoạt động
+      try {
+        const response = await axios.get<{ items: User[] }>(`${API_URL}/user/data`);
+        const users = response.data.items;
+        const user = users.find(u => u.user_id === userId);
+        console.log('Tìm thấy user từ /user/data:', user);
+        return user || null;
+      } catch (fallbackError) {
+        console.error('Lỗi khi thử phương án dự phòng:', fallbackError);
+        return null;
+      }
     }
   },
 

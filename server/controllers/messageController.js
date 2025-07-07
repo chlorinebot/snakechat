@@ -114,9 +114,9 @@ exports.sendMessage = async (req, res) => {
   }
 };
 
-// Đánh dấu một tin nhắn đã đọc
+// Đánh dấu tin nhắn đã đọc
 exports.markMessageAsRead = async (req, res) => {
-  const messageId = parseInt(req.params.messageId);
+  const messageId = req.params.id;
   
   if (!messageId) {
     return res.status(400).json({ error: 'Thiếu ID tin nhắn' });
@@ -124,13 +124,29 @@ exports.markMessageAsRead = async (req, res) => {
   
   try {
     // Cập nhật trạng thái đã đọc cho tin nhắn
+    // Sử dụng NOW() để lấy thời gian hiện tại theo múi giờ của server
     await pool.query(`
       UPDATE messages
-      SET is_read = 1
+      SET is_read = 1, read_at = NOW()
       WHERE message_id = ?
     `, [messageId]);
     
-    return res.status(200).json({ success: true });
+    // Lấy thông tin tin nhắn sau khi cập nhật
+    const [message] = await pool.query(`
+      SELECT message_id, conversation_id, sender_id, is_read, read_at
+      FROM messages
+      WHERE message_id = ?
+    `, [messageId]);
+    
+    if (message.length === 0) {
+      return res.status(404).json({ error: 'Không tìm thấy tin nhắn' });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Đã đánh dấu tin nhắn là đã đọc',
+      data: message[0]
+    });
     
   } catch (error) {
     console.error('Lỗi khi đánh dấu tin nhắn đã đọc:', error);
@@ -159,11 +175,16 @@ exports.markAllMessagesAsRead = async (req, res) => {
     }
     
     // Đánh dấu tất cả tin nhắn trong cuộc trò chuyện là đã đọc, trừ tin nhắn của chính mình
+    // Sử dụng NOW() để lấy thời gian hiện tại theo múi giờ của server
     await pool.query(`
       UPDATE messages
-      SET is_read = 1, read_at = ?
+      SET is_read = 1, read_at = NOW()
       WHERE conversation_id = ? AND sender_id != ? AND is_read = 0
-    `, [new Date().toISOString(), conversation_id, user_id]);
+    `, [conversation_id, user_id]);
+    
+    // Lấy thời gian hiện tại từ database để đảm bảo múi giờ nhất quán
+    const [currentTime] = await pool.query('SELECT NOW() as current_time');
+    const readAtTime = currentTime[0].current_time;
     
     // Nhóm các tin nhắn đã đọc theo người gửi để thông báo
     const senderToMessageIds = unreadMessages.reduce((acc, message) => {
@@ -180,7 +201,7 @@ exports.markAllMessagesAsRead = async (req, res) => {
         conversation_id: conversation_id,
         reader_id: user_id,
         message_ids: messageIds,
-        read_at: new Date().toISOString()
+        read_at: readAtTime
       });
     });
     
@@ -190,7 +211,7 @@ exports.markAllMessagesAsRead = async (req, res) => {
     return res.status(200).json({ 
       success: true, 
       read_count: unreadMessages.length,
-      timestamp: new Date().toISOString()
+      timestamp: readAtTime
     });
     
   } catch (error) {
